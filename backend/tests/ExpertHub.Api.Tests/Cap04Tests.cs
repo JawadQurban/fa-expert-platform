@@ -381,37 +381,96 @@ public sealed class Cap04Tests
         Assert.Equal("سارة العتيبي", card.GetProperty("name").GetString());
         Assert.Equal(1, listed.GetProperty("programsDelivered").GetInt32());
 
-        var publicProfile = await (await anonymous.GetAsync($"/api/v1/directory/{trainerId}"))
-            .Content.ReadAsStringAsync();
         /*
-         * What the public profile may carry, asserted on the RAW payload so a
-         * field added later cannot slip through unnoticed.
+         * What the public payloads may carry — an ALLOW-LIST of property names,
+         * so a field added later fails here instead of slipping through a
+         * substring scan that only knew five names (UI-27).
          *
-         * ⚠️ `classification` moved from the forbidden list to the permitted
-         * one on the owner's ruling of 2026-09-09 — «make it match» — together
-         * with the trainer's delivery city. The Academy's accreditation of
-         * somebody is what a directory of accredited people is for, and the
-         * city is where they teach, not where they live.
-         *
-         * The rest of the list stands, and matters more for having survived a
-         * widening: a public payload still carries no file status, no
-         * evaluation, no rating, no email and nothing about an agreement.
+         * `P-335` (2026-10-06) fixes the list: name, field (specialties),
+         * approved short bio, programmes delivered, personal photo and
+         * classification. City is no longer published, and the delivered
+         * programmes carry no internal `TRAINER_RECORD` id.
          */
-        Assert.Contains("برنامج القيادة", publicProfile, StringComparison.Ordinal);
-        Assert.Contains("classification", publicProfile, StringComparison.OrdinalIgnoreCase);
-        foreach (var forbidden in new[]
-        {
-            "fileStatus", "evaluation", "rating", "email", "agreement",
-        })
-        {
-            Assert.DoesNotContain(forbidden, publicProfile, StringComparison.OrdinalIgnoreCase);
-        }
+        static string[] Names(JsonElement e) =>
+            [.. e.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal)];
+        Assert.Equal(
+            ["items", "page", "pageCount", "pageSize", "programsDelivered", "specialtiesRepresented",
+                "totalConsented", "totalCount"],
+            Names(listed));
+        Assert.Equal(
+            ["classification", "id", "name", "photoUrl", "programsDelivered", "specialties"],
+            Names(card));
+        var publicProfile = await GetAsync(anonymous, $"/api/v1/directory/{trainerId}");
+        Assert.Equal(
+            ["bio", "classification", "deliveredPrograms", "id", "name", "photoUrl", "specialties"],
+            Names(publicProfile));
+        var program = publicProfile.GetProperty("deliveredPrograms").EnumerateArray().Single();
+        Assert.Equal(["name", "year"], Names(program));
+        Assert.Equal("برنامج القيادة", program.GetProperty("name").GetString());
+
+        // No stored photo yet → no photo URL, and the photo route is the same
+        // 404 as an unknown trainer.
+        Assert.Equal(JsonValueKind.Null, card.GetProperty("photoUrl").ValueKind);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await anonymous.GetAsync($"/api/v1/directory/{trainerId}/photo")).StatusCode);
+
+        // The photo uploaded with the application is published — the image and
+        // nothing else, through the directory's own route, never an attachment id.
+        var pixel = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+        await SeedPhotoAsync(trainerId, pixel, "image/png");
+        var withPhoto = (await GetAsync(anonymous, "/api/v1/directory?page=1&pageSize=10"))
+            .GetProperty("items").EnumerateArray().Single();
+        Assert.Equal($"/v1/directory/{trainerId:D}/photo", withPhoto.GetProperty("photoUrl").GetString());
+        using var photo = await anonymous.GetAsync($"/api/v1/directory/{trainerId}/photo");
+        Assert.Equal(HttpStatusCode.OK, photo.StatusCode);
+        Assert.Equal("image/png", photo.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(pixel, await photo.Content.ReadAsByteArrayAsync());
 
         // Turning consent off removes them again — the directory reads the
         // column, so there is no cached copy to go stale.
         await PostAsync(applicant, "/api/v1/me/profile/visibility", new { consent = false });
         var afterOptOut = await GetAsync(anonymous, "/api/v1/directory?page=1&pageSize=10");
         Assert.Empty(afterOptOut.GetProperty("items").EnumerateArray());
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await anonymous.GetAsync($"/api/v1/directory/{trainerId}/photo")).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_public_photo_route_serves_only_an_image()
+    {
+        using var applicant = await SignInAsync("cap04-photo-type", "مدرب", null);
+        var (trainerId, _) = await ActivatedTrainerAsync(applicant, "cap04-photo-type");
+        await PostAsync(applicant, "/api/v1/me/profile/visibility", new { consent = true });
+        // A `photo` slot holding a PDF is treated as no photo, not handed to a browser.
+        await SeedPhotoAsync(trainerId, "%PDF-1.4"u8.ToArray(), "application/pdf");
+        using var anonymous = TestOidc.CreateClient(_configured!);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await anonymous.GetAsync($"/api/v1/directory/{trainerId}/photo")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await anonymous.GetAsync("/api/v1/directory/not-a-guid/photo")).StatusCode);
+    }
+
+    private async Task SeedPhotoAsync(Guid trainerId, byte[] bytes, string mimeType)
+    {
+        await using var db = _database.CreateContext();
+        var profile = await db.TrainerProfiles.SingleAsync(p => p.TrainerId == trainerId);
+        var blob = new DocumentBlob
+        {
+            BlobId = Guid.NewGuid(), Content = bytes, MimeType = mimeType,
+            FileName = "me", StoredAt = DateTime.UtcNow,
+        };
+        db.DocumentBlobs.Add(blob);
+        var file = new Attachment
+        {
+            AttachmentId = Guid.NewGuid(), FileName = "me", MimeType = mimeType,
+            SizeBytes = bytes.Length, StorageRef = $"db:{blob.BlobId:D}",
+            UploadedBy = profile.UserId, UploadedAt = DateTime.UtcNow,
+        };
+        db.Attachments.Add(file);
+        var row = await db.ApplicationAttachments.SingleAsync(
+            a => a.ApplicationId == profile.ApplicationId && a.RuleCode == "photo");
+        row.AttachmentId = file.AttachmentId;
+        await db.SaveChangesAsync();
     }
 
     [Fact]
@@ -839,6 +898,7 @@ public sealed class Cap04Tests
             $"/api/v1/internal/applications/{applicationId}/agreement/preparation",
             new
             {
+                documentAttachmentId = await TestDocuments.AgreementFileAsync(manager),
                 values = new Dictionary<string, string>
                 {
                     ["startDate"] = "2026-09-01",

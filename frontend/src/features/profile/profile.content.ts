@@ -361,7 +361,7 @@ const ar: ProfileContent = {
   visibility: {
     heading: 'الظهور في الدليل العام',
     description:
-      'عند التفعيل يظهر ملفك في دليل الخبراء العام، ويمكن للزوار الاطّلاع على بياناتك المعتمدة ونبذتك المختصرة بعد اعتمادها. يسري التغيير فورًا.',
+      'عند التفعيل يظهر ملفك في دليل الخبراء العام. سيظهر للزوار: الاسم، والمجال، والنبذة المختصرة بعد اعتمادها، والبرامج المقدمة مع الأكاديمية، والصورة الشخصية، والتصنيف. يسري التغيير فورًا.',
     toggleLabel: 'إظهار ملفي في الدليل العام',
     toggleOnDescription: 'ملفك ظاهر حاليًا في الدليل العام.',
     on: 'ظاهر',
@@ -589,7 +589,7 @@ const en: ProfileContent = {
   visibility: {
     heading: 'Visibility in the public directory',
     description:
-      'When enabled, your profile appears in the public expert directory and visitors can view your accredited data and, once approved, your short bio. The change takes effect immediately.',
+      'When enabled, your profile appears in the public expert directory. Visitors will see: your name, field, short bio (once approved), programmes delivered with the Academy, personal photo and classification. The change takes effect immediately.',
     toggleLabel: 'Show my profile in the public directory',
     toggleOnDescription: 'Your profile is currently visible in the public directory.',
     on: 'Visible',

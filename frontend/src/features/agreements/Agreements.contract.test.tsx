@@ -98,7 +98,12 @@ describe('RB-05/06 contract — the agreement document against the real API resp
 
   it('the document endpoint and the detail serve one shape, and the mocks serve exactly the fixtures’ keys', async () => {
     expect(keyPaths(doc)).toEqual(keyPaths(documentFixture));
-    expect(keyPaths(applicantAgreement.document)).toEqual(keyPaths(documentFixture));
+    // `P-334` — the applicant's projection is the staff document minus the
+    // template name, version and hash.
+    const staffOnly = ['.templateName', '.templateVersion', '.contentHash'];
+    expect(keyPaths(applicantAgreement.document)).toEqual(
+      keyPaths(documentFixture).filter((path) => !staffOnly.includes(path))
+    );
 
     const internal = await createMockAgreementProvider({
       latencyMs: 0,
@@ -131,8 +136,10 @@ describe('RB-05/06 contract — the agreement document against the real API resp
     await renderInternal(nonCreatorDetail);
 
     const section = screen.getByRole('region', { name: content.document.heading });
-    // The fixed legal text.
-    expect(within(section).getByText(doc.bodyText)).toBeInTheDocument();
+    // `P-333` — the uploaded agreement file, offered to every internal reader.
+    expect(
+      within(section).getByRole('link', { name: content.document.openFile(doc.documentFileName) })
+    ).toHaveAttribute('href', expect.stringContaining(doc.documentUrl));
     // A creator-entered term — label and value.
     expect(within(section).getByText('تاريخ بداية الاتفاقية')).toBeInTheDocument();
     expect(within(section).getByText('2026-09-01')).toBeInTheDocument();
@@ -168,11 +175,15 @@ describe('RB-05/06 contract — the agreement document against the real API resp
         contentHash: null,
         createdAt: null,
         snapshot: false,
+        // Prepared before files were uploaded: the template text is what exists.
+        bodyText: 'نص الاتفاقية القديم.',
+        documentFileName: null,
+        documentUrl: null,
       },
     });
 
     expect(screen.getByText(content.document.liveTitle)).toBeInTheDocument();
-    expect(screen.getByText(doc.bodyText)).toBeInTheDocument();
+    expect(screen.getByText('نص الاتفاقية القديم.')).toBeInTheDocument();
     expect(screen.queryByText((text) => text.startsWith(versionPrefix(0)))).not.toBeInTheDocument();
     expect(
       screen.queryByText(content.document.hashLabel, { exact: false })
@@ -186,7 +197,10 @@ describe('RB-05/06 contract — the agreement document against the real API resp
     );
     const { document: served } = applicantAgreement;
 
-    expect(screen.getByText(served.bodyText)).toBeInTheDocument();
+    // `P-334` — no template version and no hash on the applicant's side.
+    expect(
+      screen.queryByText(content.document.hashLabel, { exact: false })
+    ).not.toBeInTheDocument();
     expect(screen.getByText('تاريخ بداية الاتفاقية')).toBeInTheDocument();
     expect(screen.getByText('2026-10-01')).toBeInTheDocument();
     expect(screen.getByText('agr-safe-1-applicant@test.fa.gov.sa')).toBeInTheDocument();
@@ -196,10 +210,10 @@ describe('RB-05/06 contract — the agreement document against the real API resp
     expect(
       screen.getByText(content.document.signatureMethods['internal-acceptance'])
     ).toBeInTheDocument();
-    // No PDF exists, so no download link is offered.
+    // `P-333` — the uploaded agreement file, once.
     expect(
-      screen.queryByRole('link', { name: applicantContent.agreementPreview.download })
-    ).not.toBeInTheDocument();
+      screen.getAllByRole('link', { name: applicantContent.agreementPreview.download })
+    ).toHaveLength(1);
 
     // Signing is kept, and the dialog says what is actually recorded.
     await user.click(screen.getByRole('button', { name: applicantContent.agreementDecision.sign }));
@@ -214,7 +228,9 @@ describe('RB-05/06 contract — the agreement document against the real API resp
       agreementState: 'modification-requested',
     });
 
-    expect(screen.getByText(applicantAgreement.document.bodyText)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: applicantContent.agreementPreview.download })
+    ).toBeInTheDocument();
     expect(
       screen.getByText(applicantContent.agreementDecision.modificationNotice)
     ).toBeInTheDocument();

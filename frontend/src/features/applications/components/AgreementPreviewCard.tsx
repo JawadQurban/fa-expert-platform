@@ -4,6 +4,7 @@ import { useLocale } from '@i18n/LocaleProvider';
 import { AgreementDocumentView } from '../../agreements/components/AgreementDocumentView';
 import type { ApplicantAgreementDto } from '../applicationDetail.types';
 import type { ApplicationDetailContent } from '../applicationDetail.content';
+import { apiUrl } from '../../../shared/services/apiClient';
 import styles from './AgreementPreviewCard.module.css';
 
 /**
@@ -50,7 +51,7 @@ export function AgreementPreviewCard({
           <Button
             variant="secondary"
             size="md"
-            href={agreement.documentUrl}
+            href={apiUrl(agreement.documentUrl)}
             iconStart={<Icon name="download-01" size="sm" decorative />}
           >
             {copy.download}
@@ -63,7 +64,7 @@ export function AgreementPreviewCard({
         </Alert>
       )}
 
-      <AgreementDocumentView document={agreement.document} locale={locale} />
+      <AgreementDocumentView document={agreement.document} locale={locale} fileLink={false} />
     </Card>
   );
 }

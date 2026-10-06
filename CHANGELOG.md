@@ -9,6 +9,42 @@ The history before this repository existed is in
 
 ---
 
+## [1.4.1] — 2026-10-06 — The business-review decisions (`P-333`–`P-340`)
+
+The owner answered the 13 open decisions from the 2026-10-01 review. This work
+was done in the previous repository's working tree on the same day, and was
+ported here before the first deployment from this repository.
+
+- **The agreement is a file uploaded per trainer** (`P-333`). At preparation the
+  creator uploads that trainer's agreement (PDF/DOC/DOCX, 1 MB); the signers and
+  the applicant read and sign that file, and its SHA-256 is the version's hash.
+  The DM-GAP-16 placeholder text no longer reaches anyone. The trainer can
+  download their file once it is sent to them.
+- **Template version and hash are staff-only** (`P-334`); the applicant's
+  document wire no longer carries them.
+- **The public profile publishes exactly** name, field, short bio, programmes
+  delivered, personal photo and classification (`P-335`). City is no longer
+  public; the photo is new, served by `GET v1/directory/{id}/photo` (consenting,
+  listable trainers only; images only). The «معتمد» badge is gone from the card
+  (classification shows as text). The raw `TRAINER_RECORD` id left
+  `deliveredPrograms`. The consent screen lists the six items. The backend
+  privacy test is now a property allow-list on both public endpoints.
+- **Wording** (`P-339`): one «تقديم طلب جديد» button on an empty My
+  Applications; Portal Home's cards use My Applications' labels.
+- **Pagination** (`P-340`): already renders Latin digits — the review was
+  wrong; a Design System test now pins it (test-only change).
+- No change, by ruling: bank name stays free text (`P-336`); «إسناد»/«ارتباط»
+  kept (`P-339`). Waiting: programmes delivered from FAST (`P-337`, no FAST
+  endpoint), the specialization list (`P-338`).
+- The FA portal API register (`docs/integrations/fast-portal-api-register.md`) is
+  generated from the saved swagger by `tools/fast-api/build-register.py`
+  (353 operations).
+
+Migration **M40** (additive: `AGREEMENT.document_attachment_id`,
+`AGREEMENT_DOCUMENT_VERSION.attachment_id`).
+
+---
+
 ## [1.4.0] — 2026-10-06 — Own repository
 
 Expert Hub was extracted from `financial-academy-hackathon` (commit `15bbe0c`)

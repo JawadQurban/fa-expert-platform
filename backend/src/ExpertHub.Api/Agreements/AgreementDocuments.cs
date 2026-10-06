@@ -18,9 +18,11 @@ internal sealed record DocumentFieldWire(string Id, LocalizedTextWire Label, str
 /// <remarks>
 /// <c>Snapshot</c> is false only for an agreement prepared before versions were
 /// recorded: its content is then rendered from the live rows and labelled so,
-/// never presented as a frozen record it is not. There is no PDF: nothing
-/// generates one, and none is pretended (<c>SignatureMethod</c> says how
-/// acceptance is captured — internal, not a qualified e-signature).
+/// never presented as a frozen record it is not. Since `P-333` the document is
+/// the file the creator uploaded (<c>DocumentUrl</c>); the template body is
+/// carried only for versions that predate it. <c>SignatureMethod</c> says how
+/// acceptance is captured — internal, not a qualified e-signature. This is the
+/// STAFF wire: the applicant gets <see cref="ApplicantAgreementDocumentWire"/>.
 /// </remarks>
 internal sealed record AgreementDocumentWire(
     string? DocumentVersionId,
@@ -33,7 +35,34 @@ internal sealed record AgreementDocumentWire(
     string? ContentHash,
     string? CreatedAt,
     bool Snapshot,
-    string SignatureMethod);
+    string SignatureMethod,
+    string? DocumentFileName,
+    string? DocumentUrl);
+
+/// <summary>
+/// The applicant's view of the same version. `P-334`: no template version and
+/// no content hash — both stay stored and on the staff wire, as evidence of
+/// which exact file was signed. With an uploaded file there is no body text
+/// either, so the template's placeholder never reaches the trainer (`P-333`).
+/// </summary>
+internal sealed record ApplicantAgreementDocumentWire(
+    string? DocumentVersionId,
+    int VersionNumber,
+    string? BodyText,
+    IReadOnlyList<DocumentFieldWire> Fields,
+    IReadOnlyList<MergedGroupWire> MergedData,
+    string? CreatedAt,
+    bool Snapshot,
+    string SignatureMethod,
+    string? DocumentFileName,
+    string? DocumentUrl)
+{
+    internal static ApplicantAgreementDocumentWire From(AgreementDocumentWire w) => new(
+        w.DocumentVersionId, w.VersionNumber,
+        w.DocumentUrl is null ? w.BodyText : null,
+        w.Fields, w.MergedData, w.CreatedAt, w.Snapshot, w.SignatureMethod,
+        w.DocumentFileName, w.DocumentUrl);
+}
 
 /// <summary>Agreement content versions, the active signing chain, and the
 /// document wire — one place, so every endpoint reads them the same way.</summary>
@@ -84,11 +113,19 @@ internal static class AgreementDocuments
         var merged = await AgreementEndpoints.BuildMergedDataAsync(db, agreement, ct);
         var fieldsJson = JsonSerializer.Serialize(fields, WireJson);
         var mergedJson = JsonSerializer.Serialize(merged, WireJson);
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+        // `P-333` — with an uploaded file, the file IS the document: its hash is
+        // the SHA-256 of its bytes (recorded at upload), and no template body is
+        // frozen, so the placeholder text cannot reach a signer or the applicant.
+        var file = agreement.DocumentAttachmentId is { } fileId
+            ? await db.Attachments.SingleAsync(a => a.AttachmentId == fileId, ct)
+            : null;
+        var body = file is null ? template.BodyText : string.Empty;
+        var hash = file?.Checksum ?? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             string.Join("", template.Version, template.BodyText, fieldsJson, mergedJson))));
 
         var latest = await LatestAsync(db, agreement.AgreementId, ct);
-        if (latest is not null && latest.ContentHash == hash)
+        if (latest is not null && latest.ContentHash == hash && latest.AttachmentId == file?.AttachmentId
+            && latest.Fields == fieldsJson && latest.MergedData == mergedJson)
         {
             return latest;
         }
@@ -100,10 +137,11 @@ internal static class AgreementDocuments
             TemplateId = template.TemplateId,
             TemplateName = template.Name,
             TemplateVersion = template.Version,
-            BodyText = template.BodyText,
+            BodyText = body,
             Fields = fieldsJson,
             MergedData = mergedJson,
             ContentHash = hash,
+            AttachmentId = file?.AttachmentId,
             CreatedBy = actorUserId,
             CreatedAt = now,
         };
@@ -119,6 +157,10 @@ internal static class AgreementDocuments
         var latest = await LatestAsync(db, agreement.AgreementId, ct);
         if (latest is not null)
         {
+            var fileName = latest.AttachmentId is { } fileId
+                ? await db.Attachments.Where(a => a.AttachmentId == fileId)
+                    .Select(a => a.FileName).SingleAsync(ct)
+                : null;
             return new AgreementDocumentWire(
                 latest.DocumentVersionId.ToString(),
                 latest.VersionNumber,
@@ -130,7 +172,9 @@ internal static class AgreementDocuments
                 latest.ContentHash,
                 ApplicationEndpoints.Iso(latest.CreatedAt),
                 Snapshot: true,
-                SignatureMethods.InternalAcceptance);
+                SignatureMethods.InternalAcceptance,
+                fileName,
+                latest.AttachmentId is { } id ? Documents.AttachmentUploads.DownloadUrl(id) : null);
         }
         var template = agreement.TemplateId is { } templateId
             ? await db.AgreementTemplates.SingleAsync(t => t.TemplateId == templateId, ct)
@@ -146,7 +190,9 @@ internal static class AgreementDocuments
             null,
             null,
             Snapshot: false,
-            SignatureMethods.InternalAcceptance);
+            SignatureMethods.InternalAcceptance,
+            null,
+            null);
     }
 
     private static List<DocumentFieldWire> FieldsOf(string fieldMap, string fieldValues)

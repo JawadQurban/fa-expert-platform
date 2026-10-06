@@ -50,21 +50,20 @@ describe('EH-PUB-03 — Public Trainer Profile', () => {
     );
   });
 
-  // J-24/F2/AC-1 is an EXHAUSTIVE enumeration ("no financial or sensitive
-  // personal data"). This is the regression guard for the fields removed on
-  // 2026-08-19 — `DECISIONS.md` P-40/P-41.
-  it('publishes nothing outside the J-24 enumeration (no rating, classification, or bio)', async () => {
+  // `P-335` (2026-10-06) fixes what the public profile shows: name, field,
+  // short bio, programmes delivered, photo and classification — no rating
+  // (`P-40`/`P-41`) and no city.
+  it('publishes the P-335 set: classification as text, no rating, no city', async () => {
     renderProfile('trn-001');
     await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
     // No star rating anywhere — the DS `Rating` renders role="img".
     expect(screen.queryByRole('img', { name: /من 5/ })).not.toBeInTheDocument();
-    // The classification vocabulary is trainer-private; none of it is on the page.
+    // Classification is shown, as plain text.
     const classifications = getTrainerClassificationLabels('ar');
-    for (const label of Object.values(classifications)) {
-      expect(screen.queryByText(label)).not.toBeInTheDocument();
-    }
-    // The former free-text bio (`BR-1004` corrected: no such field exists).
-    expect(screen.queryByText(/خبيرة معتمدة في القيادة التنفيذية/)).not.toBeInTheDocument();
+    const shown = Object.values(classifications).filter((label) => screen.queryByText(label));
+    expect(shown).toHaveLength(1);
+    // City is no longer published.
+    expect(screen.queryByText('الرياض')).not.toBeInTheDocument();
   });
 
   it('P-331: shows the approved short bio when the trainer has one', async () => {

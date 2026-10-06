@@ -193,25 +193,25 @@ describe('EH-TP-03 — Application Details', () => {
 
   /* ── J-11 Applicant Signing & Activation ───────────────────────────────── */
 
-  it('J-11/F1/AC-2: shows the whole agreement document, and says no PDF download exists', async () => {
+  it('J-11/F1/AC-2: shows the whole agreement — the uploaded file, the terms and the data (P-333/P-334)', async () => {
     await renderDetail('app-011'); // agreement-pending → decide
     expect(
       screen.getByRole('heading', { name: content.agreementPreview.heading })
     ).toBeInTheDocument();
-    // The complete document in-page — legal text, the creator's terms, merged data.
-    expect(screen.getByRole('heading', { name: documentCopy.bodyHeading })).toBeInTheDocument();
-    expect(screen.getByText(MOCK_AGREEMENT_BODY_TEXT)).toBeInTheDocument();
+    // `P-333` — the trainer's own uploaded agreement, offered once; no template text.
+    expect(screen.getAllByRole('link', { name: content.agreementPreview.download })).toHaveLength(
+      1
+    );
+    expect(screen.queryByText(MOCK_AGREEMENT_BODY_TEXT)).not.toBeInTheDocument();
     expect(screen.getByText('تاريخ بداية الاتفاقية')).toBeInTheDocument();
     expect(screen.getByText('رقم الآيبان')).toBeInTheDocument();
+    // `P-334` — no template version and no content hash for the applicant.
+    expect(screen.queryByText(documentCopy.hashLabel, { exact: false })).not.toBeInTheDocument();
+    expect(screen.queryByText(/mock-dm-gap-16/)).not.toBeInTheDocument();
     // How acceptance is recorded — an internal acceptance, not a certified e-signature.
     expect(
       screen.getByText(documentCopy.signatureMethods['internal-acceptance'])
     ).toBeInTheDocument();
-    // No fabricated download link while document storage is unresolved.
-    expect(screen.getByText(content.agreementPreview.downloadUnavailable)).toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: content.agreementPreview.download })
-    ).not.toBeInTheDocument();
   });
 
   it('J-11/F1: offers exactly the three decisions, and no PDF upload', async () => {

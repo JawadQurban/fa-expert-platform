@@ -13,6 +13,7 @@ import { getPublicProfileContent } from './directory.content';
 import styles from './PublicTrainerProfilePage.module.css';
 import { PageLoadError } from '../../shared/components/PageLoadError';
 import { formatNumber } from '../../shared/formatting';
+import { apiUrl } from '../../shared/services/apiClient';
 
 /**
  * EH-PUB-03 — Public Trainer Profile (`/expert-hub/directory/:trainerId`,
@@ -156,7 +157,13 @@ export default function PublicTrainerProfilePage() {
       <section className={styles.band} aria-labelledby="eh-profile-title">
         <Container>
           <div className={styles.bandInner}>
-            <Avatar name={trainer.name} size="3xl" border decorative />
+            <Avatar
+              name={trainer.name}
+              src={trainer.photoUrl == null ? undefined : apiUrl(trainer.photoUrl)}
+              size="3xl"
+              border
+              decorative
+            />
             <div className={styles.identity}>
               <Typography
                 as="h1"
@@ -166,6 +173,10 @@ export default function PublicTrainerProfilePage() {
                 tabIndex={-1}
               >
                 {trainer.name}
+              </Typography>
+              {/* `P-335` — classification is published as text, never a badge. */}
+              <Typography as="p" variant="text-md" color="inverse">
+                {content.classifications[trainer.classification]}
               </Typography>
               <div className={styles.specialtiesBlock}>
                 <Typography as="h2" variant="text-sm" weight="bold" color="inverse">
@@ -232,8 +243,12 @@ export default function PublicTrainerProfilePage() {
               </Typography>
             ) : (
               <ul className={styles.programsList}>
-                {trainer.deliveredPrograms.map((program) => (
-                  <li key={program.id} className={styles.programRow}>
+                {trainer.deliveredPrograms.map((program, index) => (
+                  // No id on the wire (`P-335`); position + content is stable for a static list.
+                  <li
+                    key={`${index}-${program.name}-${program.year}`}
+                    className={styles.programRow}
+                  >
                     <Typography as="span" variant="text-md">
                       {program.name}
                     </Typography>

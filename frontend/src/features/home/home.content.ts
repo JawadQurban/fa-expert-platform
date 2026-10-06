@@ -108,8 +108,8 @@ const ar: HomeContent = {
   metricsLabel: 'مؤشرات سريعة',
   metrics: {
     total: 'إجمالي الطلبات',
-    inProgress: 'قيد المعالجة',
-    approved: 'معتمدة',
+    inProgress: 'الطلبات قيد المعالجة',
+    approved: 'الطلبات المعتمدة',
     programs: 'البرامج',
   },
   rating: {
@@ -192,8 +192,8 @@ const en: HomeContent = {
   metricsLabel: 'At a glance',
   metrics: {
     total: 'Total applications',
-    inProgress: 'In progress',
-    approved: 'Approved',
+    inProgress: 'Applications in progress',
+    approved: 'Approved applications',
     programs: 'Programs',
   },
   rating: {

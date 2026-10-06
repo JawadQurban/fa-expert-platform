@@ -126,16 +126,28 @@ public sealed class Cap03Tests
             new { values = new Dictionary<string, string> { ["startDate"] = "2026-09-01" } });
         Assert.Equal(HttpStatusCode.BadRequest, missingFields.StatusCode);
 
+        // P-333 — the document is the trainer's own uploaded file: preparing
+        // without one is refused, and so is a file somebody else uploaded.
+        var agreementValues = new Dictionary<string, string>
+        {
+            ["startDate"] = "2026-09-01",
+            ["endDate"] = "2027-09-01",
+        };
+        var noFile = await world.Creator.PostAsJsonAsync(
+            $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
+            new { values = agreementValues });
+        Assert.Equal(HttpStatusCode.BadRequest, noFile.StatusCode);
+        Assert.Contains("agreement-document-required", await noFile.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        var someoneElsesFile = await world.Creator.PostAsJsonAsync(
+            $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
+            new { values = agreementValues, documentAttachmentId = await TestDocuments.SeedAsync(_database) });
+        Assert.Equal(HttpStatusCode.BadRequest, someoneElsesFile.StatusCode);
+
+        var fileBytes = "%PDF-1.4 agreement for sara"u8.ToArray();
+        var fileId = await TestDocuments.AgreementFileAsync(world.Creator, fileBytes);
         var prepared = await PostAsync(world.Creator,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
-            new
-            {
-                values = new Dictionary<string, string>
-                {
-                    ["startDate"] = "2026-09-01",
-                    ["endDate"] = "2027-09-01",
-                },
-            });
+            new { documentAttachmentId = fileId, values = agreementValues });
         Assert.Equal("formation", prepared.GetProperty("stage").GetString());
         // F1/AC-3 — the covered services are server-derived.
         Assert.Equal("trainer",
@@ -200,9 +212,33 @@ public sealed class Cap03Tests
         Assert.Equal("awaiting-decision", applicantView.GetProperty("agreementState").GetString());
         Assert.True(applicantView.GetProperty("agreement")
             .GetProperty("dataGroups").GetArrayLength() >= 2);
-        // G26 — no fabricated download link.
-        Assert.Equal(JsonValueKind.Null,
-            applicantView.GetProperty("agreement").GetProperty("documentUrl").ValueKind);
+        // P-333 — the applicant reads the uploaded file, and no template text.
+        var applicantAgreement = applicantView.GetProperty("agreement");
+        Assert.Equal($"/v1/attachments/{fileId}", applicantAgreement.GetProperty("documentUrl").GetString());
+        var applicantDocument = applicantAgreement.GetProperty("document");
+        Assert.Equal(JsonValueKind.Null, applicantDocument.GetProperty("bodyText").ValueKind);
+        Assert.Equal("agreement.pdf", applicantDocument.GetProperty("documentFileName").GetString());
+        // P-334 — the template version and the hash are staff-only.
+        Assert.False(applicantDocument.TryGetProperty("templateVersion", out _));
+        Assert.False(applicantDocument.TryGetProperty("contentHash", out _));
+        Assert.False(applicantDocument.TryGetProperty("templateName", out _));
+        // …and they are still recorded: the hash is the SHA-256 of the file's bytes.
+        var staffDocument = await GetAsync(world.Creator,
+            $"/api/v1/internal/applications/{world.ApplicationId}/agreement/document");
+        Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(fileBytes)),
+            staffDocument.GetProperty("contentHash").GetString());
+        Assert.Equal(string.Empty, staffDocument.GetProperty("bodyText").GetString());
+        // The trainer can open their file; another applicant cannot.
+        using (var download = await world.Applicant.GetAsync($"/api/v1/attachments/{fileId}"))
+        {
+            Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+            Assert.Equal(fileBytes, await download.Content.ReadAsByteArrayAsync());
+        }
+        using (var stranger = await SignInAsync("agr-1-stranger", "unmapped", "شخص آخر"))
+        {
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await stranger.GetAsync($"/api/v1/attachments/{fileId}")).StatusCode);
+        }
 
         // AC-3 — signing needs an actual signature…
         var unsigned = await world.Applicant.PostAsJsonAsync(
@@ -449,7 +485,7 @@ public sealed class Cap03Tests
         // The creator corrects the start date — a NEW version, the first kept.
         await PostAsync(world.Creator,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
-            new { values = new Dictionary<string, string> { ["startDate"] = "2026-10-01", ["endDate"] = "2027-10-01" } });
+            new { documentAttachmentId = await TestDocuments.AgreementFileAsync(world.Creator), values = new Dictionary<string, string> { ["startDate"] = "2026-10-01", ["endDate"] = "2027-10-01" } });
         await PostAsync(world.Creator,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/signing-sequence",
             new
@@ -468,14 +504,15 @@ public sealed class Cap03Tests
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/decisions",
             new { kind = "sign-and-approve", note = "", signatureName = "أ. الموقّع" });
 
-        // The applicant reads the COMPLETE agreement — the legal text and the
-        // terms the creator entered — before accepting.
+        // The applicant reads the COMPLETE agreement — the uploaded file
+        // (`P-333`) and the terms the creator entered — before accepting.
         var detail = await GetAsync(world.Applicant, $"/api/v1/me/applications/{world.ApplicationId}");
         ContractFixtures.Verify("me.application-agreement", detail.GetProperty("agreement"));
         var document = detail.GetProperty("agreement").GetProperty("document");
         Assert.True(document.GetProperty("snapshot").GetBoolean());
         Assert.Equal(2, document.GetProperty("versionNumber").GetInt32());
-        Assert.False(string.IsNullOrWhiteSpace(document.GetProperty("bodyText").GetString()));
+        Assert.Equal(JsonValueKind.Null, document.GetProperty("bodyText").ValueKind);
+        Assert.StartsWith("/v1/attachments/", document.GetProperty("documentUrl").GetString(), StringComparison.Ordinal);
         Assert.Contains(document.GetProperty("fields").EnumerateArray(),
             f => f.GetProperty("id").GetString() == "startDate" && f.GetProperty("value").GetString() == "2026-10-01");
         Assert.Equal(SignatureMethods.InternalAcceptance, document.GetProperty("signatureMethod").GetString());
@@ -487,7 +524,11 @@ public sealed class Cap03Tests
         await using var check = _database.CreateContext();
         var versions = await check.AgreementDocumentVersions.OrderBy(v => v.VersionNumber).ToListAsync();
         Assert.Equal([1, 2], versions.Select(v => v.VersionNumber));
-        Assert.NotEqual(versions[0].ContentHash, versions[1].ContentHash);
+        // `P-333` — the hash is the FILE's. The correction changed the creator's
+        // fields, not the file, so a new version records the new fields while
+        // naming the same document bytes.
+        Assert.Equal(versions[0].ContentHash, versions[1].ContentHash);
+        Assert.NotEqual(versions[0].Fields, versions[1].Fields);
         var agreement = await check.Agreements.SingleAsync();
         Assert.Equal(versions[1].DocumentVersionId, agreement.ApplicantDocumentVersionId);
         Assert.Equal(SignatureMethods.InternalAcceptance, agreement.ApplicantSignatureMethod);
@@ -514,8 +555,10 @@ public sealed class Cap03Tests
         var before = await GetAsync(world.Reviewer,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/document");
         ContractFixtures.Verify("internal.agreement-document", before);
-        var originalBody = before.GetProperty("bodyText").GetString();
-        Assert.False(string.IsNullOrWhiteSpace(originalBody));
+        // `P-333` — the document is the uploaded file; no template text is frozen.
+        Assert.Equal(string.Empty, before.GetProperty("bodyText").GetString());
+        var originalFile = before.GetProperty("documentUrl").GetString();
+        Assert.NotNull(originalFile);
         Assert.Equal(1, before.GetProperty("versionNumber").GetInt32());
         Assert.Contains(before.GetProperty("fields").EnumerateArray(),
             f => f.GetProperty("value").GetString() == "2026-09-01");
@@ -541,12 +584,13 @@ public sealed class Cap03Tests
         {
             var history = await db.AgreementTemplateVersions.SingleAsync();
             Assert.Equal(originalVersion, history.Version);
-            Assert.Equal(originalBody, history.BodyText);
+            Assert.NotEqual("نص قانوني مُعدَّل.", history.BodyText);
         }
-        // …and the agreement already prepared still reads what it was prepared with.
+        // …and the agreement already prepared still reads the file it was prepared with.
         var after = await GetAsync(world.Reviewer,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/document");
-        Assert.Equal(originalBody, after.GetProperty("bodyText").GetString());
+        Assert.Equal(originalFile, after.GetProperty("documentUrl").GetString());
+        Assert.Equal(string.Empty, after.GetProperty("bodyText").GetString());
         Assert.Equal(1, after.GetProperty("versionNumber").GetInt32());
     }
 
@@ -566,7 +610,7 @@ public sealed class Cap03Tests
         // J-10/F4/AC-2 — the creator can now correct the content (was 409)…
         await PostAsync(world.Creator,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
-            new { values = new Dictionary<string, string> { ["startDate"] = "2026-09-01", ["endDate"] = "2027-08-31" } });
+            new { documentAttachmentId = await TestDocuments.AgreementFileAsync(world.Creator), values = new Dictionary<string, string> { ["startDate"] = "2026-09-01", ["endDate"] = "2027-08-31" } });
         // …and the chain RESUMES from the requester (AC-3), not from scratch.
         var resumed = await PostAsync(world.Creator,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/resubmit", null);
@@ -776,6 +820,7 @@ public sealed class Cap03Tests
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
             new
             {
+                documentAttachmentId = await TestDocuments.AgreementFileAsync(world.Creator),
                 values = new Dictionary<string, string>
                 {
                     ["startDate"] = "2026-09-01",

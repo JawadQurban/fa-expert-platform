@@ -168,14 +168,13 @@ describe('EH-TP-02 — My Applications', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows the first-time empty state with an Apply CTA when there are no applications', async () => {
+  it('shows the first-time empty state with exactly one «تقديم طلب جديد» link (P-339)', async () => {
     useSeed([]);
     await renderPage();
     expect(await screen.findByText(content.empty.noApplicationsTitle)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: content.actions.applyNow })).toHaveAttribute(
-      'href',
-      expertHubPaths.applicationsNew
-    );
+    const links = screen.getAllByRole('link', { name: content.actions.newApplication });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', expertHubPaths.applicationsNew);
   });
 
   it('shows the approved loading placeholder before data resolves', async () => {

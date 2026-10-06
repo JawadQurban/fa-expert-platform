@@ -202,11 +202,6 @@ export default function MyApplicationsPage() {
           icon={<Icon name="note-add" size="featured" tone="primary" decorative />}
           title={content.empty.noApplicationsTitle}
           description={content.empty.noApplicationsBody}
-          action={
-            <Button variant="primary" size="md" href={expertHubPaths.applicationsNew}>
-              {content.actions.applyNow}
-            </Button>
-          }
         />
       );
     }

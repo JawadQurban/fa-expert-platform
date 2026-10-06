@@ -2,6 +2,7 @@ using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
 using ExpertHub.Api.ServiceRequests;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Documents;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,11 +24,13 @@ namespace ExpertHub.Api.Profiles;
  * The two live in one file because their difference is the point, and it is
  * easier to keep honest side by side:
  *
- * - The PUBLIC projection carries name, specialties and delivered programmes
- *   and NOTHING else (J-24/F2/AC-1). No rating (`P-40`/`P-41`), no
- *   classification, no file status, no email — enforced by the projection
- *   itself, not by a view that remembers to omit them. Only trainers who
- *   turned consent ON appear at all (`BR-1002`/`BR-1007`).
+ * - The PUBLIC projection carries exactly what `P-335` lists — name, field
+ *   (specialties), approved short bio, programmes delivered with the Academy,
+ *   personal photo and classification — and NOTHING else. No rating
+ *   (`P-40`/`P-41`), no city, no file status, no email, no internal id —
+ *   enforced by the projection itself, not by a view that remembers to omit
+ *   them, and pinned by a property allow-list test. Only trainers who turned
+ *   consent ON appear at all (`BR-1002`/`BR-1007`).
  * - The INTERNAL projection adds exactly what J-15/F1/AC-1 enumerates, file
  *   status included (`BR-0408` keeps it internal — this is the surface it is
  *   allowed on).
@@ -39,49 +42,36 @@ namespace ExpertHub.Api.Profiles;
 /// One card in the public directory.
 /// </summary>
 /// <remarks>
-/// ⚠️ <b>This is a wider public projection than `J-24/F2/AC-1` originally
-/// enumerated</b>, on the owner's ruling of 2026-09-09: «make it match … the
-/// city is where this trainer provide course». Three fields were added, and
-/// each is a deliberate publication decision rather than a styling one:
-/// <list type="bullet">
-/// <item><b>City</b> — <i>where they deliver</i>, taken from the trainer's own
-/// `inPersonCities` answer. Not a home address: the owner's wording defines it
-/// as the place courses are given, which is service information a person
-/// choosing a trainer needs.</item>
-/// <item><b>Programmes delivered</b> — a count of what the profile already
-/// publishes in full, so it discloses nothing the profile does not.</item>
-/// <item><b>Classification</b> — «خبير معتمد» / «مدرب معتمد». ⚠️ This one
-/// REVERSES an earlier decision: `AC-1` omitted it and a test asserted it never
-/// reached a public payload. It is published now because the owner asked for
-/// the card to match, and because the Academy's accreditation of somebody is
-/// the directory's whole point.</item>
-/// </list>
-/// The consent gate is untouched: none of this is published for anybody who
-/// has not turned visibility on (`BR-1002`/`BR-1007`), and every field remains
-/// invisible until they do.
+/// ⚠️ Every field is a publication decision, not a styling one. `P-335`
+/// (2026-10-06) fixes the list: name, field, short bio (profile only),
+/// programmes delivered with the Academy, personal photo, classification.
+/// It supersedes the 2026-09-09 ruling for <b>city</b>, which is no longer
+/// published. <b>Classification</b> stays public as text; the «معتمد» badge
+/// that used to carry it was removed from the card. <b>The photo</b> is a URL
+/// to <c>/directory/{id}/photo</c>, never an attachment id. The consent gate is
+/// untouched: none of this reaches anybody for a trainer who has not turned
+/// visibility on (`BR-1002`/`BR-1007`).
 /// </remarks>
 internal sealed record PublicTrainerSummaryWire(
     string Id,
     string Name,
     IReadOnlyList<string> Specialties,
-    string? City,
     int ProgramsDelivered,
-    string Classification);
+    string Classification,
+    string? PhotoUrl);
 
-internal sealed record PublicProgramWire(string Id, string Name, int Year);
+/// <summary>A delivered programme — name and year only. The `TRAINER_RECORD`
+/// id is internal and is not published (`P-335`, UI-27).</summary>
+internal sealed record PublicProgramWire(string Name, int Year);
 
 /// <summary>
-/// The public profile. ⚠️ Carries the same three added fields as the summary
-/// (`PublicTrainerSummaryWire`): a directory that shows somebody's city and
-/// accreditation on the card and hides them on the page behind it would be
-/// incoherent, and a reader would reasonably wonder which one was the mistake.
+/// The public profile: the card's fields plus the programmes themselves and the
+/// APPROVED short bio (`P-331`), never a draft.
 /// </summary>
-/// `Bio` is the APPROVED short bio only (`P-331`), never a draft — and, like
-/// every field here, only for a trainer who consented.
 internal sealed record PublicTrainerProfileWire(
     string Id, string Name, IReadOnlyList<string> Specialties,
     IReadOnlyList<PublicProgramWire> DeliveredPrograms,
-    string? City, string Classification, string? Bio);
+    string Classification, string? Bio, string? PhotoUrl);
 
 internal sealed record DirectoryListWire(
     IReadOnlyList<PublicTrainerSummaryWire> Items, int TotalCount, int Page, int PageSize,
@@ -173,16 +163,7 @@ public static class DirectoryEndpoints
         v1.MapGet("/directory/{id}", async (
             string id, ExpertHubDbContext db, CancellationToken ct) =>
         {
-            if (!Guid.TryParse(id, out var trainerId))
-            {
-                return Results.Problem(statusCode: 404, detail: "Trainer not found.");
-            }
-            var profile = await db.TrainerProfiles.FirstOrDefaultAsync(
-                p => p.TrainerId == trainerId && p.VisibilityConsent, ct);
-            if (profile is not null && !(await ListableAsync(db, [profile], ct)).Contains(profile.TrainerId))
-            {
-                profile = null;
-            }
+            var profile = await PublicProfileAsync(db, id, ct);
             if (profile is null)
             {
                 // Without consent the profile is not "forbidden" — it is not
@@ -195,21 +176,45 @@ public static class DirectoryEndpoints
             var publicServices = await db.TrainerServices
                 .Where(s => s.TrainerId == profile.TrainerId)
                 .ToListAsync(ct);
-            var publicCity = await db.TrainerFieldValues
-                .Where(v => v.TrainerId == profile.TrainerId && v.FieldCode == "inPersonCities")
-                .Select(v => v.Value)
-                .FirstOrDefaultAsync(ct);
+            var photos = await PhotoAttachmentsAsync(db, [profile.ApplicationId], ct);
 
             return Results.Ok(new PublicTrainerProfileWire(
                 profile.TrainerId.ToString(),
                 user.FullNameAr,
                 TrainerProfileService.Specialties(),
-                [.. records.Select(r => new PublicProgramWire(
-                    r.RecordId.ToString(), r.ProgramNameAr, r.DeliveredFrom.Year))],
-                City: string.IsNullOrWhiteSpace(publicCity) ? null : publicCity,
+                [.. records.Select(r => new PublicProgramWire(r.ProgramNameAr, r.DeliveredFrom.Year))],
                 Classification: TrainerProfileService.Classification(publicServices),
-                Bio: await TrainerBioEndpoints.PublishedAsync(db, profile.TrainerId, ct)));
+                Bio: await TrainerBioEndpoints.PublishedAsync(db, profile.TrainerId, ct),
+                PhotoUrl: photos.ContainsKey(profile.ApplicationId) ? PhotoUrl(profile.TrainerId) : null));
         }).WithName("PublicTrainerProfile");
+
+        /*
+         * The personal photo (`P-335`) — the one file the directory publishes.
+         * The same gate as the profile, and the same identical 404 for a
+         * malformed id, an unknown trainer, a withheld one and one with no
+         * photo, so the route never tells anybody more than the profile would.
+         * Only an image is served: a `photo` slot holding anything else is
+         * treated as no photo rather than handed to an anonymous browser.
+         */
+        v1.MapGet("/directory/{id}/photo", async (
+            string id, HttpContext http, ExpertHubDbContext db, IDocumentStore store,
+            CancellationToken ct) =>
+        {
+            var profile = await PublicProfileAsync(db, id, ct);
+            var photo = profile is null
+                ? null
+                : (await PhotoAttachmentsAsync(db, [profile.ApplicationId], ct))
+                    .GetValueOrDefault(profile.ApplicationId);
+            var content = photo is null ? null : await store.GetAsync(photo.StorageRef, ct);
+            if (content is null || !content.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Problem(statusCode: 404, detail: "Trainer not found.");
+            }
+            // Short and public: a withdrawn consent must stop the photo soon,
+            // and nothing about it differs per viewer.
+            http.Response.Headers.CacheControl = "public, max-age=300";
+            return Results.File(content.Bytes, content.MimeType);
+        }).WithName("PublicTrainerPhoto");
 
         /* ── the internal trainer base — J-15 ──────────────────────────────── */
 
@@ -316,6 +321,37 @@ public static class DirectoryEndpoints
             .Select(p => p.TrainerId)];
     }
 
+    /// <summary>The trainer behind a public id, or null when the id is
+    /// malformed, unknown, not consenting or not listable — one answer for all
+    /// four, so the caller cannot tell them apart.</summary>
+    private static async Task<TrainerProfile?> PublicProfileAsync(
+        ExpertHubDbContext db, string id, CancellationToken ct)
+    {
+        if (!Guid.TryParse(id, out var trainerId))
+        {
+            return null;
+        }
+        var profile = await db.TrainerProfiles.FirstOrDefaultAsync(
+            p => p.TrainerId == trainerId && p.VisibilityConsent, ct);
+        return profile is not null && (await ListableAsync(db, [profile], ct)).Contains(profile.TrainerId)
+            ? profile
+            : null;
+    }
+
+    /// <summary>The `photo` attachment each application carries, by application.</summary>
+    private static async Task<Dictionary<Guid, Attachment>> PhotoAttachmentsAsync(
+        ExpertHubDbContext db, Guid[] applicationIds, CancellationToken ct) =>
+        (await (
+            from link in db.ApplicationAttachments
+            join file in db.Attachments on link.AttachmentId equals file.AttachmentId
+            where applicationIds.Contains(link.ApplicationId) && link.RuleCode == "photo"
+            select new { link.ApplicationId, file }).ToListAsync(ct))
+        .GroupBy(x => x.ApplicationId)
+        .ToDictionary(g => g.Key, g => g.First().file);
+
+    private static string PhotoUrl(Guid trainerId) =>
+        $"/{ExpertHub.Core.ApiVersions.V1}/directory/{trainerId:D}/photo";
+
     private static async Task<List<PublicTrainerSummaryWire>> ConsentedAsync(
         ExpertHubDbContext db, CancellationToken ct)
     {
@@ -330,7 +366,7 @@ public static class DirectoryEndpoints
         var listable = await ListableAsync(db, [.. consenting.Select(c => c.profile)], ct);
         var rows = consenting
             .Where(c => listable.Contains(c.profile.TrainerId))
-            .Select(c => new { c.profile.TrainerId, c.FullNameAr })
+            .Select(c => new { c.profile.TrainerId, c.profile.ApplicationId, c.FullNameAr })
             .ToList();
 
         var trainerIds = rows.Select(r => r.TrainerId).ToArray();
@@ -345,29 +381,17 @@ public static class DirectoryEndpoints
             .Where(s => trainerIds.Contains(s.TrainerId))
             .ToListAsync(ct);
 
-        /*
-         * Where they deliver — the trainer's own `inPersonCities` answer.
-         *
-         * ⚠️ Read from the trainer's field values rather than from any identity
-         * record, because the owner's ruling defines this as «where this
-         * trainer provide course». A home address would be a different fact
-         * with a different consent question attached to it, and this is not
-         * that.
-         */
-        var cities = await db.TrainerFieldValues
-            .Where(v => trainerIds.Contains(v.TrainerId) && v.FieldCode == "inPersonCities")
-            .ToDictionaryAsync(v => v.TrainerId, v => v.Value, ct);
+        var photos = await PhotoAttachmentsAsync(db, [.. rows.Select(r => r.ApplicationId)], ct);
 
         return [.. rows.Select(r => new PublicTrainerSummaryWire(
             r.TrainerId.ToString(),
             r.FullNameAr,
             TrainerProfileService.Specialties(),
-            City: cities.TryGetValue(r.TrainerId, out var city)
-                && !string.IsNullOrWhiteSpace(city) ? city : null,
             ProgramsDelivered: recordCounts
                 .FirstOrDefault(c => c.TrainerId == r.TrainerId)?.Count ?? 0,
             Classification: TrainerProfileService.Classification(
-                [.. services.Where(s => s.TrainerId == r.TrainerId)])))];
+                [.. services.Where(s => s.TrainerId == r.TrainerId)]),
+            PhotoUrl: photos.ContainsKey(r.ApplicationId) ? PhotoUrl(r.TrainerId) : null))];
     }
 
     private static async Task<List<(TrainerSearchResultWire Wire, Guid TrainerId)>>

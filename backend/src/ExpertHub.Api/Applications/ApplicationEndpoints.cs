@@ -376,7 +376,16 @@ public static class ApplicationEndpoints
              */
             var isStaff = http.User.HasClaim(
                 ExpertHubClaims.Role, ExpertHubClaims.InternalRole);
-            if (!isOwner && !isStaff)
+            // `P-333` — the trainer reads the agreement file staff uploaded for
+            // them, once it has been sent to them (and afterwards, as a record).
+            var isAgreementParty = !isOwner && !isStaff && await (
+                from version in db.AgreementDocumentVersions
+                join agreement in db.Agreements on version.AgreementId equals agreement.AgreementId
+                where version.AttachmentId == attachmentId
+                    && agreement.TrainerUserId == actor.UserId
+                    && (agreement.SentToApplicantAt != null || agreement.ApplicantDecidedAt != null)
+                select version).AnyAsync(ct);
+            if (!isOwner && !isStaff && !isAgreementParty)
             {
                 // Not "not found": the file exists and is simply not theirs.
                 return Results.Problem(statusCode: 403, title: "Forbidden",

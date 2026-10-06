@@ -73,7 +73,11 @@ internal sealed record AgreementDetailWire(
     AgreementViewerWire Viewer,
     AgreementDocumentWire? Document);
 
-internal sealed record PrepareInputWire(IReadOnlyDictionary<string, string>? Values);
+/// <summary>`DocumentAttachmentId` — `P-333`: the trainer's agreement file,
+/// uploaded first through <c>POST v1/internal/attachments</c> with purpose
+/// <c>agreement-document</c>. Required.</summary>
+internal sealed record PrepareInputWire(
+    IReadOnlyDictionary<string, string>? Values, string? DocumentAttachmentId);
 
 internal sealed record SigningMemberInputWire(string? ApproverId, string? Obligation, bool IsSigner);
 
@@ -159,6 +163,14 @@ public static class AgreementEndpoints
                 return Results.Problem(statusCode: 400, detail: "required-field-missing");
             }
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+            // `P-333` — the document everybody signs is the uploaded file. It
+            // must be one this preparer uploaded (never somebody else's file by
+            // id), and carry the checksum the upload recorded.
+            var document = await Documents.AttachmentUploads.FindAsync(db, input.DocumentAttachmentId, ct);
+            if (document is null || document.UploadedBy != actor.UserId || document.Checksum is null)
+            {
+                return Results.Problem(statusCode: 400, detail: "agreement-document-required");
+            }
             var now = DateTime.UtcNow;
 
             var existing = await db.Agreements.FirstOrDefaultAsync(
@@ -175,6 +187,7 @@ public static class AgreementEndpoints
                     Status = AgreementStatuses.Formation,
                     TermYears = 1, // BR-0302 — first accreditation.
                     FieldValues = JsonSerializer.Serialize(values),
+                    DocumentAttachmentId = document.AttachmentId,
                     CreatedBy = actor.UserId,
                     CreatedAt = now,
                 };
@@ -200,6 +213,7 @@ public static class AgreementEndpoints
                     return Results.Problem(statusCode: 409, detail: "Not editable at this stage.");
                 }
                 existing.FieldValues = JsonSerializer.Serialize(values);
+                existing.DocumentAttachmentId = document.AttachmentId;
                 if (existing.Status == AgreementStatuses.ModificationRequested)
                 {
                     // J-10/F4/AC-2 + AC-3 — an internal member asked for a

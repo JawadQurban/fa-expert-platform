@@ -3,6 +3,7 @@ import { Avatar, Link, Tag, Typography } from '@ds/primitives';
 import type { Locale } from '@/types';
 import { expertHubPaths } from '../../../app/router/paths';
 import { formatNumber } from '../../../shared/formatting';
+import { apiUrl } from '../../../shared/services/apiClient';
 import type { DirectoryContent } from '../directory.content';
 import type { PublicTrainerSummaryDto } from '../directory.types';
 import styles from './TrainerCard.module.css';
@@ -10,11 +11,10 @@ import styles from './TrainerCard.module.css';
 /**
  * One directory result card (EH-PUB-02 results grid).
  *
- * The card carries only what J-24 permits publicly: the trainer's name and
- * their specializations. The classification tag, the star rating and the brief
- * bio were removed on 2026-08-19 — J-24/F2/AC-1 (`BR-1004` corrected) enumerates
- * the public fields, and the journey's open item records that public evaluation
- * display is "fully removed for now".
+ * The card carries what `P-335` publishes: photo, name, field, programmes
+ * delivered and classification. Classification is plain text — the «معتمد»
+ * badge (a `Tag`) was removed by the same ruling — and city is no longer
+ * public. No rating (`P-40`/`P-41`).
  *
  * The name is the single discernible link to the public profile
  * (`05` EH-PUB-02 §18).
@@ -31,7 +31,13 @@ export function TrainerCard({
   return (
     <Card effect="stroke" className={styles.card}>
       <div className={styles.header}>
-        <Avatar name={trainer.name} size="xl" border decorative />
+        <Avatar
+          name={trainer.name}
+          src={trainer.photoUrl == null ? undefined : apiUrl(trainer.photoUrl)}
+          size="xl"
+          border
+          decorative
+        />
         <div className={styles.identity}>
           <Typography as="h2" variant="text-lg" weight="bold" className={styles.name}>
             <Link href={expertHubPaths.directoryProfile(trainer.id)} className={styles.nameLink}>
@@ -51,21 +57,12 @@ export function TrainerCard({
         ))}
       </ul>
 
-      {/*
-        City and programmes, as the kit sets them (EH-PUB-02). A definition
-        list because that is what they are — two labelled facts, not a layout.
-        The city is omitted rather than shown blank when the trainer has not
-        said where they deliver.
-      */}
+      {/* Labelled facts, not a layout — hence a definition list. */}
       <dl className={styles.facts}>
-        {trainer.city != null && (
-          <div className={styles.fact}>
-            <dt className={styles.factLabel}>{content.card.cityLabel}</dt>
-            <dd className={styles.factValue}>
-              <bdi>{trainer.city}</bdi>
-            </dd>
-          </div>
-        )}
+        <div className={styles.fact}>
+          <dt className={styles.factLabel}>{content.card.classificationLabel}</dt>
+          <dd className={styles.factValue}>{content.classifications[trainer.classification]}</dd>
+        </div>
         <div className={styles.fact}>
           <dt className={styles.factLabel}>{content.card.programsLabel}</dt>
           <dd className={styles.factValue}>{formatNumber(trainer.programsDelivered, locale)}</dd>
@@ -73,9 +70,6 @@ export function TrainerCard({
       </dl>
 
       <div className={styles.foot}>
-        <Tag variant="information" size="sm">
-          {content.classifications[trainer.classification]}
-        </Tag>
         {/*
           The visible label is the same on every card, so on its own it gives
           a screen-reader user a list of identical links (WCAG 2.4.4). The

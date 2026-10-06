@@ -5,6 +5,7 @@ import { getApplicationDetailContent } from './features/applications/application
 import { getDirectoryContent } from './features/directory/directory.content';
 import { getEngagementsContent } from './features/engagements/engagements.content';
 import { getProfileContent } from './features/profile/profile.content';
+import { getHomeContent } from './features/home/home.content';
 import { getHeaderContent } from './shared/content/header.content';
 
 /**
@@ -14,11 +15,11 @@ import { getHeaderContent } from './shared/content/header.content';
  * these comes back as a failure instead of a surprise in the next review. The
  * G-02 Latin-digit rule has its own guard in `shared/formatting.test.ts`.
  *
- * Items left out on purpose, because they are not implemented and a test
- * asserting the fixed behaviour would be a lie: UI-07 (the `DM-GAP-16`
- * placeholder agreement text), UI-09 (no bank reference list), UI-13 (the
- * public payload carries no accredited services), UI-15 (no short-bio field),
- * UI-16 (nothing populates `TRAINER_RECORD`). See
+ * The owner's 2026-10-06 answers (`P-333`–`P-340`) are pinned where they
+ * changed copy here; the agreement file (UI-07) and the public profile
+ * (UI-13/27/28) are covered by their own feature and contract tests. Still
+ * left out, because nothing is built: UI-09 (bank name stays free text by
+ * ruling) and UI-16 (programmes delivered await a FAST endpoint, `P-337`). See
  * `docs/reviews/business-review-2026-10-01.md`.
  */
 
@@ -29,6 +30,7 @@ const ar = {
   engagements: getEngagementsContent('ar'),
   profile: getProfileContent('ar'),
   header: getHeaderContent('ar'),
+  home: getHomeContent('ar'),
 };
 
 describe('UI-02 — My Applications description', () => {
@@ -44,12 +46,11 @@ describe('UI-03 — the "start a new application" CTA', () => {
     expect(ar.applications.actions.newApplication).toBe('تقديم طلب جديد');
   });
 
-  it('keeps the empty-state CTA distinct from it', () => {
-    // Both controls render on the same page and point at the same route, so
-    // giving them one label produced two links with the same accessible name
-    // (WCAG 2.4.4) — MyApplicationsPage.test.tsx caught it. Raised in the
-    // review document as a question for the business.
-    expect(ar.applications.actions.applyNow).not.toBe(ar.applications.actions.newApplication);
+  it('offers it once — the empty state no longer carries a second CTA (P-339)', () => {
+    // Owner ruling, item 11 «A»: one control labelled «تقديم طلب جديد». Two
+    // links with one name to one route was a WCAG 2.4.4 failure, so the empty
+    // state's own CTA was removed rather than relabelled.
+    expect('applyNow' in ar.applications.actions).toBe(false);
   });
 
   it('leaves the public header as an invitation to apply, not a "new" application', () => {
@@ -69,6 +70,13 @@ describe('UI-04 — application statistic cards', () => {
   it('keeps the application STATUS vocabulary untouched', () => {
     // The status map is the wire vocabulary, not a card label.
     expect(ar.applications.statuses.approved).not.toBe('الطلبات المعتمدة');
+  });
+});
+
+describe('UI-01/UI-04 — Portal Home uses the same card labels (P-339)', () => {
+  it('matches My Applications', () => {
+    expect(ar.home.metrics.inProgress).toBe(ar.applications.summary.underReview);
+    expect(ar.home.metrics.approved).toBe(ar.applications.summary.approved);
   });
 });
 
@@ -190,5 +198,23 @@ describe('UI-28 — public visibility status text', () => {
   it('keeps the on/off tag wording it already had', () => {
     expect(ar.profile.visibility.on).toBe('ظاهر');
     expect(ar.profile.visibility.off).toBe('غير ظاهر');
+  });
+});
+
+describe('UI-28 — the consent screen names what is published (P-335)', () => {
+  it('lists exactly the six published items', () => {
+    const text = ar.profile.visibility.description;
+    for (const item of [
+      'الاسم',
+      'المجال',
+      'النبذة المختصرة',
+      'البرامج المقدمة مع الأكاديمية',
+      'الصورة الشخصية',
+      'التصنيف',
+    ]) {
+      expect(text).toContain(item);
+    }
+    expect(text).not.toContain('بياناتك المعتمدة');
+    expect(text).not.toContain('المدينة');
   });
 });

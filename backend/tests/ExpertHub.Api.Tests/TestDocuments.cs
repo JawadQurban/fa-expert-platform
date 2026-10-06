@@ -39,6 +39,11 @@ internal static class TestDocuments
         return attachment.AttachmentId.ToString();
     }
 
+    /// <summary>`P-333` — an agreement file uploaded by the J-10 creator; returns its id.</summary>
+    internal static async Task<string> AgreementFileAsync(HttpClient creator, byte[]? bytes = null) =>
+        (await UploadInternalAsync(creator, "agreement-document", "agreement.pdf", bytes))
+            .GetProperty("attachmentId").GetString()!;
+
     /// <summary>Uploads through <c>POST v1/internal/attachments</c>.</summary>
     internal static async Task<JsonElement> UploadInternalAsync(
         HttpClient client, string purpose, string fileName = "document.pdf", byte[]? bytes = null)

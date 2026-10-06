@@ -29,7 +29,6 @@ export interface MyApplicationsContent {
     readonly viewDetails: string;
     readonly retry: string;
     readonly clearFilters: string;
-    readonly applyNow: string;
   };
   readonly filters: {
     readonly regionLabel: string;
@@ -96,7 +95,6 @@ const ar: MyApplicationsContent = {
     viewDetails: 'عرض التفاصيل',
     retry: 'إعادة المحاولة',
     clearFilters: 'مسح عوامل التصفية',
-    applyNow: 'قدّم طلب الانضمام',
   },
   filters: {
     regionLabel: 'تصفية الطلبات',
@@ -183,7 +181,6 @@ const en: MyApplicationsContent = {
     viewDetails: 'View details',
     retry: 'Try again',
     clearFilters: 'Clear filters',
-    applyNow: 'Apply to join',
   },
   filters: {
     regionLabel: 'Filter applications',

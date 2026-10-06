@@ -664,18 +664,20 @@ implemented, and a test asserting the fixed behaviour would be false.
 
 ## Open decisions, in one place
 
-| # | Decision needed | Blocks |
-|---|---|---|
-| 1 | Approved agreement template name, version and legal body text (DM-GAP-16) | UI-07 |
-| 2 | Should the applicant see `templateVersion` and `contentHash`? | UI-07 |
-| 3 | The Academy's approved bank list | UI-09 |
-| 4 | What "معتمد" means per service, and may the public payload carry the service list? | UI-13 |
-| 5 | ~~Is a trainer short bio wanted, who approves it, may it be public?~~ **Decided 2026-10-05 (`P-331`)**: AI-drafted from the CV, trainer confirms, trainer-management employee approves, public with consent. **Built** — the AI step waits on `Q28`, the rest works now | UI-15 |
-| 6 | Who populates `TRAINER_RECORD`, and from where? | UI-16, UI-14 |
-| 7 | The specialization taxonomy (`specialtiesRepresented` is always 0) | UI-14 |
-| 8 | «ارتباط» or «إسناد» for the engagement? | UI-22, UI-23 |
-| 9 | One CTA label with one visible control, or two distinct labels? | UI-03 |
-| 10 | Align Portal Home's card labels with My Applications? | UI-01, UI-04 |
-| 11 | Should the consent screen enumerate what gets published (city, classification)? | UI-28 |
-| 12 | Remove the raw `TRAINER_RECORD` id from the public profile payload? | UI-27 |
-| 13 | Latin digits in `Pagination` — Design System owner | UI-14 |
+Answered by the owner on 2026-10-06 (`P-333`–`P-340`), except where marked.
+
+| # | Decision needed | Blocks | Answer |
+|---|---|---|---|
+| 1 | Approved agreement template name, version and legal body text (DM-GAP-16) | UI-07 | **A file uploaded per trainer** (`P-333`) — built; the placeholder no longer reaches anyone |
+| 2 | Should the applicant see `templateVersion` and `contentHash`? | UI-07 | **Staff only** (`P-334`) — built |
+| 3 | The Academy's approved bank list | UI-09 | **Keep free text** (`P-336`) — no change |
+| 4 | What "معتمد" means per service, and may the public payload carry the service list? | UI-13 | **Remove the badge** (`P-335`) — built; classification stays public as text |
+| 5 | Is a trainer short bio wanted, who approves it, may it be public? | UI-15 | Decided 2026-10-05 (`P-331`) — built |
+| 6 | Who populates `TRAINER_RECORD`, and from where? | UI-16, UI-14 | **From FAST** (`P-337`) — ⚠️ not buildable yet: no `/fa-api` operation returns another person's delivered programmes |
+| 7 | The specialization taxonomy (`specialtiesRepresented` is always 0) | UI-14 | **The Academy will send the list** (`P-338`) — waiting |
+| 8 | «ارتباط» or «إسناد» for the engagement? | UI-22, UI-23 | **«إسناد» = offer, «ارتباط» = engagement** (`P-339`) — no change |
+| 9 | One CTA label with one visible control, or two distinct labels? | UI-03 | **One «تقديم طلب جديد» button** (`P-339`) — built |
+| 10 | Align Portal Home's card labels with My Applications? | UI-01, UI-04 | **Align** (`P-339`) — built |
+| 11 | Should the consent screen enumerate what gets published (city, classification)? | UI-28 | **Yes — name, field, bio, programmes, photo, classification; city no longer public** (`P-335`) — built |
+| 12 | Remove the raw `TRAINER_RECORD` id from the public profile payload? | UI-27 | **Remove** (`P-335`) — built, with a property allow-list test on both public endpoints |
+| 13 | Latin digits in `Pagination` — Design System owner | UI-14 | **Approved** (`P-340`) — it already renders 0–9; pinned by a test, no component change |

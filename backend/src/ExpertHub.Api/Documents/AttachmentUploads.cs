@@ -35,6 +35,8 @@ internal static class AttachmentUploads
     {
         ["assignment-brochure"] = "F-0501",
         ["service-addendum"] = "F-0305",
+        // `P-333` — the trainer's own agreement file, uploaded at J-10 preparation.
+        ["agreement-document"] = "F-0301",
     };
 
     internal static string DownloadUrl(Guid attachmentId) =>

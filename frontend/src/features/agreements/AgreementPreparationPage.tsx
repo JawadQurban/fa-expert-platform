@@ -21,6 +21,9 @@ import type {
 import { AgreementDocumentView } from './components/AgreementDocumentView';
 import { AgreementGateCard } from './components/AgreementGateCard';
 import { AgreementPreparationForm } from './components/AgreementPreparationForm';
+import type { AgreementFileRef } from './components/AgreementPreparationForm';
+import { attachmentIdFromUrl } from './agreement.types';
+import type { AgreementDocumentDto } from './agreement.types';
 import { SendStatusCard } from './components/SendStatusCard';
 import { SigningDecisionPanel } from './components/SigningDecisionPanel';
 import { SigningSequenceTimeline } from './components/SigningSequenceTimeline';
@@ -113,8 +116,8 @@ export default function AgreementPreparationPage() {
     });
   };
 
-  const handlePrepare = (values: AgreementFieldValues) => {
-    run(getAgreementService().prepareAgreement(id, { values }));
+  const handlePrepare = (values: AgreementFieldValues, documentAttachmentId: string) => {
+    run(getAgreementService().prepareAgreement(id, { values, documentAttachmentId }));
   };
 
   const handleFormation = (input: FormSigningSequenceInput) => {
@@ -271,6 +274,7 @@ export default function AgreementPreparationPage() {
             <AgreementPreparationForm
               schema={detail.fieldSchema}
               initialValues={detail.fieldValues}
+              initialDocument={currentDocument(detail.document)}
               approvedServices={detail.approvedServices}
               saved={prepared}
               content={content}
@@ -337,4 +341,12 @@ export default function AgreementPreparationPage() {
       )}
     </WorkspacePage>
   );
+}
+
+/** The file the saved version names, so re-editing the fields does not force a re-upload. */
+function currentDocument(document: AgreementDocumentDto | null): AgreementFileRef | null {
+  const attachmentId = attachmentIdFromUrl(document?.documentUrl ?? null);
+  return attachmentId == null
+    ? null
+    : { attachmentId, fileName: document?.documentFileName ?? attachmentId };
 }

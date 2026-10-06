@@ -72,11 +72,6 @@ export interface PublicTrainerSummaryDto {
   readonly id: string;
   readonly name: string;
   readonly specialties: readonly DirectorySpecialty[];
-  /**
-   * Where they deliver — the trainer's own `inPersonCities` answer, not a home
-   * address (owner ruling, 2026-09-09). `null` when they have not said.
-   */
-  readonly city: string | null;
   /** A count of what the profile already publishes in full. */
   readonly programsDelivered: number;
   /**
@@ -86,11 +81,16 @@ export interface PublicTrainerSummaryDto {
    * people is for.
    */
   readonly classification: TrainerClassification;
+  /**
+   * `P-335` — the personal photo, as an API path (`/v1/directory/{id}/photo`),
+   * or `null` when there is none. Never an attachment id.
+   */
+  readonly photoUrl: string | null;
 }
 
 /** A program the trainer delivered with the Academy (J-24/F2/AC-1). */
 export interface PublicDeliveredProgram {
-  readonly id: string;
+  // No id — the `TRAINER_RECORD` key is internal and is not published (`P-335`).
   readonly name: string;
   /** Delivery year — the only temporal detail the public view carries. */
   readonly year: number;

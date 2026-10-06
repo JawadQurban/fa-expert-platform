@@ -308,6 +308,7 @@ public static partial class ApplicantAgreementEndpoints
         {
             return (state, null);
         }
+        var document = await AgreementDocuments.WireAsync(db, row, ct);
         object? decision = row.ApplicantDecisionKind is null
             ? null
             : new
@@ -321,11 +322,12 @@ public static partial class ApplicantAgreementEndpoints
             sentAt = ApplicationEndpoints.Iso(
                 row.SentToApplicantAt ?? row.ApplicantDecidedAt ?? row.CreatedAt),
             dataGroups = await AgreementEndpoints.BuildMergedDataAsync(db, row, ct),
-            // No PDF is generated, and none is pretended.
-            documentUrl = (string?)null,
-            // F1/AC-2 — the WHOLE agreement: the legal text, the terms the
-            // creator entered, and the merged data — as the version signed.
-            document = await AgreementDocuments.WireAsync(db, row, ct),
+            // `P-333` — the uploaded agreement file; null for one prepared
+            // before files were uploaded. Never a generated PDF.
+            documentUrl = document.DocumentUrl,
+            // F1/AC-2 — the WHOLE agreement as the version signed, minus the
+            // template version and the hash (`P-334`, staff only).
+            document = ApplicantAgreementDocumentWire.From(document),
             decision,
         });
     }

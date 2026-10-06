@@ -1,7 +1,7 @@
 import type { SlaDto } from '../../shared/types/sla';
 import { validateESignature } from '../../shared/types/eSignature';
 import type { ESignatureInput, ESignatureValidationCode } from '../../shared/types/eSignature';
-import type { AgreementDocumentDto, MergedDataGroup } from '../agreements/agreement.types';
+import type { ApplicantAgreementDocumentDto, MergedDataGroup } from '../agreements/agreement.types';
 import type { ApplicationPresentationStatus, ApplicationService } from './application.types';
 import type {
   ApplicationEntryDto,
@@ -222,7 +222,7 @@ export interface ApplicantAgreementDto {
   /** `G26` — `null`: no PDF exists. */
   readonly documentUrl: string | null;
   /** F1/AC-2 — the whole agreement, no field withheld. */
-  readonly document: AgreementDocumentDto;
+  readonly document: ApplicantAgreementDocumentDto;
   /** `null` until the applicant decides; then the decision is a matter of record. */
   readonly decision: ApplicantDecisionRecordDto | null;
 }

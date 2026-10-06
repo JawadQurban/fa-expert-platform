@@ -16,6 +16,18 @@ describe('Pagination', () => {
     expect(screen.getByRole('button', { name: '2' })).not.toHaveAttribute('aria-current');
   });
 
+  // P-340 / UI-14 — page numbers are Latin digits (0–9) in every locale. The
+  // number is rendered as-is, never through an `ar` numbering system; this pins it.
+  it('renders page numbers with Latin digits only', () => {
+    renderWithProviders(
+      <Pagination page={12} pageCount={40} onPageChange={vi.fn()} label="ترقيم الصفحات" />
+    );
+    const nav = screen.getByRole('navigation', { name: 'ترقيم الصفحات' });
+    const digits = (nav.textContent ?? '').replace(/[^\d\u0660-\u0669\u06F0-\u06F9]/g, '');
+    expect(digits).toMatch(/^[0-9]+$/);
+    expect(screen.getByRole('button', { name: '12' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('disables Previous on the first page and Next on the last page', () => {
     renderWithProviders(
       <Pagination

@@ -3,7 +3,7 @@
   "versionNumber": 1,
   "templateName": "الاتفاقية الموحدة",
   "templateVersion": "mock-dm-gap-16-draft.1",
-  "bodyText": "⚠️ نص تجريبي — بانتظار النص القانوني المعتمد (DM-GAP-16). تُبرم هذه الاتفاقية بين الأكاديمية المالية والخبير المعتمد لتقديم الخدمات الموضحة في ملحق الخدمات، وفق الشروط والأحكام المعتمدة.",
+  "bodyText": "",
   "fields": [
     {
       "id": "startDate",
@@ -104,5 +104,7 @@
   "contentHash": "2C3312A9FBA6B6F3950C5687C67D3C8E36F485DD3A845BD65910371E1BA2F20D",
   "createdAt": "2026-09-16T21:24:32Z",
   "snapshot": true,
-  "signatureMethod": "internal-acceptance"
+  "signatureMethod": "internal-acceptance",
+  "documentFileName": "agreement.pdf",
+  "documentUrl": "/v1/attachments/5b3e0d1c-2f4a-4d7e-9a61-8c0f2b7d4e19"
 }

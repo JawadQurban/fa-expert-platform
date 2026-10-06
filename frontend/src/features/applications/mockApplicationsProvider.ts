@@ -11,7 +11,10 @@ import { APPLICATION_STATUSES } from './application.types';
 import type { ApplicationDraftDto } from './applicationForm.types';
 import type { SlaDto } from '../../shared/types/sla';
 import type { MergedDataGroup } from '../agreements/agreement.types';
-import { buildMockAgreementDocument } from '../agreements/mockAgreementTemplate';
+import {
+  buildMockAgreementDocument,
+  toApplicantDocument,
+} from '../agreements/mockAgreementTemplate';
 import type {
   ApplicantAgreementDto,
   ApplicantInterviewDto,
@@ -466,15 +469,17 @@ function deriveDetail(summary: ApplicationSummaryDto): ApplicationDetailDto {
         ? {
             sentAt: summary.updatedAt,
             dataGroups: buildAgreementData(summary),
-            // No PDF is generated, so no fabricated download link.
-            documentUrl: null,
+            // `P-333` — the agreement file staff uploaded for this trainer.
+            documentUrl: '/v1/attachments/mock-agreement-file',
             // J-11/F1/AC-2 — the frozen version the applicant reads and decides on:
             // the creator's terms as fields, the trainer/bank data as merged groups.
-            document: buildMockAgreementDocument(
-              1,
-              { startDate: '2026-09-01', endDate: '2027-08-31' },
-              buildAgreementData(summary).filter((group) => group.id !== 'terms'),
-              summary.updatedAt
+            document: toApplicantDocument(
+              buildMockAgreementDocument(
+                1,
+                { startDate: '2026-09-01', endDate: '2027-08-31' },
+                buildAgreementData(summary).filter((group) => group.id !== 'terms'),
+                summary.updatedAt
+              )
             ),
             decision: signed ? { kind: 'sign', decidedAt: summary.updatedAt, note: null } : null,
           }

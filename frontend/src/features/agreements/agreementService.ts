@@ -8,6 +8,7 @@ import type {
   FormSigningSequenceInput,
   PrepareAgreementInput,
   SigningDecisionInput,
+  UploadedAgreementDocumentDto,
 } from './agreement.types';
 
 /**
@@ -25,6 +26,10 @@ export const AGREEMENT_API_VERSION = 'v1';
 
 export interface AgreementService {
   getAgreementDetail(applicationId: string): Promise<Result<AgreementDetailDto, ExpertHubApiError>>;
+  /** `P-333` — stores the trainer's agreement file (PDF/DOC/DOCX, 1 MB, J-01's rule). */
+  uploadAgreementDocument(
+    file: File
+  ): Promise<Result<UploadedAgreementDocumentDto, ExpertHubApiError>>;
   /** F1 — the creator saves the editable fields; the server merges the rest. */
   prepareAgreement(
     applicationId: string,
@@ -54,6 +59,15 @@ export function createHttpAgreementProvider(
   return {
     getAgreementDetail(applicationId) {
       return client.get<AgreementDetailDto>(base(applicationId));
+    },
+    uploadAgreementDocument(file) {
+      const payload = new FormData();
+      payload.append('purpose', 'agreement-document');
+      payload.append('file', file);
+      return client.post<UploadedAgreementDocumentDto>(
+        `${AGREEMENT_API_VERSION}/internal/attachments`,
+        payload
+      );
     },
     prepareAgreement(applicationId, input) {
       return client.post<AgreementDetailDto>(`${base(applicationId)}/preparation`, input);

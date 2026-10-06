@@ -12,7 +12,6 @@ import { setAgreementServiceForTesting } from './agreementService';
 import { createMockAgreementProvider } from './mockAgreementProvider';
 import type { MockAgreementProviderOptions } from './mockAgreementProvider';
 import { getAgreementsContent } from './agreements.content';
-import { MOCK_AGREEMENT_BODY_TEXT } from './mockAgreementTemplate';
 
 /**
  * EH-INT-06a — Agreement Preparation & Internal Approval (J-10). The tests target
@@ -23,6 +22,18 @@ import { MOCK_AGREEMENT_BODY_TEXT } from './mockAgreementTemplate';
 
 const content = getAgreementsContent('ar');
 const APPLICATION_ID = 'app-3001';
+
+/** `P-333` — the agreement file the creator uploads before saving. */
+async function uploadAgreementFile(user: {
+  upload: (input: HTMLElement, file: File) => Promise<void>;
+}) {
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+  if (input == null) {
+    throw new Error('no file input');
+  }
+  await user.upload(input, new File(['%PDF-1.4'], 'agreement.pdf', { type: 'application/pdf' }));
+  await screen.findByText('agreement.pdf');
+}
 
 function injectProvider(options: MockAgreementProviderOptions = {}) {
   setAgreementServiceForTesting(createMockAgreementProvider({ latencyMs: 0, ...options }));
@@ -70,7 +81,9 @@ describe('EH-INT-06a — Agreement Preparation & Internal Approval', () => {
 
     // The summary region (each field also flags itself inline).
     const errors = await screen.findByRole('alert', { name: content.preparation.errorsHeading });
-    expect(within(errors).getAllByRole('listitem')).toHaveLength(2);
+    // Two fields, and the agreement file (`P-333`).
+    expect(within(errors).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(errors).getByText(content.preparation.documentRequired)).toBeInTheDocument();
   });
 
   it('merges trainer and bank data only AFTER the fields are saved (F1/AC-2)', async () => {
@@ -84,6 +97,7 @@ describe('EH-INT-06a — Agreement Preparation & Internal Approval', () => {
 
     await user.type(screen.getByLabelText(/تاريخ بداية/), '2026-08-01');
     await user.type(screen.getByLabelText(/تاريخ نهاية/), '2027-07-31');
+    await uploadAgreementFile(user);
     await user.click(screen.getByRole('button', { name: content.preparation.save }));
 
     // The frozen document version now carries the merged data.
@@ -241,7 +255,11 @@ describe('EH-INT-06a — Agreement Preparation & Internal Approval', () => {
     ).not.toBeInTheDocument();
     // A non-creator still reads the whole document — never a "storage pending" stub.
     expect(screen.getByRole('heading', { name: content.document.heading })).toBeInTheDocument();
-    expect(screen.getByText(MOCK_AGREEMENT_BODY_TEXT)).toBeInTheDocument();
+    // `P-333` — the uploaded file, never the template placeholder.
+    expect(
+      screen.getByRole('link', { name: content.document.openFile('agreement.pdf') })
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/نص تجريبي/)).not.toBeInTheDocument();
     expect(screen.queryByText(content.document.notPrepared)).not.toBeInTheDocument();
     // …and cannot edit it.
     expect(

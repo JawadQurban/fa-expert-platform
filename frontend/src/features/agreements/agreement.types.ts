@@ -91,8 +91,10 @@ export type SignatureMethod = 'internal-acceptance';
  *
  * Each preparation is frozen as an immutable version; every decision records the
  * version it was taken on. `snapshot: false` only for a legacy agreement prepared
- * before versions existed — it is then rendered live and must say so. There is
- * no PDF (`documentUrl` stays `null`).
+ * before versions existed — it is then rendered live and must say so. Since
+ * `P-333` the document is the file the creator uploaded (`documentUrl`); the
+ * template body is carried only by versions that predate it. This is the STAFF
+ * shape — the applicant receives `ApplicantAgreementDocumentDto`.
  */
 export interface AgreementDocumentDto {
   /** `null` only for a live (non-snapshot) rendering. */
@@ -115,6 +117,26 @@ export interface AgreementDocumentDto {
   readonly createdAt: string | null;
   readonly snapshot: boolean;
   readonly signatureMethod: SignatureMethod;
+  /** `P-333` — the uploaded agreement file; `null` on a version that predates it. */
+  readonly documentFileName: string | null;
+  readonly documentUrl: string | null;
+}
+
+/**
+ * The applicant's view of the same version. `P-334`: no template name, version
+ * or content hash (staff only — still stored as evidence). With an uploaded file
+ * there is no body text either (`P-333`).
+ */
+export type ApplicantAgreementDocumentDto = Omit<
+  AgreementDocumentDto,
+  'templateName' | 'templateVersion' | 'contentHash' | 'bodyText'
+> & {
+  readonly bodyText: string | null;
+};
+
+/** The stored attachment id inside a `/v1/attachments/{id}` download path. */
+export function attachmentIdFromUrl(url: string | null): string | null {
+  return url?.match(/\/attachments\/([^/?#]+)/)?.[1] ?? null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -208,6 +230,15 @@ export interface AgreementViewerDto {
 
 export interface PrepareAgreementInput {
   readonly values: AgreementFieldValues;
+  /** `P-333` — the uploaded agreement file (`uploadAgreementDocument`). Required. */
+  readonly documentAttachmentId: string;
+}
+
+/** What the upload returns — the stored file, referenced by id on preparation. */
+export interface UploadedAgreementDocumentDto {
+  readonly attachmentId: string;
+  readonly fileName: string;
+  readonly sizeBytes: number;
 }
 
 export type FormSigningSequenceInput = SequenceFormationInput;

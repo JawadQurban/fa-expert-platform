@@ -35,6 +35,14 @@ export interface AgreementsContent {
     readonly templateNote: string;
     readonly servicesNote: (services: string) => string;
     readonly save: string;
+    readonly documentLabel: string;
+    readonly documentHint: string;
+    readonly documentRequired: string;
+    readonly documentFormatError: string;
+    readonly documentSizeError: string;
+    readonly documentUploadFailed: string;
+    readonly documentBrowse: string;
+    readonly documentRemove: string;
     readonly requiredError: string;
     readonly errorsHeading: string;
     /** Versions are frozen on save; a restarted run is voided and kept. */
@@ -96,6 +104,8 @@ export interface AgreementsContent {
     readonly liveTitle: string;
     readonly liveBody: string;
     readonly bodyHeading: string;
+    readonly fileHeading: string;
+    readonly openFile: (fileName: string) => string;
     readonly fieldsHeading: string;
     readonly hashLabel: string;
     readonly signatureMethodTitle: string;
@@ -190,6 +200,15 @@ const ar: AgreementsContent = {
     templateNote: 'قائمة الحقول المعتمدة لم تصل بعد؛ المؤكد حاليًا هو تاريخا البداية والنهاية فقط.',
     servicesNote: (services) => `تغطي الاتفاقية الخدمات المعتمدة تحديدًا: ${services}.`,
     save: 'حفظ البيانات ومتابعة',
+    documentLabel: 'ملف الاتفاقية',
+    documentHint:
+      'ارفع اتفاقية هذا المدرب كما أعددتها — PDF أو DOC أو DOCX، بحد أقصى 1 ميجابايت. هذا الملف هو ما يطّلع عليه الموقّعون والمتقدم ويوقّعون عليه.',
+    documentRequired: 'ارفع ملف الاتفاقية قبل الحفظ.',
+    documentFormatError: 'الصيغ المقبولة: PDF أو DOC أو DOCX.',
+    documentSizeError: 'حجم الملف أكبر من 1 ميجابايت.',
+    documentUploadFailed: 'تعذّر رفع الملف. حاول مرة أخرى.',
+    documentBrowse: 'اختيار ملف',
+    documentRemove: 'إزالة الملف',
     requiredError: 'هذا الحقل مطلوب.',
     errorsHeading: 'أكمل الحقول المطلوبة',
     historyNote:
@@ -260,6 +279,8 @@ const ar: AgreementsContent = {
     liveBody:
       'أُعدّت هذه الاتفاقية قبل تسجيل نسخ المستند، لذا يُعرض محتواها من البيانات الحالية وقد يتغيّر.',
     bodyHeading: 'نص الاتفاقية',
+    fileHeading: 'ملف الاتفاقية',
+    openFile: (fileName) => `فتح ملف الاتفاقية (${fileName})`,
     fieldsHeading: 'بنود الاتفاقية',
     hashLabel: 'بصمة المحتوى (SHA-256)',
     signatureMethodTitle: 'كيف يُسجَّل التوقيع',
@@ -364,6 +385,15 @@ const en: AgreementsContent = {
       'The approved field list has not arrived yet. Only the start and end dates are confirmed today.',
     servicesNote: (services) => `The agreement covers exactly the approved services: ${services}.`,
     save: 'Save and continue',
+    documentLabel: 'Agreement file',
+    documentHint:
+      "Upload this trainer's agreement as you prepared it — PDF, DOC or DOCX, up to 1 MB. This file is what the signers and the applicant read and sign.",
+    documentRequired: 'Upload the agreement file before saving.',
+    documentFormatError: 'Accepted formats: PDF, DOC or DOCX.',
+    documentSizeError: 'The file is larger than 1 MB.',
+    documentUploadFailed: 'The file could not be uploaded. Please try again.',
+    documentBrowse: 'Choose a file',
+    documentRemove: 'Remove file',
     requiredError: 'This field is required.',
     errorsHeading: 'Complete the required fields',
     historyNote:
@@ -436,6 +466,8 @@ const en: AgreementsContent = {
     liveBody:
       'This agreement was prepared before document versions were recorded, so its content is rendered from the current data and may change.',
     bodyHeading: 'Agreement text',
+    fileHeading: 'Agreement file',
+    openFile: (fileName) => `Open the agreement file (${fileName})`,
     fieldsHeading: 'Agreement terms',
     hashLabel: 'Content fingerprint (SHA-256)',
     signatureMethodTitle: 'How signing is recorded',

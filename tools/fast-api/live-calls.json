@@ -1,0 +1,331 @@
+{
+ "GET /api/v1/AlmentorCourseCatalogue/GetAllLearnsProgress": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "241 B"
+  }
+ ],
+ "GET /api/v1/AlmentorCourseCatalogue/GetTimeLineChartData": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "279 B"
+  }
+ ],
+ "GET /api/v1/Cart/GetShoppingCartWithDetails": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "82 B"
+  }
+ ],
+ "GET /api/v1/Catalog/search": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "13 KB"
+  }
+ ],
+ "GET /api/v1/DashBoard/MyCoupon": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "312 B"
+  }
+ ],
+ "GET /api/v1/DashBoard/ProgramEndWithExam": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "378 B"
+  }
+ ],
+ "GET /api/v1/Eligibility/status": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "164 B"
+  }
+ ],
+ "GET /api/v1/Event/GetEventTypes": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "791 B"
+  }
+ ],
+ "GET /api/v1/Event/GetEventPeriods": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "278 B"
+  }
+ ],
+ "GET /api/v1/Event/GetEventDetails": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 404,
+   "size": "30 B"
+  }
+ ],
+ "GET /api/v1/Exam/GetCfaCertificates": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "5.4 KB"
+  }
+ ],
+ "GET /api/v1/Exam/GetExamDetailsById": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "259 B"
+  }
+ ],
+ "GET /api/v1/Exam/ValidateCertificate": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 400,
+   "size": "267 B"
+  }
+ ],
+ "GET /api/v1/Exam/GetExamProfiles": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 500,
+   "size": "179 B"
+  }
+ ],
+ "GET /api/v1/Exam/GetExamTestCenters": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 400,
+   "size": "40 B"
+  }
+ ],
+ "GET /api/v1/Exam/TestingCenters": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "2.4 KB"
+  }
+ ],
+ "GET /api/v1/Exam/GetCenterAvailableDates": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 400,
+   "size": "36 B"
+  }
+ ],
+ "GET /api/v1/Exam/GetCenterAvailableTimes": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 400,
+   "size": "241 B"
+  }
+ ],
+ "GET /api/v1/Exam/generate-exam-report": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "227 B"
+  }
+ ],
+ "GET /api/v1/Exam/Overview": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "28 KB"
+  }
+ ],
+ "GET /api/v1/ExecuseRequest/Service/filter-excuse-request": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "3.8 KB"
+  }
+ ],
+ "GET /api/v1/Home/Trending": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "283 KB"
+  }
+ ],
+ "GET /api/v1/Home/EventsOverview": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "17 KB"
+  }
+ ],
+ "GET /api/v1/Home/TopMenu": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "11 KB"
+  }
+ ],
+ "GET /api/v1/Home/report-and-study": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "6.7 KB"
+  }
+ ],
+ "GET /api/v1/Home/FinancialSectorGateway": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "33 KB"
+  }
+ ],
+ "GET /api/v1/Lookup/GetAllCountries": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "15 KB"
+  }
+ ],
+ "GET /api/v1/Lookup/GetCountries": [
+  {
+   "date": "2026-10-06",
+   "auth": "service token (fast_test)",
+   "status": 200,
+   "size": ""
+  },
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "49 KB"
+  }
+ ],
+ "GET /api/v1/Mursion/GetDetails": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "42 KB"
+  }
+ ],
+ "GET /api/v1/Program/GetTrendingPrograms": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "21 KB"
+  }
+ ],
+ "GET /api/v1/Program/TrainingTopics": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "18 KB"
+  }
+ ],
+ "GET /api/v1/Program/Overview": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "52 KB"
+  }
+ ],
+ "GET /api/v1/Users/Info": [
+  {
+   "date": "2026-09-08",
+   "auth": "user token",
+   "status": 200,
+   "size": "5.2 KB"
+  }
+ ],
+ "GET /api/v1/Lookup/GetSectors": [
+  {
+   "date": "2026-10-06",
+   "auth": "service token (fast_test)",
+   "status": 200,
+   "size": ""
+  }
+ ],
+ "GET /api/training-courses/levels": [
+  {
+   "date": "2026-10-06",
+   "auth": "service token (fast_test)",
+   "status": 200,
+   "size": ""
+  }
+ ],
+ "POST /api/v1/Program/Search": [
+  {
+   "date": "2026-10-06",
+   "auth": "service token (fast_test)",
+   "status": 200,
+   "size": "",
+   "note": "paged: totalItems=270, pageSize is capped at 100 (asked 200, got 100); some programmes have appointmentDateText «الموعد غير محدد» (no date set)"
+  },
+  {
+   "date": "2026-10-06",
+   "auth": "anonymous",
+   "status": 200,
+   "size": "",
+   "note": "body `{}` returned 12 programmes; same result with the service token"
+  }
+ ],
+ "GET /api/v1/Program/GetPlansByProgramId": [
+  {
+   "date": "2026-10-06",
+   "auth": "service token (fast_test)",
+   "status": 200,
+   "size": "",
+   "note": "also 200 anonymously per Program/Search; a missing programId returns success=false with a NullReferenceException message"
+  }
+ ],
+ "GET /api/v1/Program/GetProgramLiveSessions": [
+  {
+   "date": "2026-10-06",
+   "auth": "service token (fast_test)",
+   "status": 200,
+   "size": "",
+   "note": "no token or a forged token → HTTP 401 «Unauthorized access. Please provide a valid token.» from the auth middleware; the fast_test service token → HTTP 200 with success=false «Unauthorized» from the controller. So the token AUTHENTICATES and is refused at authorization (token carries a client_role claim; the endpoint presumably needs a user or a role the client lacks)"
+  }
+ ],
+ "GET /api/v1/Program/GetProgramPlanTakers": [
+  {
+   "date": "2026-10-06",
+   "auth": "service token (fast_test)",
+   "status": 200,
+   "size": "",
+   "note": "success=true, 0 items — takes no programId, so it is scoped to the caller; the service principal has no plans"
+  }
+ ]
+}

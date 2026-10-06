@@ -40,7 +40,7 @@ export interface DirectoryContent {
   readonly card: {
     readonly viewProfile: (name: string) => string;
     readonly specialtiesLabel: string;
-    readonly cityLabel: string;
+    readonly classificationLabel: string;
     readonly programsLabel: string;
     readonly viewProfileShort: string;
   };
@@ -65,6 +65,8 @@ export interface DirectoryContent {
 
 /** EH-PUB-03 — the single public profile page. */
 export interface PublicProfileContent {
+  /** `P-335` — classification is public, shown as text. */
+  readonly classifications: Readonly<Record<TrainerClassification, string>>;
   readonly documentTitle: (name: string) => string;
   readonly breadcrumbLabel: string;
   readonly breadcrumbDirectory: string;
@@ -164,7 +166,7 @@ const directoryAr: DirectoryContent = {
   },
   card: {
     viewProfile: (name) => `عرض الملف العام لـ${name}`,
-    cityLabel: 'المدينة',
+    classificationLabel: 'التصنيف',
     programsLabel: 'البرامج',
     viewProfileShort: 'عرض الملف التعريفي',
     specialtiesLabel: 'مجالات التخصص',
@@ -208,7 +210,7 @@ const directoryEn: DirectoryContent = {
   },
   card: {
     viewProfile: (name) => `View the public profile of ${name}`,
-    cityLabel: 'City',
+    classificationLabel: 'Classification',
     programsLabel: 'Programmes',
     viewProfileShort: 'View profile',
     specialtiesLabel: 'Areas of specialty',
@@ -233,6 +235,7 @@ const directoryEn: DirectoryContent = {
 };
 
 const profileAr: PublicProfileContent = {
+  classifications: getTrainerClassificationLabels('ar'),
   documentTitle: (name) => `${name} — دليل الخبراء والمدربين`,
   breadcrumbLabel: 'مسار التنقل',
   breadcrumbDirectory: 'دليل الخبراء والمدربين',
@@ -256,6 +259,7 @@ const profileAr: PublicProfileContent = {
 };
 
 const profileEn: PublicProfileContent = {
+  classifications: getTrainerClassificationLabels('en'),
   documentTitle: (name) => `${name} — Expert & Trainer Directory`,
   breadcrumbLabel: 'Breadcrumb',
   breadcrumbDirectory: 'Expert & Trainer Directory',

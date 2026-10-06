@@ -39,7 +39,6 @@ interface MockTrainerRecord {
   readonly specialties: readonly DirectorySpecialty[];
   readonly consent: boolean;
   /** Where they deliver — `null` when they have not said. */
-  readonly city: string | null;
   readonly programsDelivered: number;
 }
 
@@ -51,7 +50,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'expert',
     specialties: ['leadership', 'human-resources'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 3,
   },
   {
@@ -60,7 +58,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'senior',
     specialties: ['finance', 'project-management'],
     consent: true,
-    city: 'جدة',
     programsDelivered: 5,
   },
   {
@@ -69,7 +66,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'expert',
     specialties: ['digital-transformation', 'data-analytics'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 2,
   },
   {
@@ -78,7 +74,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'certified',
     specialties: ['cybersecurity'],
     consent: true,
-    city: 'الدمام',
     programsDelivered: 7,
   },
   {
@@ -87,7 +82,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'expert',
     specialties: ['customer-experience', 'leadership'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 4,
   },
   {
@@ -96,7 +90,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'senior',
     specialties: ['project-management'],
     consent: true,
-    city: 'جدة',
     programsDelivered: 6,
   },
   {
@@ -105,7 +98,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'expert',
     specialties: ['human-resources', 'leadership'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 1,
   },
   {
@@ -114,7 +106,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'certified',
     specialties: ['finance'],
     consent: true,
-    city: 'مكة',
     programsDelivered: 2,
   },
   {
@@ -123,7 +114,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'senior',
     specialties: ['data-analytics', 'digital-transformation'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 3,
   },
   {
@@ -132,7 +122,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'certified',
     specialties: ['customer-experience'],
     consent: true,
-    city: 'جدة',
     programsDelivered: 5,
   },
   {
@@ -141,7 +130,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'senior',
     specialties: ['project-management', 'leadership'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 2,
   },
   {
@@ -150,7 +138,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'expert',
     specialties: ['cybersecurity', 'data-analytics'],
     consent: true,
-    city: 'الدمام',
     programsDelivered: 7,
   },
   {
@@ -159,7 +146,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'expert',
     specialties: ['digital-transformation', 'customer-experience'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 4,
   },
   {
@@ -168,7 +154,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'certified',
     specialties: ['finance'],
     consent: true,
-    city: 'جدة',
     programsDelivered: 6,
   },
   {
@@ -177,7 +162,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'senior',
     specialties: ['human-resources'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 1,
   },
   {
@@ -186,7 +170,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'certified',
     specialties: ['data-analytics'],
     consent: true,
-    city: 'مكة',
     programsDelivered: 2,
   },
   {
@@ -195,7 +178,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'expert',
     specialties: ['leadership', 'customer-experience'],
     consent: true,
-    city: 'الرياض',
     programsDelivered: 3,
   },
   {
@@ -204,7 +186,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'senior',
     specialties: ['project-management', 'digital-transformation'],
     consent: true,
-    city: 'جدة',
     programsDelivered: 5,
   },
   // Non-consented rows — real ids that MUST resolve to the same neutral 404 as an
@@ -215,7 +196,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'expert',
     specialties: ['leadership'],
     consent: false,
-    city: 'الرياض',
     programsDelivered: 2,
   },
   {
@@ -224,7 +204,6 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     classification: 'senior',
     specialties: ['finance'],
     consent: false,
-    city: 'الدمام',
     programsDelivered: 7,
   },
 ];
@@ -276,7 +255,6 @@ function deliveredProgramsFor(record: MockTrainerRecord): PublicDeliveredProgram
   return Array.from({ length: count }, (_value, index) => {
     const pick = (hash + index * 7) % PROGRAM_NAMES.length;
     return {
-      id: `${record.id}-prog-${index + 1}`,
       name: PROGRAM_NAMES[pick],
       year: 2023 + ((hash + index) % 3),
     };
@@ -292,7 +270,7 @@ function toSummary(record: MockTrainerRecord): PublicTrainerSummaryDto {
     id: record.id,
     name: record.name,
     specialties: record.specialties,
-    city: record.city,
+    photoUrl: null,
     programsDelivered: record.programsDelivered,
     classification: record.classification,
   };

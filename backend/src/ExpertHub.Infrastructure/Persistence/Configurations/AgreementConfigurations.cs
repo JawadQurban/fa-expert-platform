@@ -30,6 +30,7 @@ public sealed class AgreementConfiguration : IEntityTypeConfiguration<Agreement>
         builder.Property(a => a.TermYears).HasColumnName("term_years");
         builder.Property(a => a.RenewalCount).HasColumnName("renewal_count");
         builder.Property(a => a.FieldValues).HasColumnName("field_values");
+        builder.Property(a => a.DocumentAttachmentId).HasColumnName("document_attachment_id");
         builder.Property(a => a.SentToApplicantAt).HasColumnName("sent_to_applicant_at");
         builder.Property(a => a.ApplicantDecisionKind).HasColumnName("applicant_decision").HasMaxLength(30);
         builder.Property(a => a.ApplicantDecisionNote).HasColumnName("applicant_decision_note");
@@ -189,10 +190,14 @@ public sealed class AgreementDocumentVersionConfiguration : IEntityTypeConfigura
         builder.Property(v => v.Fields).HasColumnName("fields");
         builder.Property(v => v.MergedData).HasColumnName("merged_data");
         builder.Property(v => v.ContentHash).HasColumnName("content_hash").HasMaxLength(64);
+        builder.Property(v => v.AttachmentId).HasColumnName("attachment_id");
         builder.Property(v => v.CreatedBy).HasColumnName("created_by");
         builder.Property(v => v.CreatedAt).HasColumnName("created_at");
         builder.HasIndex(v => new { v.AgreementId, v.VersionNumber }).IsUnique();
+        builder.HasIndex(v => v.AttachmentId);
         builder.HasOne<Agreement>().WithMany().HasForeignKey(v => v.AgreementId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Attachment>().WithMany().HasForeignKey(v => v.AttachmentId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

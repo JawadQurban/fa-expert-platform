@@ -1,5 +1,6 @@
 import type {
   AgreementDocumentDto,
+  ApplicantAgreementDocumentDto,
   AgreementFieldSchema,
   AgreementFieldValues,
   MergedDataGroup,
@@ -67,14 +68,16 @@ export function buildMockAgreementDocument(
   versionNumber: number,
   values: AgreementFieldValues,
   mergedData: readonly MergedDataGroup[],
-  createdAt: string
+  createdAt: string,
+  documentAttachmentId: string = 'mock-agreement-file'
 ): AgreementDocumentDto {
   return {
     documentVersionId: `mock-agreement-version-${versionNumber}`,
     versionNumber,
     templateName: MOCK_AGREEMENT_TEMPLATE_NAME,
     templateVersion: MOCK_AGREEMENT_TEMPLATE_VERSION,
-    bodyText: MOCK_AGREEMENT_BODY_TEXT,
+    // `P-333` — the uploaded file is the document; no template text is frozen.
+    bodyText: '',
     fields: MOCK_AGREEMENT_FIELDS.map((field) => ({
       id: field.id,
       label: field.label,
@@ -85,5 +88,16 @@ export function buildMockAgreementDocument(
     createdAt,
     snapshot: true,
     signatureMethod: 'internal-acceptance',
+    documentFileName: 'agreement.pdf',
+    documentUrl: `/v1/attachments/${documentAttachmentId}`,
   };
+}
+
+/** The applicant's projection of a mock version (`P-334`). */
+export function toApplicantDocument(document: AgreementDocumentDto): ApplicantAgreementDocumentDto {
+  const { templateName, templateVersion, contentHash, bodyText, ...rest } = document;
+  void templateName;
+  void templateVersion;
+  void contentHash;
+  return { ...rest, bodyText: document.documentUrl == null ? bodyText : null };
 }

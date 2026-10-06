@@ -4,6 +4,7 @@ import type { ApproverDto, SequenceTemplateDto } from '../../shared/types/sequen
 import { MOCK_INBOX } from '../internal/mockInternalProvider';
 import { MOCK_COMMITTEE_POOL } from '../screening/mockScreeningProvider';
 import { buildMockAgreementDocument, MOCK_AGREEMENT_FIELDS } from './mockAgreementTemplate';
+import { addendumFileIssue } from '../serviceRequests/serviceRequest.types';
 import type { AgreementService } from './agreementService';
 import type {
   AgreementDetailDto,
@@ -122,6 +123,8 @@ export function createMockAgreementProvider(
   let isPrepared = prepared;
   /** Each preparation that changes the content freezes a new document version. */
   let versionNumber = prepared ? 1 : 0;
+  let documentAttachmentId = 'mock-agreement-file';
+  let uploads = 0;
   let sequence: SigningMemberDto[] = [];
   let templates: SequenceTemplateDto[] = [...SEED_TEMPLATES];
   let signaturesAttached = false;
@@ -235,7 +238,8 @@ export function createMockAgreementProvider(
             versionNumber,
             fieldValues,
             buildMergedData(row.applicantName),
-            timestamp
+            timestamp,
+            documentAttachmentId
           )
         : null,
     };
@@ -257,6 +261,28 @@ export function createMockAgreementProvider(
       return resolve(applicationId);
     },
 
+    async uploadAgreementDocument(file: File) {
+      await delay(latencyMs);
+      if (failWith != null) {
+        return { ok: false, error: failWith };
+      }
+      if (file.size === 0) {
+        return { ok: false, error: { status: 400, message: 'file-required' } };
+      }
+      if (addendumFileIssue(file) != null) {
+        return { ok: false, error: { status: 422, message: 'format-or-size' } };
+      }
+      uploads += 1;
+      return {
+        ok: true,
+        value: {
+          attachmentId: `mock-agreement-file-${uploads}`,
+          fileName: file.name,
+          sizeBytes: file.size,
+        },
+      };
+    },
+
     async prepareAgreement(applicationId: string, input: PrepareAgreementInput) {
       await delay(latencyMs);
       if (failWith != null) {
@@ -266,10 +292,19 @@ export function createMockAgreementProvider(
       if (!gate.committeeApproved || !gate.bankDataComplete) {
         return { ok: false, error: { status: 409, message: 'Agreement preconditions not met' } };
       }
-      if (!isPrepared || JSON.stringify(input.values) !== JSON.stringify(fieldValues)) {
+      // `P-333` — the uploaded file is required, as the server requires it.
+      if (input.documentAttachmentId.trim() === '') {
+        return { ok: false, error: { status: 400, message: 'agreement-document-required' } };
+      }
+      if (
+        !isPrepared ||
+        JSON.stringify(input.values) !== JSON.stringify(fieldValues) ||
+        input.documentAttachmentId !== documentAttachmentId
+      ) {
         versionNumber += 1;
       }
       fieldValues = { ...input.values };
+      documentAttachmentId = input.documentAttachmentId;
       isPrepared = true;
       return resolve(applicationId);
     },

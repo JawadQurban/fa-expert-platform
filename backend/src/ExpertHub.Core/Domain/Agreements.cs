@@ -45,6 +45,10 @@ public sealed class Agreement
     /// <summary>JSON map of the creator-filled template fields (`DM-GAP-16`).</summary>
     public required string FieldValues { get; set; }
 
+    /// <summary>`P-333` — the trainer's own agreement file, uploaded at
+    /// preparation. What the signers and the applicant read and sign.</summary>
+    public Guid? DocumentAttachmentId { get; set; }
+
     public DateTime? SentToApplicantAt { get; set; }
 
     /* ── J-11/F1 — the applicant's three-way decision ────────────────────── */
@@ -258,8 +262,14 @@ public sealed class AgreementDocumentVersion
     /// <summary>JSON — the merged data groups as they were.</summary>
     public required string MergedData { get; set; }
 
-    /// <summary>SHA-256 of the content above — evidence it was not altered.</summary>
+    /// <summary>SHA-256 of the content — evidence it was not altered. For a
+    /// version with an <see cref="AttachmentId"/> it is the hash of the file's
+    /// bytes (`P-333`).</summary>
     public required string ContentHash { get; set; }
+
+    /// <summary>`P-333` — the uploaded agreement file this version froze; null
+    /// on versions rendered from the template before files were uploaded.</summary>
+    public Guid? AttachmentId { get; set; }
 
     public Guid CreatedBy { get; set; }
 
