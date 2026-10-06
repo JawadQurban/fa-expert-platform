@@ -94,7 +94,7 @@ No calendar override was needed or added.
 ### Regression tests — `shared/formatting.test.ts`
 
 Behaviour, plus three guards that fail the build on a relapse:
-- no `new Intl.NumberFormat`/`DateTimeFormat` anywhere under `apps/expert-hub` except the module itself;
+- no `new Intl.NumberFormat`/`DateTimeFormat` anywhere under `src/` except the module itself;
 - no `'ar-SA'` locale tag in any production source;
 - no Arabic-Indic digit in any string literal (comments excluded).
 

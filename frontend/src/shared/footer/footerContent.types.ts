@@ -4,7 +4,7 @@
  * This is **shared infrastructure** — it lives under `src/shared/` (like the
  * Design System under `src/design-system/`), not under any single product. Both
  * the Hackathon product (`content/footer.ts`) and the standalone Expert Hub
- * product (`apps/expert-hub/shared/content/footer.content.ts`) supply a value of
+ * product (`src/shared/content/footer.content.ts`) supply a value of
  * this shape to the one shared `AcademyFooter` composition, so the Footer's
  * *structure* is written once and each product feeds it its own *content*.
  *

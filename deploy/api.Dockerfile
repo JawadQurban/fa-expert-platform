@@ -8,8 +8,8 @@
 # never at build time (`P-159`/`P-163`; a test fails the build if a value ever
 # appears in appsettings).
 #
-# Build context = REPOSITORY ROOT (needs `backend/expert-hub/`):
-#   docker build -f deploy/expert-hub/api.Dockerfile -t expert-hub-api:<tag> .
+# Build context = REPOSITORY ROOT (needs `backend/`):
+#   docker build -f deploy/api.Dockerfile -t expert-hub-api:<tag> .
 #
 # Topology served: Browser → Server Nginx (/api/) → THIS container (:8080).
 # The app honours X-Forwarded-Proto/Host, so the OIDC redirect URI it builds
@@ -17,7 +17,7 @@
 #
 # ⚠️ Runtime debt, tracked as BE-21: the backend targets net9.0 (out of
 # support since May 2026). Moving to the LTS is one line in
-# `backend/expert-hub/Directory.Build.props` plus the two tags below.
+# `backend/Directory.Build.props` plus the two tags below.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1 — publish (Expert Hub API only)
@@ -26,16 +26,16 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # 1. Restore from the project graph first (layer-cached until a csproj changes).
-COPY backend/expert-hub/Directory.Build.props backend/expert-hub/
-COPY backend/expert-hub/src/ExpertHub.Core/ExpertHub.Core.csproj backend/expert-hub/src/ExpertHub.Core/
-COPY backend/expert-hub/src/ExpertHub.Infrastructure/ExpertHub.Infrastructure.csproj backend/expert-hub/src/ExpertHub.Infrastructure/
-COPY backend/expert-hub/src/ExpertHub.Api/ExpertHub.Api.csproj backend/expert-hub/src/ExpertHub.Api/
-RUN dotnet restore backend/expert-hub/src/ExpertHub.Api/ExpertHub.Api.csproj
+COPY backend/Directory.Build.props backend/
+COPY backend/src/ExpertHub.Core/ExpertHub.Core.csproj backend/src/ExpertHub.Core/
+COPY backend/src/ExpertHub.Infrastructure/ExpertHub.Infrastructure.csproj backend/src/ExpertHub.Infrastructure/
+COPY backend/src/ExpertHub.Api/ExpertHub.Api.csproj backend/src/ExpertHub.Api/
+RUN dotnet restore backend/src/ExpertHub.Api/ExpertHub.Api.csproj
 
 # 2. Copy the backend source and publish Release (warnings are errors there,
 #    so an image that builds is an image with a clean compile).
-COPY backend/expert-hub/ backend/expert-hub/
-RUN dotnet publish backend/expert-hub/src/ExpertHub.Api/ExpertHub.Api.csproj \
+COPY backend/ backend/
+RUN dotnet publish backend/src/ExpertHub.Api/ExpertHub.Api.csproj \
     -c Release -o /app/publish --no-restore
 
 # ─────────────────────────────────────────────────────────────────────────────

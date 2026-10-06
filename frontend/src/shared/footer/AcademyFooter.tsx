@@ -13,7 +13,7 @@ import styles from './AcademyFooter.module.css';
  * `FooterContent`), so the Footer's *structure* is authored once here and each
  * product feeds its own *content* — the Hackathon product through
  * `components/AppFooter` (→ `content/footer.ts`) and the standalone Expert Hub
- * product through `apps/expert-hub` (→ its own footer content). Neither product
+ * product through `src/` (→ its own footer content). Neither product
  * duplicates or diverges from this structure.
  *
  * Layout: four columns — a Summary group, an Important-links group, a Contact

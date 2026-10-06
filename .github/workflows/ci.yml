@@ -64,3 +64,18 @@ jobs:
       # containerised SQL Server.
       - name: Build
         run: dotnet build
+
+  images:
+    name: Docker images · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The exact builds the server runs (`docker compose build`), from the
+      # repository root as the build context. A path the Dockerfiles copy that
+      # no longer exists fails here, not on the server.
+      - name: Frontend image
+        run: docker build -f deploy/Dockerfile -t expert-hub-frontend:ci .
+
+      - name: API image
+        run: docker build -f deploy/api.Dockerfile -t expert-hub-api:ci .
