@@ -1,0 +1,256 @@
+/* Horizontal Tab / Horizontal Tab List (CMP-09) — token-based, live-Figma-verified styles.
+   See docs/FIGMA_HORIZONTAL_TAB_SPECIFICATION.md. */
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.list {
+  position: relative;
+}
+
+.listDivider {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: var(--fads-sys-tabs-list-divider-height);
+  background-color: var(--fads-sys-tabs-list-divider-color);
+  border-radius: var(--fads-sys-radius-full);
+}
+
+.listRow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+/* Isolates the ARIA tablist to only its real tab children (WAI-ARIA required-children) while
+   letting them still lay out as direct flex items of .listRow, alongside the sibling
+   .moreTrigger button, which must NOT be a tablist descendant. */
+.tablistGroup {
+  display: contents;
+}
+
+.list[data-flush='true'] .listRow {
+  margin-inline-start: calc(-1 * var(--fads-sys-tabs-md-padding-inline));
+}
+
+.list[data-flush='true'][data-size='sm'] .listRow {
+  margin-inline-start: calc(-1 * var(--fads-sys-tabs-sm-padding-inline));
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fads-sys-tabs-gap);
+  border: none;
+  background-color: transparent;
+  border-radius: var(--fads-sys-radius-sm);
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-tabs-text-color-unselected);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab[data-size='md'] {
+  padding-inline: var(--fads-sys-tabs-md-padding-inline);
+  padding-block: var(--fads-sys-tabs-md-padding-block);
+}
+
+.tab[data-size='sm'] {
+  padding-inline: var(--fads-sys-tabs-sm-padding-inline);
+  padding-block: var(--fads-sys-tabs-sm-padding-block);
+}
+
+.tab[data-size='lg'] {
+  padding: var(--fads-sys-tabs-lg-padding);
+}
+
+.tabIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.tab[data-selected='true'] {
+  font-weight: var(--fads-ref-font-weight-bold);
+  color: var(--fads-sys-tabs-text-color-selected);
+}
+
+.indicator {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: var(--fads-sys-tabs-md-padding-inline);
+  block-size: var(--fads-sys-tabs-indicator-height);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: transparent;
+}
+
+.tab[data-size='sm'] .indicator {
+  inset-inline: var(--fads-sys-tabs-sm-padding-inline);
+}
+
+.tab[data-selected='true'] .indicator {
+  background-color: var(--fads-sys-tabs-indicator-color);
+}
+
+.tab[data-selected='true']:disabled .indicator {
+  background-color: var(--fads-sys-tabs-indicator-color-disabled);
+}
+
+.tab[data-selected='false']:not(:disabled):hover .indicator,
+.tab[data-selected='false']:not(:disabled):active .indicator {
+  background-color: var(--fads-sys-tabs-indicator-color-preview);
+}
+
+.tab[data-selected='false']:not(:disabled):hover {
+  background-color: var(--fads-sys-tabs-background-hover);
+}
+
+.tab[data-selected='false']:not(:disabled):active {
+  background-color: var(--fads-sys-tabs-background-pressed);
+}
+
+.tab:disabled {
+  color: var(--fads-sys-tabs-text-color-disabled);
+  cursor: not-allowed;
+}
+
+.tab:focus-visible {
+  outline: none;
+  border-radius: var(--fads-sys-tabs-focus-ring-inner-radius);
+  box-shadow:
+    inset 0 0 0 var(--fads-sys-tabs-focus-ring-inner-width)
+      var(--fads-sys-tabs-focus-ring-inner-color),
+    0 0 0 var(--fads-sys-tabs-focus-ring-outer-width) var(--fads-sys-tabs-focus-ring-outer-color);
+}
+
+/* Overflow trigger (⋯) — visual shell only, Medium geometry only (see spec §5 Needs
+   Confirmation — only size=Medium was sampled in Figma). */
+.moreTrigger {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--fads-sys-tabs-md-padding-inline);
+  /* Figma sets an explicit h-[44px] frame (matching the Medium tab height) that overrides the
+     shared vertical-padding token for this node — the 32px icon box is centered within it. */
+  block-size: 2.75rem;
+  border: none;
+  background-color: transparent;
+  border-radius: var(--fads-sys-radius-sm);
+  cursor: pointer;
+  color: var(--fads-sys-tabs-text-color-unselected);
+}
+
+.moreTrigger:hover {
+  background-color: var(--fads-sys-tabs-background-hover);
+}
+
+.moreTrigger:active {
+  background-color: var(--fads-sys-tabs-background-pressed);
+}
+
+.moreTrigger:focus-visible {
+  outline: none;
+  border-radius: var(--fads-sys-tabs-focus-ring-inner-radius);
+  box-shadow:
+    inset 0 0 0 var(--fads-sys-tabs-focus-ring-inner-width)
+      var(--fads-sys-tabs-focus-ring-inner-color),
+    0 0 0 var(--fads-sys-tabs-focus-ring-outer-width) var(--fads-sys-tabs-focus-ring-outer-color);
+}
+
+.moreIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-tabs-more-trigger-size);
+  block-size: var(--fads-sys-tabs-more-trigger-size);
+}
+
+.moreIcon::before {
+  content: '';
+  display: inline-block;
+  inline-size: 3px;
+  block-size: 3px;
+  border-radius: var(--fads-sys-radius-full);
+  background-color: currentColor;
+  box-shadow:
+    6px 0 currentColor,
+    -6px 0 currentColor;
+}
+
+/* Vertical Tab (CMP-09b) — token-based, live-Figma-verified styles.
+   See docs/FIGMA_VERTICAL_TAB_SPECIFICATION.md. Placed last so these equal-specificity
+   [data-orientation='vertical'] rules win the cascade over the horizontal rules above. */
+
+.list[data-orientation='vertical'] .listRow {
+  flex-direction: column;
+  align-items: stretch;
+  overflow-x: visible;
+  overflow-y: auto;
+}
+
+.tab[data-orientation='vertical'] {
+  justify-content: flex-start;
+}
+
+.tab[data-orientation='vertical'][data-size='sm'] {
+  padding-inline: var(--fads-sys-tabs-vertical-sm-padding-inline);
+  padding-block: var(--fads-sys-tabs-vertical-sm-padding-block);
+}
+
+.tab[data-orientation='vertical'][data-size='md'] {
+  padding-inline: var(--fads-sys-tabs-vertical-md-padding-inline);
+  padding-block: var(--fads-sys-tabs-vertical-md-padding-block);
+}
+
+.tab[data-orientation='vertical'][data-size='lg'] {
+  padding-inline: var(--fads-sys-tabs-vertical-lg-padding-inline);
+  padding-block: var(--fads-sys-tabs-vertical-lg-padding-block);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+}
+
+.tab[data-orientation='vertical'][data-selected='true'] {
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+
+.tab[data-orientation='vertical'][data-selected='false'] {
+  font-weight: var(--fads-ref-font-weight-regular);
+}
+
+/* Live-verified quirk: Disabled+Selected renders in Medium weight, matching neither the
+   enabled-Selected (Semibold) nor enabled-Unselected (Regular) weight — reproduced exactly as
+   sampled, not corrected (spec §3). */
+.tab[data-orientation='vertical'][data-selected='true']:disabled {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.tab[data-orientation='vertical'] .indicator {
+  inset-block-start: var(--fads-sys-tabs-vertical-indicator-inset-md);
+  inset-block-end: var(--fads-sys-tabs-vertical-indicator-inset-md);
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+  inline-size: var(--fads-sys-tabs-indicator-height);
+  block-size: auto;
+}
+
+.tab[data-orientation='vertical'][data-size='sm'] .indicator {
+  inset-block-start: var(--fads-sys-tabs-vertical-indicator-inset-sm);
+  inset-block-end: var(--fads-sys-tabs-vertical-indicator-inset-sm);
+}

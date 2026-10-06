@@ -1,0 +1,14 @@
+/* Section — token-only. ⚠ Pending final DGA token values (Q3). */
+
+.section {
+  padding-block: var(--fads-sys-space-section-gap);
+}
+
+.section[data-background='subtle'] {
+  background-color: var(--fads-sys-color-background-subtle);
+}
+
+.section[data-background='inverse'] {
+  background-color: var(--fads-sys-color-background-inverse);
+  color: var(--fads-sys-color-text-inverse);
+}

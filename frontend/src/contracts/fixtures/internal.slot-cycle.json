@@ -1,0 +1,82 @@
+{
+  "reference": "ASR-2026-0001",
+  "slotNumber": 1,
+  "cycleNumber": 1,
+  "status": "awaiting_approval",
+  "exhausted": true,
+  "confirmed": false,
+  "pool": {
+    "status": "sent",
+    "members": [
+      {
+        "trainerId": "7c65ab22-e504-42cf-8790-df2ab3ec4161",
+        "name": "مدرب 1",
+        "price": {
+          "inClass": null,
+          "online": null,
+          "currency": "SAR",
+          "agreementReference": ""
+        },
+        "decision": "pending",
+        "preferenceRank": null
+      },
+      {
+        "trainerId": "a1c1b6d8-6995-439d-a519-c67870e54aa8",
+        "name": "مدرب 2",
+        "price": {
+          "inClass": null,
+          "online": null,
+          "currency": "SAR",
+          "agreementReference": ""
+        },
+        "decision": "pending",
+        "preferenceRank": null
+      },
+      {
+        "trainerId": "b37a1624-a987-4ce0-ac01-1a4de6a36027",
+        "name": "مدرب 0",
+        "price": {
+          "inClass": null,
+          "online": null,
+          "currency": "SAR",
+          "agreementReference": ""
+        },
+        "decision": "pending",
+        "preferenceRank": null
+      }
+    ],
+    "sentAt": "2026-09-16T20:57:22Z",
+    "requiredHeadcount": 1
+  },
+  "cycles": [
+    {
+      "cycleNumber": 1,
+      "status": "awaiting_approval",
+      "poolId": "a82d0b1a-09dc-473d-86fe-8e76ea2c3f2b",
+      "openedAt": "2026-09-16T20:57:22Z"
+    }
+  ],
+  "previouslyOffered": [
+    {
+      "offerId": "281a51ee-91d5-4916-acb8-0e722c038f5a",
+      "trainerId": "7c65ab22-e504-42cf-8790-df2ab3ec4161",
+      "trainerName": "مدرب 1",
+      "outcome": "rejected",
+      "sentAt": "2026-09-16T20:57:22Z",
+      "respondedAt": "2026-09-16T20:57:22Z"
+    },
+    {
+      "offerId": "fd757020-30ca-4304-8187-f55f090a6b1a",
+      "trainerId": "a1c1b6d8-6995-439d-a519-c67870e54aa8",
+      "trainerName": "مدرب 2",
+      "outcome": "rejected",
+      "sentAt": "2026-09-16T20:57:22Z",
+      "respondedAt": "2026-09-16T20:57:22Z"
+    }
+  ],
+  "viewer": {
+    "canMatch": true,
+    "canApprove": true
+  },
+  "siblings": []
+}

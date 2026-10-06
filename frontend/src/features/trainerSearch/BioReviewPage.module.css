@@ -1,0 +1,30 @@
+/* Short bio review — layout-only, token-only (DC-04/DC-23). */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.published {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding-inline-start: var(--fads-sys-space-inline-md);
+  border-inline-start: 2px solid var(--fads-sys-color-border-default);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}

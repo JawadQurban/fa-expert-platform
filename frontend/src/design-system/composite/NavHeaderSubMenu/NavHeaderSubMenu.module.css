@@ -1,0 +1,49 @@
+/* NavHeaderSubMenu — token-based, live-Figma-verified styles.
+   See docs/FIGMA_NAV_HEADER_SUB_MENU_SPECIFICATION.md. */
+
+.panel {
+  inline-size: 100%;
+  padding-inline: var(--fads-sys-navheadersubmenu-padding-inline);
+  background-color: var(--fads-sys-navheadersubmenu-bg);
+  box-shadow: var(--fads-sys-navheadersubmenu-shadow);
+  overflow: clip;
+}
+.panel[data-oncolor] {
+  background-color: var(--fads-sys-navheadersubmenu-bg-oncolor);
+}
+
+.content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--fads-sys-navheadersubmenu-column-gap);
+  max-inline-size: var(--fads-sys-navheadersubmenu-content-max-width);
+  margin-inline: auto;
+  padding-block: var(--fads-sys-navheadersubmenu-padding-block);
+}
+
+.column {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--fads-sys-navheadersubmenu-column-inner-gap);
+  min-inline-size: var(--fads-sys-navheadersubmenu-column-min-width);
+}
+
+.groupLabel {
+  padding-inline: var(--fads-sys-navheadersubmenu-label-padding-inline);
+  font-size: var(--fads-sys-navheadersubmenu-label-font-size);
+  line-height: var(--fads-sys-navheadersubmenu-label-line-height);
+  font-weight: var(--fads-ref-font-weight-bold);
+  color: var(--fads-sys-navheadersubmenu-label-color);
+}
+.panel[data-oncolor] .groupLabel {
+  color: var(--fads-sys-navheadersubmenu-label-color-oncolor);
+}
+
+.navigation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-navheadersubmenu-nav-gap);
+  inline-size: 100%;
+}

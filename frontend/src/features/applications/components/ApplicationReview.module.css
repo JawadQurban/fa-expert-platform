@@ -1,0 +1,82 @@
+/* EH-TP-05 review step — layout-only, token-only (DC-04/DC-23). */
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.groupHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.serviceTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+  padding-block-end: var(--fads-sys-space-stack-xs);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.row:last-child {
+  border-block-end: none;
+  padding-block-end: 0;
+}
+
+.row dt {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.row dd {
+  margin: 0;
+  text-align: end;
+}
+
+.missingList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  margin: 0;
+  padding-inline-start: var(--fads-sys-space-inline-lg);
+}
+
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One entry of a repeatable section inside its review group. */
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}

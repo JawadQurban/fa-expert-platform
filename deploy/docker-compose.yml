@@ -1,0 +1,200 @@
+# Expert Hub — STANDALONE frontend Docker Compose (this product ONLY).
+# Never add Hackathon or other products here.
+#
+#   cd deploy
+#   cp .env.expert-hub.example .env        # then edit
+#   docker compose --env-file .env up -d --build
+#
+# The container binds to 127.0.0.1 only; the external server Nginx is the public
+# entry point (see server-nginx.example.conf).
+
+name: expert-hub
+
+services:
+  expert-hub-frontend:
+    build:
+      # Build context = repository root (needs frontend/ + deploy/).
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        EXPERT_HUB_BASE_PATH: ${EXPERT_HUB_BASE_PATH:-/expert-hub}
+        EXPERT_HUB_ENV: ${EXPERT_HUB_ENV:-production}
+    image: expert-hub-frontend:${EXPERT_HUB_IMAGE_TAG:-local}
+    container_name: expert-hub-frontend
+    restart: unless-stopped
+    # Runtime configuration → injected into config.js at container start.
+    environment:
+      EXPERT_HUB_API_BASE_URL: ${EXPERT_HUB_API_BASE_URL:-}
+      EXPERT_HUB_DATA_MODE: ${EXPERT_HUB_DATA_MODE:-api}
+      EXPERT_HUB_ENV: ${EXPERT_HUB_ENV:-production}
+      EXPERT_HUB_SSO_ENTRY_URL: ${EXPERT_HUB_SSO_ENTRY_URL:-}
+      EXPERT_HUB_TELEMETRY_URL: ${EXPERT_HUB_TELEMETRY_URL:-}
+      # OIDC client (INT-01, P-158) — config.js.template reads all ten; without
+      # this block the env-file values never reach the container.
+      EXPERT_HUB_OIDC_ISSUER: ${EXPERT_HUB_OIDC_ISSUER:-}
+      EXPERT_HUB_OIDC_DISCOVERY_URL: ${EXPERT_HUB_OIDC_DISCOVERY_URL:-}
+      EXPERT_HUB_OIDC_CLIENT_ID: ${EXPERT_HUB_OIDC_CLIENT_ID:-}
+      EXPERT_HUB_OIDC_SCOPES: ${EXPERT_HUB_OIDC_SCOPES:-}
+      EXPERT_HUB_OIDC_REDIRECT_URI: ${EXPERT_HUB_OIDC_REDIRECT_URI:-}
+      EXPERT_HUB_OIDC_POST_LOGOUT_REDIRECT_URI: ${EXPERT_HUB_OIDC_POST_LOGOUT_REDIRECT_URI:-}
+      EXPERT_HUB_OIDC_ROLE_CLAIM: ${EXPERT_HUB_OIDC_ROLE_CLAIM:-}
+      EXPERT_HUB_OIDC_INTERNAL_ROLE_VALUES: ${EXPERT_HUB_OIDC_INTERNAL_ROLE_VALUES:-}
+      EXPERT_HUB_OIDC_TRAINER_ROLE_VALUES: ${EXPERT_HUB_OIDC_TRAINER_ROLE_VALUES:-}
+      EXPERT_HUB_OIDC_NAME_CLAIM: ${EXPERT_HUB_OIDC_NAME_CLAIM:-}
+    # Bind to localhost ONLY — the external Nginx proxies to this port.
+    ports:
+      - '127.0.0.1:${EXPERT_HUB_HOST_PORT:-8085}:8080'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/health']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    # Writable scratch for Nginx; the image already runs as a non-root user.
+    tmpfs:
+      - /tmp
+
+  # ── The Expert Hub API (ASP.NET Core, BFF for INT-01) ──────────────────────
+  #
+  # Secrets (ConnectionStrings__ExpertHub, Oidc__ClientSecret) come from a
+  # second, UNCOMMITTED env file — see env/api.secrets.env.example:
+  #   docker compose --env-file env/local.env --env-file env/api.secrets.env up -d --build
+  # Without the secrets file the API still boots: /health is healthy,
+  # /health/ready reports the missing database honestly, and the OIDC
+  # handshake works with a public (secret-less) client.
+  expert-hub-api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    image: expert-hub-api:${EXPERT_HUB_IMAGE_TAG:-local}
+    container_name: expert-hub-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${EXPERT_HUB_API_ENVIRONMENT:-Production}
+      # OIDC — the same values the frontend env file already carries (P-176).
+      Oidc__Authority: ${EXPERT_HUB_OIDC_ISSUER:-}
+      Oidc__ClientId: ${EXPERT_HUB_OIDC_CLIENT_ID:-}
+      Oidc__ClientSecret: ${EXPERT_HUB_OIDC_CLIENT_SECRET:-}
+      Oidc__FrontendReturnPath: ${EXPERT_HUB_OIDC_FRONTEND_RETURN_PATH:-/expert-hub}
+      Oidc__RoleClaim: ${EXPERT_HUB_OIDC_ROLE_CLAIM:-}
+      Oidc__InternalRoleValues: ${EXPERT_HUB_OIDC_INTERNAL_ROLE_VALUES:-}
+      Oidc__TrainerRoleValues: ${EXPERT_HUB_OIDC_TRAINER_ROLE_VALUES:-}
+      Oidc__NameClaim: ${EXPERT_HUB_OIDC_NAME_CLAIM:-name}
+      Oidc__UsePushedAuthorization: ${EXPERT_HUB_OIDC_USE_PAR:-true}
+      # ⚠️ The API runs the handshake (`P-163`), so the scopes that matter are
+      # THESE. The env files have carried `EXPERT_HUB_OIDC_SCOPES` since the
+      # flow lived in the browser, and it reached nothing after the move —
+      # editing it appeared to work and changed nothing.
+      Oidc__Scopes: ${EXPERT_HUB_OIDC_SCOPES:-openid profile email}
+      # Interview meetings (J-06/F2). Empty secret = off; nothing is booked
+      # and the interview panel behaves as it always has.
+      # ⚠️ Calendars.ReadWrite (Application) reaches EVERY mailbox unless an
+      # Exchange admin scopes it to the organiser with New-ApplicationAccessPolicy.
+      Teams__TenantId: ${EXPERT_HUB_TEAMS_TENANT_ID:-}
+      Teams__ClientId: ${EXPERT_HUB_TEAMS_CLIENT_ID:-}
+      Teams__ClientSecret: ${EXPERT_HUB_TEAMS_CLIENT_SECRET:-}
+      Teams__OrganizerUpn: ${EXPERT_HUB_TEAMS_ORGANIZER_UPN:-}
+      Teams__InterviewMinutes: ${EXPERT_HUB_TEAMS_INTERVIEW_MINUTES:-30}
+      # INT-05 — the Academy's own API. Empty = off: every call fails closed
+      # with a reason and the product behaves exactly as it did before. Set it
+      # and each sign-in reads that person's profile (`P-227`).
+      Fast__BaseUrl: ${EXPERT_HUB_FAST_API_BASE_URL:-}
+      Fast__TimeoutSeconds: ${EXPERT_HUB_FAST_TIMEOUT_SECONDS:-30}
+      Fast__ReferenceSyncIntervalHours: ${EXPERT_HUB_FAST_REFERENCE_SYNC_HOURS:-24}
+      # FAST SERVICE credential (machine-to-machine, OAuth client_credentials) —
+      # never a signed-in user's token. Setting ClientId AND ClientSecret switches
+      # server-to-server calls on; empty leaves them failing closed
+      # (WAITING_FOR_FAST_SERVICE_CREDENTIAL). Scope is omitted when empty. The
+      # token endpoint is discovered from Authority (default: Oidc__Authority)
+      # unless TokenEndpoint names it. Put the secret in env/api.secrets.env.
+      Fast__ClientId: ${EXPERT_HUB_FAST_CLIENT_ID:-}
+      Fast__ClientSecret: ${EXPERT_HUB_FAST_CLIENT_SECRET:-}
+      Fast__Scope: ${EXPERT_HUB_FAST_SCOPE:-}
+      Fast__Authority: ${EXPERT_HUB_FAST_AUTHORITY:-}
+      Fast__TokenEndpoint: ${EXPERT_HUB_FAST_TOKEN_ENDPOINT:-}
+      # INT-06 — the AI provider for every AI use case (screening insight, the
+      # trainer bio draft). `anthropic` or `openai`; switching is these values
+      # and a restart. The key is a secret: env/api.secrets.env only. Empty key
+      # or model = off, and the product behaves as it does without AI.
+      Ai__Provider: ${EXPERT_HUB_AI_PROVIDER:-anthropic}
+      Ai__Model: ${EXPERT_HUB_AI_MODEL:-}
+      Ai__ApiKey: ${EXPERT_HUB_AI_API_KEY:-}
+      Ai__Endpoint: ${EXPERT_HUB_AI_ENDPOINT:-}
+      Ai__MaxTokens: ${EXPERT_HUB_AI_MAX_TOKENS:-1024}
+      # P-181 — roles are Expert Hub's own; this seeds the FIRST administrator.
+      Access__BootstrapAdministrators: ${EXPERT_HUB_BOOTSTRAP_ADMINS:-}
+      # Owner ruling 2026-09-08 — the Academy's own role values that mean
+      # "trainer". Someone it already registers as one is granted the trainer
+      # role at sign-in instead of waiting to be typed in by hand. Empty grants
+      # nothing; a revocation by an administrator is never undone by this.
+      Access__TrainerFastRoles: ${EXPERT_HUB_TRAINER_FAST_ROLES:-}
+      # Database — empty until infrastructure supplies one; readiness says so.
+      ConnectionStrings__ExpertHub: ${EXPERT_HUB_API_CONNECTION_STRING:-}
+      # Uploaded documents live on the server until the CDN is configured
+      # (owner ruling 2026-09-03). This path MUST be the mounted volume below —
+      # written anywhere else, every document is lost on the next deployment.
+      Documents__RootPath: ${EXPERT_HUB_DOCUMENTS_ROOT:-/var/expert-hub/documents}
+      Database__AutoMigrate: ${EXPERT_HUB_DB_AUTO_MIGRATE:-true}
+    # Bind to localhost ONLY — the external Nginx proxies /api/ to this port.
+    ports:
+      - '127.0.0.1:${EXPERT_HUB_API_HOST_PORT:-8086}:8080'
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/health']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    # Data-protection keys encrypt the session/handshake cookies. Persisted so
+    # a container restart does not sign every user out mid-session.
+    volumes:
+      - expert-hub-api-dpkeys:/home/app/.aspnet/DataProtection-Keys
+      # ⚠️ Uploaded documents. A named volume, not a bind into the image: a
+      # redeploy replaces the container and would take the files with it.
+      # Back this up with the database — an application's CV is as much a
+      # record as its row.
+      - expert-hub-api-documents:/var/expert-hub/documents
+
+  # ── SQL Server for the TESTING stack (opt-in) ──────────────────────────────
+  #
+  # The stand-in until infrastructure supplies a managed instance
+  # (`17_STACK_DECISION.md` §4). Starts only with `--profile db`:
+  #
+  #   docker compose --env-file env/local.env --env-file env/api.secrets.env \
+  #     --profile db up -d --build
+  #
+  # `EXPERT_HUB_DB_SA_PASSWORD` and the API's connection string live in the
+  # UNCOMMITTED env/api.secrets.env (see its .example). The API applies EF
+  # migrations automatically at startup when a connection string is configured
+  # (`Database__AutoMigrate`, default true) — a no-op when already current.
+  expert-hub-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: expert-hub-db
+    profiles: ["db"]
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${EXPERT_HUB_DB_SA_PASSWORD:-}
+      MSSQL_PID: Developer
+    # No host port on purpose: only the API container (same compose network)
+    # talks to it, as `Server=expert-hub-db` in the connection string.
+    volumes:
+      - expert-hub-db-data:/var/opt/mssql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" -b
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  expert-hub-api-dpkeys:
+  expert-hub-api-documents:
+  expert-hub-db-data:

@@ -1,0 +1,56 @@
+/* Staff record identity head (Option B prototype `.idh`) — token-only. */
+
+.card {
+  gap: var(--fads-ref-space-3);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-ref-space-3);
+}
+
+/* Initials on the brand tint, as the prototype's person badge. */
+.avatar {
+  background-color: var(--fads-ref-primary-100);
+  color: var(--fads-ref-primary-800);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.text {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  min-inline-size: 0;
+}
+
+/* Programmatic focus target only — see PageHead.module.css. */
+.title:focus {
+  outline: none;
+}
+
+.meta {
+  margin: 0;
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+  line-height: var(--fads-sys-typography-line-height-xs);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  margin-block-start: var(--fads-ref-space-1);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  margin-inline-start: auto;
+}

@@ -1,0 +1,62 @@
+/* P-10 Profile Header (pattern hero) — layout-only, token-only (DC-04/DC-23). */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  margin-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-lg);
+  padding-block: var(--fads-ref-space-8);
+  padding-inline: var(--fads-ref-space-8);
+  border-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-ref-primary-25);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.heroInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-lg);
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+
+.eyebrow {
+  color: var(--fads-sys-color-primary);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.ratingScore {
+  color: var(--fads-sys-color-text-default);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.email {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.emailLabel {
+  font-weight: var(--fads-ref-font-weight-medium);
+}

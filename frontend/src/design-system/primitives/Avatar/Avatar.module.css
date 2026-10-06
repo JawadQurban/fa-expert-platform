@@ -1,0 +1,95 @@
+/* Avatar — token-only. Verified live against Figma node 5699:53529 (7 sizes x
+   Rounded/Square shape x Initials/Icon/Image type x border on/off). */
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-sys-avatar-background-fallback);
+  color: var(--fads-sys-avatar-text-color);
+  font-family: var(--fads-sys-font-family-base);
+  user-select: none;
+}
+
+.avatar[data-border] {
+  box-shadow: 0 0 0 var(--fads-sys-avatar-border-width) var(--fads-sys-avatar-border-color);
+}
+
+.avatar[data-square] {
+  border-radius: var(--fads-sys-radius-sm);
+}
+
+.avatar[data-size='2xl'][data-square],
+.avatar[data-size='3xl'][data-square] {
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.avatar[data-size='xs'] {
+  inline-size: var(--fads-ref-space-5);
+  block-size: var(--fads-ref-space-5);
+  font-size: var(--fads-sys-avatar-font-size-xs);
+  line-height: var(--fads-sys-avatar-line-height-xs);
+  font-weight: var(--fads-sys-avatar-font-weight-xs);
+}
+.avatar[data-size='sm'] {
+  inline-size: var(--fads-ref-space-6);
+  block-size: var(--fads-ref-space-6);
+  font-size: var(--fads-sys-avatar-font-size-sm);
+  line-height: var(--fads-sys-avatar-line-height-sm);
+  font-weight: var(--fads-sys-avatar-font-weight-sm);
+}
+.avatar[data-size='md'] {
+  inline-size: var(--fads-ref-space-7);
+  block-size: var(--fads-ref-space-7);
+  font-size: var(--fads-sys-avatar-font-size-md);
+  line-height: var(--fads-sys-avatar-line-height-md);
+  font-weight: var(--fads-sys-avatar-font-weight-md);
+}
+.avatar[data-size='lg'] {
+  inline-size: var(--fads-ref-space-8);
+  block-size: var(--fads-ref-space-8);
+  font-size: var(--fads-sys-avatar-font-size-lg);
+  line-height: var(--fads-sys-avatar-line-height-lg);
+  font-weight: var(--fads-sys-avatar-font-weight-lg);
+}
+.avatar[data-size='xl'] {
+  inline-size: var(--fads-ref-space-9);
+  block-size: var(--fads-ref-space-9);
+  font-size: var(--fads-sys-avatar-font-size-xl);
+  line-height: var(--fads-sys-avatar-line-height-xl);
+  font-weight: var(--fads-sys-avatar-font-weight-xl);
+}
+.avatar[data-size='2xl'] {
+  inline-size: var(--fads-sys-avatar-size-2xl);
+  block-size: var(--fads-sys-avatar-size-2xl);
+  font-size: var(--fads-sys-avatar-font-size-2xl);
+  line-height: var(--fads-sys-avatar-line-height-2xl);
+  font-weight: var(--fads-sys-avatar-font-weight-2xl);
+}
+.avatar[data-size='3xl'] {
+  inline-size: var(--fads-sys-avatar-size-3xl);
+  block-size: var(--fads-sys-avatar-size-3xl);
+  font-size: var(--fads-sys-avatar-font-size-3xl);
+  line-height: var(--fads-sys-avatar-line-height-3xl);
+  font-weight: var(--fads-sys-avatar-font-weight-3xl);
+}
+
+.image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--fads-sys-avatar-icon-color);
+  inline-size: 60%;
+  block-size: 60%;
+}
+
+.initials {
+  line-height: 1;
+}

@@ -1,0 +1,197 @@
+/* Select / Dropdown Input (CMP-15) — token-only styling.
+   Every color, size, and typography value below is sourced from the official
+   Platforms Code Figma Dropdown Input component set (file J0xq7JG3JKshRDzrgAM7E0,
+   node 3534:49934), verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_SELECT_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Select/VISUAL_COMPLIANCE_SELECT.md. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-select-label-gap);
+  font-family: var(--fads-sys-font-family-base);
+}
+
+.labelRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--fads-ref-space-1);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-regular);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  color: var(--fads-sys-select-text-filled);
+}
+.label[data-disabled] {
+  color: var(--fads-sys-select-text-disabled);
+}
+
+.required {
+  color: var(--fads-sys-select-border-error);
+}
+.label[data-disabled] .required {
+  color: inherit;
+}
+
+/* Trigger — a real <button role="combobox">, styled like the bordered field every
+   other form primitive in this family uses. */
+.trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-select-content-gap);
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 200px;
+  block-size: var(--fads-sys-select-height-lg);
+  padding-inline: var(--fads-sys-select-padding-inline);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-select-border-default);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-select-bg-default);
+  color: var(--fads-sys-select-text-filled);
+  font-family: inherit;
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  cursor: pointer;
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    box-shadow var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+.trigger[data-size='md'] {
+  block-size: var(--fads-sys-select-height-md);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+
+.trigger[data-surface='filledDarker'] {
+  border-color: transparent;
+  background-color: var(--fads-sys-select-bg-darker);
+}
+.trigger[data-surface='filledLighter'] {
+  border-color: transparent;
+  background-color: var(--fads-sys-select-bg-lighter);
+}
+
+.trigger:hover:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-select-border-hovered);
+}
+.trigger[data-surface='filledDarker']:hover:not([data-disabled]):not([data-readonly]),
+.trigger[data-surface='filledLighter']:hover:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-select-border-default);
+}
+
+.trigger:active:not([data-disabled]):not([data-readonly]) {
+  background-color: var(--fads-sys-select-bg-pressed);
+}
+
+.trigger:focus-visible,
+.trigger[data-open]:not([data-disabled]) {
+  outline: none;
+  box-shadow: 0 0 0 var(--fads-sys-border-width-thin) var(--fads-sys-select-border-hovered) inset;
+}
+
+.trigger[data-invalid] {
+  border-color: var(--fads-sys-select-border-error);
+}
+
+.trigger[data-readonly] {
+  background-color: transparent;
+  border-color: var(--fads-sys-select-border-disabled);
+  cursor: default;
+}
+.trigger[data-disabled] {
+  background-color: transparent;
+  border-color: var(--fads-sys-select-border-disabled);
+  color: var(--fads-sys-select-text-disabled);
+  cursor: not-allowed;
+}
+
+.value {
+  flex: 1 1 0%;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+}
+.value[data-placeholder] {
+  color: var(--fads-sys-select-text-placeholder);
+}
+.trigger[data-disabled] .value[data-placeholder] {
+  color: var(--fads-sys-select-text-disabled);
+}
+
+/* Chevron — a CSS-drawn triangle approximating the official arrow-down-01/
+   arrow-up-01 icon pair (not independently importable via this component's own
+   files — spec §1/§4, same category as every prior component's icon-pipeline
+   gap). Flips via a plain rotation instead of swapping assets. */
+.chevron {
+  flex: none;
+  inline-size: 0;
+  block-size: 0;
+  border-inline: 4px solid transparent;
+  border-block-start: 5px solid var(--fads-sys-select-icon-default);
+  transition: transform var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+.chevron[data-open] {
+  transform: rotate(180deg);
+}
+.trigger[data-disabled] .chevron {
+  border-block-start-color: var(--fads-sys-select-icon-disabled);
+}
+
+/* Listbox panel — portaled to document.body, positioned via the trigger's own
+   getBoundingClientRect() (see Select.tsx), same technique as DatePicker. */
+.panel {
+  position: fixed;
+  z-index: 50;
+  margin: 0;
+  padding: var(--fads-sys-select-panel-padding);
+  list-style: none;
+  max-block-size: 20rem;
+  overflow-y: auto;
+  background-color: var(--fads-sys-select-bg-default);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-select-panel-border);
+  border-radius: var(--fads-sys-radius-sm);
+  box-shadow: var(--fads-sys-select-panel-shadow);
+}
+
+.status {
+  padding: var(--fads-sys-select-content-gap);
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-select-text-placeholder);
+  text-align: center;
+}
+
+.liveRegion {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.helper,
+.error {
+  margin: 0;
+  padding-block: var(--fads-ref-space-1);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+.helper {
+  color: var(--fads-sys-select-helper-text);
+}
+.error {
+  color: var(--fads-sys-select-helper-error);
+}
+.field[data-disabled] .helper,
+.field[data-disabled] .error {
+  color: var(--fads-sys-select-text-disabled);
+}

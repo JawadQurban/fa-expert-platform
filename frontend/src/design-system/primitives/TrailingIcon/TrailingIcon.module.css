@@ -1,0 +1,97 @@
+/* TrailingIcon — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Trailing Icon component set (file J0xq7JG3JKshRDzrgAM7E0, node 30150:92875),
+   verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_TRAILING_ICON_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/TrailingIcon/VISUAL_COMPLIANCE_TRAILING_ICON.md. The panel's
+   tokens share the same Figma "Tooltip/*" variable namespace as the separate, not-yet
+   -visually-verified Tooltip primitive (batch 7) — scoped here under trailingicon-* rather
+   than reusing Tooltip's own (currently unverified, visually different) CSS. */
+
+.wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: var(--fads-sys-trailingicon-hit-padding);
+  margin: 0;
+  cursor: pointer;
+}
+.button:disabled {
+  cursor: not-allowed;
+}
+
+/* No Hovered/Pressed/Focused/Disabled variant exists in the live 2-variant set — this
+   focus-visible outline uses already-shared generic tokens (not Figma-specific ones),
+   added because WCAG 2.2 requires visible focus regardless of Figma sample completeness. */
+.button:focus-visible {
+  outline: var(--fads-sys-border-width-thick) solid var(--fads-sys-focus-ring-color);
+  outline-offset: 2px;
+  border-radius: var(--fads-sys-radius-sm);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-trailingicon-icon-size);
+  block-size: var(--fads-sys-trailingicon-icon-size);
+  color: var(--fads-sys-trailingicon-icon-color);
+}
+
+/* Panel — appears below the trigger icon (live-verified: the icon sits above, the panel
+   below it, beak pointing up toward the icon), not the more common above-trigger placement. */
+.panel {
+  position: absolute;
+  inset-block-start: calc(100% + var(--fads-sys-trailingicon-tooltip-gap));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  z-index: var(--fads-sys-z-tooltip);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-inline-size: var(--fads-sys-trailingicon-tooltip-min-width);
+  max-inline-size: var(--fads-sys-trailingicon-tooltip-max-width);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    visibility var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+.panel[data-open] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.beak {
+  inline-size: 8px;
+  block-size: 8px;
+  margin-block-end: -4px;
+  background-color: var(--fads-sys-trailingicon-tooltip-bg);
+  transform: rotate(45deg);
+  flex: none;
+}
+
+.panelText {
+  box-sizing: border-box;
+  inline-size: 100%;
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-trailingicon-tooltip-bg);
+  box-shadow: var(--fads-sys-trailingicon-tooltip-shadow);
+  padding: var(--fads-sys-trailingicon-tooltip-padding);
+  color: var(--fads-sys-trailingicon-tooltip-text);
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-trailingicon-tooltip-font-size);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  line-height: var(--fads-sys-trailingicon-tooltip-line-height);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

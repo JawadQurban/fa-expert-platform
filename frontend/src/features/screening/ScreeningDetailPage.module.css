@@ -1,0 +1,45 @@
+/* EH-INT-03 Application Insight Page (J-05/J-08) — layout-only, token-only (DC-04/DC-23). */
+
+/* The decision (or its recorded outcome) and anything announced beside it. */
+.decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.nextStage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+/* The tabbed evidence sits inside one card: the tab row along its top edge,
+   each panel padded as the card body (Option B prototype). */
+.reviewTabs {
+  gap: 0;
+}
+
+.reviewTabs > :first-child {
+  padding-inline: var(--fads-sys-space-inset-sm);
+}
+
+.reviewTabs [role='tabpanel'] {
+  padding: var(--fads-sys-space-inset-md);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-3);
+}
+
+.block + .block {
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}
+
+.scoreGrid {
+  display: grid;
+  gap: var(--fads-sys-space-stack-lg);
+}

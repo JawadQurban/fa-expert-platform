@@ -1,0 +1,9 @@
+/* Full-page load failure — layout-only, token-only (DC-04/DC-23). */
+
+.head {
+  margin-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-md);
+}
+
+.action {
+  margin-block-start: var(--fads-sys-space-stack-md);
+}

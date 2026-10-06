@@ -1,0 +1,33 @@
+/* Expert Hub application shell — sticky-footer column, token-only. */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100vh;
+}
+
+.main {
+  flex: 1 1 auto;
+  /* Option B figure/ground: every page sits on the subtle ground so the white
+     @ds cards read as elevated surfaces (token-only; pages/sections that set
+     their own background still win over this default). */
+  background-color: var(--fads-sys-color-background-subtle);
+}
+
+/*
+  ⚠️ Tables need the surface they were designed against.
+
+  The Design System table is built for a white page: its header fill
+  (`--fads-sys-table-bg-header`) and its alternating-row fill
+  (`--fads-sys-table-bg-row-alt`) are near-white, and the row-alt token resolves
+  to the SAME value as the subtle ground above. Rendered straight onto that
+  ground a table loses its header distinction and its stripes disappear.
+
+  Fixed once here — at the shell, which is what introduced the ground — rather
+  than by wrapping a panel around the table on each of the ten pages that render
+  one. A table already inside a `Card` is white anyway, so this is a no-op there.
+  `@ds` itself is untouched.
+*/
+.main :global(table) {
+  background-color: var(--fads-sys-card-bg);
+}

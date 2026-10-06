@@ -1,0 +1,54 @@
+/* =============================================================================
+   Global base styles — foundation only (no component styling).
+   Loads tokens + reset, wires the base typography/colors, and provides the
+   accessibility primitives every product relies on (focus ring, skip link).
+   ========================================================================== */
+
+@import './generated/tokens.css';
+@import './tokens.css';
+@import './reset.css';
+
+body {
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-md);
+  color: var(--fads-sys-color-text-default);
+  background-color: var(--fads-sys-color-background-default);
+}
+
+/* Global visible focus indicator (WCAG 2.4.7). Components may refine, never remove. */
+:focus-visible {
+  outline: var(--fads-sys-focus-ring-width) solid var(--fads-sys-focus-ring-color);
+  outline-offset: var(--fads-sys-focus-ring-offset);
+}
+
+/* Skip link — visually hidden until focused (WCAG 2.4.1). Used by RootLayout. */
+.fads-skip-link {
+  position: absolute;
+  inset-inline-start: var(--fads-ref-space-2);
+  inset-block-start: var(--fads-ref-space-2);
+  z-index: var(--fads-sys-z-tooltip);
+  padding: var(--fads-sys-space-inset-sm) var(--fads-sys-space-inset-md);
+  background-color: var(--fads-sys-color-background-default);
+  color: var(--fads-sys-color-text-link);
+  border: var(--fads-sys-focus-ring-width) solid var(--fads-sys-color-border-focus);
+  border-radius: var(--fads-sys-radius-sm);
+  transform: translateY(-200%);
+  transition: transform var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+.fads-skip-link:focus {
+  transform: translateY(0);
+}
+
+/* Screen-reader-only utility (foundation-level a11y helper, not a UI component). */
+.fads-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

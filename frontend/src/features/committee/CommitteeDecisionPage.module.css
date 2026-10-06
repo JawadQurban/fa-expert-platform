@@ -1,0 +1,20 @@
+/* EH-INT-05 Approval Committee (J-09) — layout-only, token-only (DC-04/DC-23). */
+
+.optionalRejections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding: var(--fads-sys-space-inset-md);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.optionalList {
+  margin: 0;
+  padding-inline-start: var(--fads-sys-space-inset-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-color-text-default);
+}

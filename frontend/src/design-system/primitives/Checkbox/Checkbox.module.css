@@ -1,0 +1,180 @@
+/* Checkbox (CMP-17) — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Checkbox component set (file J0xq7JG3JKshRDzrgAM7E0, node 30186:53826),
+   verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_CHECKBOX_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Checkbox/VISUAL_COMPLIANCE_CHECKBOX.md. */
+
+.root {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-control-gap);
+  font-family: var(--fads-sys-font-family-base);
+}
+
+.box {
+  position: relative;
+  flex: none;
+  inline-size: var(--fads-sys-checkbox-size-md);
+  block-size: var(--fads-sys-checkbox-size-md);
+  margin-block-start: 0.125rem;
+}
+.box[data-size='sm'] {
+  inline-size: var(--fads-sys-checkbox-size-sm);
+  block-size: var(--fads-sys-checkbox-size-sm);
+}
+.box[data-size='xs'] {
+  inline-size: var(--fads-sys-checkbox-size-xs);
+  block-size: var(--fads-sys-checkbox-size-xs);
+}
+
+/* Real, fully-interactive native input — visually hidden, not display:none, so
+   focus/keyboard/AT behavior stays native. The decorative .visual sibling ignores
+   pointer events so clicks always land on the input beneath it. */
+.input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  inline-size: 100%;
+  block-size: 100%;
+}
+.input:disabled {
+  cursor: not-allowed;
+}
+
+.visual {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-checkbox-border-default);
+  border-radius: var(--fads-sys-checkbox-radius);
+  background-color: transparent;
+  color: var(--fads-sys-checkbox-icon-oncolor);
+  pointer-events: none;
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+/* Ripple / interaction circle — Hovered and Pressed, live-verified oversized by ~33%
+   per side, regardless of checked state. */
+.visual::before {
+  content: '';
+  position: absolute;
+  inset: -33.33%;
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: transparent;
+}
+.input:hover:not(:disabled) ~ .visual::before,
+.input:active:not(:disabled) ~ .visual::before {
+  background-color: var(--fads-sys-checkbox-ripple);
+}
+
+.check,
+.dash {
+  position: relative;
+  inline-size: 70%;
+  block-size: 70%;
+  display: none;
+}
+.input:checked:not(:indeterminate) ~ .visual .check {
+  display: block;
+}
+.input:indeterminate ~ .visual .dash {
+  display: block;
+}
+
+/* Checked/indeterminate fill — Default state. Primary (default mood) shown here;
+   Neutral overridden below. */
+.input:checked ~ .visual,
+.input:indeterminate ~ .visual {
+  border-color: transparent;
+  background-color: var(--fads-sys-checkbox-primary-checked);
+}
+.box[data-mood='neutral'] .input:checked ~ .visual,
+.box[data-mood='neutral'] .input:indeterminate ~ .visual {
+  background-color: var(--fads-sys-checkbox-neutral-checked);
+}
+
+/* Pressed — unchecked fills gray; checked/indeterminate darkens further. */
+.input:active:not(:disabled):not(:checked):not(:indeterminate) ~ .visual {
+  background-color: var(--fads-sys-checkbox-bg-pressed-unchecked);
+}
+.input:active:not(:disabled):checked ~ .visual,
+.input:active:not(:disabled):indeterminate ~ .visual {
+  background-color: var(--fads-sys-checkbox-primary-pressed);
+}
+.box[data-mood='neutral'] .input:active:not(:disabled):checked ~ .visual,
+.box[data-mood='neutral'] .input:active:not(:disabled):indeterminate ~ .visual {
+  background-color: var(--fads-sys-checkbox-neutral-pressed);
+}
+
+/* Hovered (not pressed) — checked/indeterminate changes fill; unchecked box is
+   unchanged (only the ripple appears, live-verified). */
+.input:hover:not(:disabled):not(:active):checked ~ .visual,
+.input:hover:not(:disabled):not(:active):indeterminate ~ .visual {
+  background-color: var(--fads-sys-checkbox-primary-hovered);
+}
+.box[data-mood='neutral'] .input:hover:not(:disabled):not(:active):checked ~ .visual,
+.box[data-mood='neutral'] .input:hover:not(:disabled):not(:active):indeterminate ~ .visual {
+  background-color: var(--fads-sys-checkbox-neutral-hovered);
+}
+
+/* Focused — real, visible ring outside the box; fill unchanged from its own
+   checked/unchecked color (live-verified: focus never changes fill). */
+.input:focus-visible ~ .visual {
+  outline: var(--fads-sys-border-width-thin) solid var(--fads-sys-checkbox-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Read-only — border-only, no fill, even when checked/indeterminate; the icon uses
+   the border tone so it stays visible on the transparent background. Declared after
+   checked/hover/pressed/focus so it wins (equal-specificity, last-wins), matching
+   the "Read-only/Disabled are uniform, declared last" pattern from TextInput. */
+.input[data-readonly] ~ .visual {
+  border-color: var(--fads-sys-checkbox-border-readonly);
+  background-color: transparent;
+  color: var(--fads-sys-checkbox-icon-readonly);
+}
+
+/* Disabled — solid fill, no border, regardless of checked state (not opacity). */
+.input:disabled ~ .visual {
+  border-color: transparent;
+  background-color: var(--fads-sys-checkbox-bg-disabled);
+  color: var(--fads-sys-checkbox-icon-readonly);
+}
+.input:disabled ~ .visual::before {
+  background-color: transparent;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding-block-start: 0.125rem;
+}
+
+.label {
+  font-size: var(--fads-sys-typography-text-md);
+  color: var(--fads-sys-color-text-default);
+  cursor: pointer;
+}
+.root[data-disabled] .label {
+  color: var(--fads-sys-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.description {
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-color-status-error);
+}

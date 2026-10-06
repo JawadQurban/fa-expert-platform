@@ -1,0 +1,44 @@
+/* EH-TP-08 material & content submission — layout-only, token-only (DC-04/DC-23). */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-2);
+  margin-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-lg);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.headings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}

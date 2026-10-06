@@ -1,0 +1,179 @@
+/* CAP-07 notification administration — layout-only, token-only (DC-04/DC-23). */
+
+/* The area's screens as a tab strip (Option B prototype `.tabs`): the current
+   one underlined in the brand colour, named by `aria-current`, not colour. */
+.areaNav {
+  display: flex;
+  flex-wrap: wrap;
+  padding-inline: var(--fads-sys-space-inset-sm);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-ref-neutral-300);
+  border-start-start-radius: var(--fads-sys-radius-lg);
+  border-start-end-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-sys-card-bg);
+}
+
+.areaNav > a {
+  padding-block: var(--fads-ref-space-2);
+  padding-inline: var(--fads-ref-space-3);
+  border-block-end: 2px solid transparent;
+  color: var(--fads-ref-neutral-700);
+  font-size: var(--fads-sys-typography-text-sm);
+  text-decoration: none;
+}
+
+.areaNav > a[aria-current='page'] {
+  border-block-end-color: var(--fads-ref-primary-600);
+  color: var(--fads-ref-primary-700);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+/* Workspace console rows — one ruled row per event or deadline, inside the
+   console's card (Option B `.rows` / `.mt2`). */
+.consoleRows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.consoleRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding-block: var(--fads-ref-space-3);
+  padding-inline: var(--fads-sys-space-inset-md);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.consoleRow:last-child {
+  border-block-end: 0;
+}
+
+.rowStatus {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+  margin-inline-start: auto;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-2);
+  margin-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-lg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding: var(--fads-sys-space-inset-md);
+  border: 1px solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.rowHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* The journey's own words sit apart from the routing controls, because one is
+   evidence and the other is a decision. */
+.evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding-inline-start: var(--fads-sys-space-inset-sm);
+  border-inline-start: 2px solid var(--fads-sys-color-border-default);
+}
+
+.routing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding-block-start: var(--fads-sys-space-stack-sm);
+  border-block-start: 1px solid var(--fads-sys-color-border-default);
+}
+
+.audienceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--fads-sys-space-inline-sm);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A checkbox group needs a group-level error, and `Field` cannot supply one:
+   it renders a `<label for>`, which may not point at a group. So the group is a
+   real `<fieldset>` and its error is a `<p role="alert">` wired by
+   `aria-describedby`, styled from the DS's own status token. */
+.groupError {
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-color-status-error);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+/* Arabic and English side by side: BR-0701 approves them together, so the
+   editor should not make one feel like an afterthought. */
+.bilingual {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+/* The active-filter row takes a line of its own under the controls. This bar is
+   a wrapping flex row, not a grid — `flex-basis: 100%` is what breaks the line
+   here, and `grid-column` would do nothing. */
+.activeChips {
+  flex-basis: 100%;
+}
+
+.tableScroll {
+  overflow-x: auto;
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+.failureRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}

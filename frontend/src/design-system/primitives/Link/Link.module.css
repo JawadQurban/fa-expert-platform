@@ -1,0 +1,148 @@
+/* Link (CMP-06) — token-only styling.
+   Every color, size, and typography value below is sourced from the official
+   Platforms Code Figma Link component set (file cII2UMRzWj0rwKuMzWFqTU, node
+   2508:25804), verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_LINK_SPECIFICATION.md and reports/VISUAL_COMPLIANCE/Link/VISUAL_COMPLIANCE_LINK.md.
+   Nothing here is a placeholder or an invented value. */
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-link-gap-md);
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  font-weight: var(--fads-ref-font-weight-regular);
+  text-decoration: none;
+  text-underline-offset: 0.2em;
+  text-decoration-skip-ink: none;
+  border-radius: var(--fads-sys-radius-sm);
+  /* Reserve the focus border's space so gaining it on :focus-visible never
+     shifts layout — same pattern as Button's transparent 1px border reserve. */
+  border: var(--fads-sys-link-focus-border-width) solid transparent;
+  cursor: pointer;
+  transition:
+    color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+/* Size — sm/md map 1:1 to the official Small/Medium variants (font, line-height,
+   gap, icon size all live-verified). Medium is the default (matches .link above). */
+.link[data-size='sm'] {
+  gap: var(--fads-sys-link-gap-sm);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+
+/* Mood: primary (default) — official Style=Primary. Focused keeps the Default
+   color (live-verified: link-primary-focused === link-primary) and is
+   communicated by the border below instead. */
+.link[data-mood='primary'] {
+  color: var(--fads-sys-link-primary);
+}
+.link[data-mood='primary']:hover:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-primary-hovered);
+  text-decoration: underline;
+}
+.link[data-mood='primary']:active:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-primary-pressed);
+  text-decoration: underline;
+}
+.link[data-mood='primary']:visited:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-primary-visited);
+}
+
+/* Mood: neutral — official Style=Neutral. Needs Confirmation: the live Visited
+   node references the *Primary*-mood visited color (see
+   --fads-sys-link-neutral-visited's definition in generate-tokens.mjs and
+   docs/FIGMA_LINK_SPECIFICATION.md §4) — implemented to match the live node. */
+.link[data-mood='neutral'] {
+  color: var(--fads-sys-link-neutral);
+}
+.link[data-mood='neutral']:hover:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-neutral-hovered);
+  text-decoration: underline;
+}
+.link[data-mood='neutral']:active:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-neutral-pressed);
+  text-decoration: underline;
+}
+.link[data-mood='neutral']:visited:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-neutral-visited);
+}
+
+/* Mood: onColor — official Style=On-color, for placement on a colored/dark
+   surface. Uses translucent-white states and a white focus border (below). */
+.link[data-mood='onColor'] {
+  color: var(--fads-sys-link-oncolor);
+}
+.link[data-mood='onColor']:hover:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-oncolor-hovered);
+  text-decoration: underline;
+}
+.link[data-mood='onColor']:active:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-oncolor-pressed);
+  text-decoration: underline;
+}
+.link[data-mood='onColor']:visited:not([aria-disabled='true']) {
+  color: var(--fads-sys-link-oncolor-visited);
+}
+
+/* Inline=True — official property: a link embedded in body text is always
+   underlined (live-verified across Default/Focused/Visited/Disabled), unlike a
+   standalone link (Inline=False, default) which is only underlined on
+   hover/press. See docs/FIGMA_LINK_SPECIFICATION.md §6. */
+.link[data-inline='true'] {
+  text-decoration: underline;
+}
+
+/* Focus — a literal 2px solid border around the whole link box (not an offset
+   ring), live-verified on the Focused-state nodes. Primary/Neutral use the dark
+   border token; On-color swaps to the white one for contrast on dark surfaces. */
+.link:focus-visible {
+  border-color: var(--fads-sys-link-focus-border-color);
+}
+.link[data-mood='onColor']:focus-visible {
+  border-color: var(--fads-sys-link-focus-border-color-oncolor);
+}
+
+/* Disabled — a flat, mood-agnostic gray (live-verified: Primary and Neutral both
+   reference the same shared disabled token; On-color has its own translucent
+   variant). No underline, no border, not interactive. Declared last so it wins
+   over every mood/hover/active/visited rule above (equal specificity). */
+.link[aria-disabled='true'] {
+  cursor: not-allowed;
+  text-decoration: none;
+  pointer-events: none;
+}
+.link[data-mood='primary'][aria-disabled='true'],
+.link[data-mood='neutral'][aria-disabled='true'] {
+  color: var(--fads-sys-link-disabled);
+}
+.link[data-mood='onColor'][aria-disabled='true'] {
+  color: var(--fads-sys-link-oncolor-disabled);
+}
+.link[data-inline='true'][aria-disabled='true'] {
+  text-decoration: underline;
+}
+
+.label {
+  display: inline;
+}
+
+/* Icon — 20px (Medium) / 16px (Small), matching the label's size tier
+   (live-verified via get_design_context). The external marker is a decorative
+   placeholder pending the official DGA icon library (Q8); it mirrors correctly
+   since it sits at the logical end. */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-link-icon-size-md);
+  block-size: var(--fads-sys-link-icon-size-md);
+  font-size: 0.85em;
+}
+.link[data-size='sm'] .icon {
+  inline-size: var(--fads-sys-link-icon-size-sm);
+  block-size: var(--fads-sys-link-icon-size-sm);
+}

@@ -1,0 +1,11 @@
+/* Token-based error-state styles. Layout only — visual tone comes from Alert. */
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.description {
+  margin: 0;
+}

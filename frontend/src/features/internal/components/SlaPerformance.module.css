@@ -1,0 +1,71 @@
+/* EH-INT-01 SLA performance table — layout-only, token-only (DC-04/DC-23). */
+
+/* Wide content scrolls inside its own box; the page never scrolls sideways. */
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  /* Figures line up under each other, which is the whole point of a column
+     of durations. */
+  font-variant-numeric: tabular-nums;
+}
+
+.caption {
+  margin-block-end: var(--fads-sys-space-stack-sm);
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+  text-align: start;
+}
+
+.table th,
+.table td {
+  padding-block: var(--fads-sys-space-inset-sm);
+  padding-inline: var(--fads-sys-space-inset-sm);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table thead th {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.stageCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  font-weight: var(--fads-ref-font-weight-regular);
+}
+
+.stageName {
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+/* The configuring row's id, quiet enough not to compete with the stage name. */
+.slaId {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.number {
+  font-size: var(--fads-sys-typography-text-sm);
+  white-space: nowrap;
+}
+
+/* ⚠️ An absent figure is muted and worded, never a zero. */
+.absent {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.measured {
+  display: block;
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}

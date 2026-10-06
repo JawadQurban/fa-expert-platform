@@ -1,0 +1,41 @@
+/* EH-INT-03 form review (J-05/F2/AC-2) — layout-only, token-only (DC-04/DC-23). */
+
+.fields {
+  margin: 0;
+  display: grid;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding-block-end: var(--fads-sys-space-stack-xs);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.field:last-child {
+  border-block-end: none;
+  padding-block-end: 0;
+}
+
+.term {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  margin: 0;
+}
+
+.definition {
+  margin: 0;
+}
+
+@media (min-width: 48rem) {
+  .field {
+    display: grid;
+    grid-template-columns: minmax(10rem, 16rem) 1fr;
+    align-items: start;
+    gap: var(--fads-sys-space-inline-md);
+  }
+}

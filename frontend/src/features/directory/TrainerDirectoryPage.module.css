@@ -1,0 +1,110 @@
+/* EH-PUB-02 Trainer Directory — layout-only, token-only (DC-04/DC-23). */
+
+/* Editorial masthead — a flat tint, no pattern. At display-xl the heading is
+   the page's texture; a pattern behind it competes with the one thing the page
+   is for. */
+.hero {
+  margin-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-lg);
+  padding-block: var(--fads-ref-space-8);
+  padding-inline: var(--fads-ref-space-8);
+  border-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-ref-primary-25);
+}
+
+/* Text and counts side by side, the counts settling to the baseline of the
+   lead so the two blocks share a line rather than floating apart. */
+.heroInner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  align-items: end;
+  gap: var(--fads-sys-space-stack-lg);
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-sm);
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+.eyebrow {
+  display: inline-block;
+  padding-block: var(--fads-ref-space-1);
+  padding-inline: var(--fads-sys-space-inline-md);
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-sys-color-background-default);
+  color: var(--fads-sys-color-primary);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.heroLead {
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+/* Derived highlight stats. */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--fads-sys-space-inline-lg);
+  margin: 0;
+  padding: 0;
+}
+
+/* `order` puts the figure above its label visually while the DOM keeps `dt`
+   before `dd` — the reading order a definition list promises. */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  min-inline-size: 7rem;
+}
+
+.statValue {
+  order: 1;
+  margin: 0;
+  color: var(--fads-sys-color-primary-strong);
+  font-size: var(--fads-sys-typography-display-lg);
+  line-height: var(--fads-ref-line-height-tight);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.statLabel {
+  order: 2;
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.filters {
+  margin-block-end: var(--fads-sys-space-stack-md);
+}
+
+.count {
+  margin-block: 0 var(--fads-sys-space-stack-md);
+}
+
+.resultsRegion {
+  min-block-size: 12rem;
+}
+
+/* Responsive results grid — desktop → tablet → single column (`05` §17). */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--fads-sys-space-stack-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gridItem {
+  display: flex;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}

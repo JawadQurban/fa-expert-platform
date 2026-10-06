@@ -1,0 +1,83 @@
+/* Expert Hub application header composition — token-only, logical properties
+   (DC-04/DC-23). Layout-only styling around the approved Design System `Header`
+   and the two utility bars; no colors/spacing/radius are hardcoded. */
+
+/* The three-level header stack (public variant). A plain wrapper — NOT a
+   landmark — so the Design System `Header` inside stays the sole top-level
+   `banner`. */
+.root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Levels 1 + 2 wrapped as one labelled region (see ExpertHubHeader.tsx). */
+.utilityRegion {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  display: block;
+  block-size: var(--fads-ref-space-7);
+  inline-size: auto;
+  object-fit: contain;
+}
+
+/* Expert Hub product name beside the Financial Academy brand mark — an org-logo +
+   product-name lockup, separated by a hairline divider (token border). Hidden on
+   the narrowest screens so the mark alone stays legible. */
+.brandName {
+  display: inline-block;
+  padding-inline-start: var(--fads-sys-space-inline-sm);
+  margin-inline-start: var(--fads-sys-space-inline-sm);
+  border-inline-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  /* The header's OWN label colour, not the page's muted text. They are a
+     step apart — neutral-500 against neutral-600 — and the header token is
+     what the design system specifies for a logo lockup. */
+  color: var(--fads-sys-header-logo-label-text);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+/* ⚠️ Hidden from the header's OWN compact breakpoint (959.98px), not from
+   30rem as it was. Between those two widths the product name kept its full
+   length while the actions — search, language, the user menu, sign out — were
+   already competing for the same row, and the two overlapped: the search icon
+   sat on top of «منصة الخبراء والمدربين».
+
+   The number is the design system Header's `useMediaQuery('(max-width:
+   959.98px)')`, matched deliberately: the lockup should disappear at exactly
+   the moment the header decides it is short of room, not at some width chosen
+   here. */
+@media (max-width: 959.98px) {
+  .brandName {
+    display: none;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* Official repo action icons (search / language / login) inlined into the DS
+   Button `iconStart` slot. Sized from the same icon-size token the DS `Icon`
+   uses; color inherits from the Button (the SVGs use `fill="currentColor"`). */
+.actionIcon {
+  display: inline-flex;
+  inline-size: var(--fads-sys-icon-size-sm);
+  block-size: var(--fads-sys-icon-size-sm);
+}
+
+.actionIcon svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.account {
+  font-weight: var(--fads-ref-font-weight-bold);
+  color: var(--fads-sys-color-text-muted);
+}

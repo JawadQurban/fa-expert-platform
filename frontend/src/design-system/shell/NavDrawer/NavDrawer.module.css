@@ -1,0 +1,52 @@
+/* Token-based nav drawer styles. */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  block-size: var(--fads-sys-control-height-sm);
+  padding-inline: var(--fads-sys-control-padding-inline-sm);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-control-radius);
+  background-color: var(--fads-sys-color-background-default);
+  color: var(--fads-sys-color-text-default);
+  cursor: pointer;
+}
+
+.toggle[aria-expanded='true'] {
+  background-color: var(--fads-sys-color-background-pressed);
+}
+
+/* Off-canvas panel. `inset-inline-start` is a logical property, so animating
+   it (rather than a physical `transform: translateX(...)`) slides the drawer
+   off-screen toward the correct edge automatically in both LTR and RTL. */
+.drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: -100%;
+  inline-size: min(20rem, 85vw);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  padding: var(--fads-sys-space-inset-md);
+  background-color: var(--fads-sys-color-surface-raised);
+  box-shadow: var(--fads-sys-elevation-2);
+  z-index: var(--fads-sys-z-drawer);
+  transition: inset-inline-start var(--fads-sys-motion-duration-base)
+    var(--fads-sys-motion-easing-standard);
+}
+
+.drawer[data-open='true'] {
+  inset-inline-start: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-lg);
+  font-weight: var(--fads-ref-font-weight-semibold);
+}

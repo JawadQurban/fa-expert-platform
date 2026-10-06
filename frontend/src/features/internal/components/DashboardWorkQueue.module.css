@@ -1,0 +1,106 @@
+/* EH-INT-01 dashboard work queue — layout-only, token-only (DC-04/DC-23).
+   A filterable peek into the staff inbox (getInbox), as identity-first action
+   rows, inside a Card. */
+
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  min-inline-size: 0; /* lets the rows wrap instead of the page scrolling */
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.count {
+  margin-inline-start: auto;
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* P-11 filter bar: search + status + clear. */
+.filters {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--fads-sys-space-inline-md);
+  flex-wrap: wrap;
+}
+
+.search {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+
+.select {
+  flex: 0 1 14rem;
+  min-inline-size: 0;
+}
+
+.clear {
+  display: flex;
+  align-items: center;
+}
+
+.list {
+  min-inline-size: 0;
+}
+
+/* Identity-first action rows. */
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+  flex-wrap: wrap;
+  padding-block: var(--fads-sys-space-stack-sm);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.row:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+
+.main {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  min-inline-size: 0;
+}
+
+.name {
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+
+.meta {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.age {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.open {
+  flex: 0 0 auto;
+}
+
+.foot {
+  display: flex;
+}

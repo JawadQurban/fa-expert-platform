@@ -1,0 +1,128 @@
+/* Tooltip — token-only. Verified live against Figma node 30150:139266 (rtl x inverted x
+   beakPlacement x icon x title). The default bubble is light — the prior always-dark bubble
+   was a real defect, fixed here. */
+
+.wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.bubble {
+  position: absolute;
+  z-index: var(--fads-sys-z-tooltip);
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    visibility var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+.bubble[data-open] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Placement (logical, RTL-safe): drives both position and beak direction via flex-direction. */
+.bubble[data-placement='top'] {
+  flex-direction: column;
+  align-items: center;
+  inset-block-end: calc(100% + var(--fads-ref-space-1));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+}
+.bubble[data-placement='bottom'] {
+  flex-direction: column-reverse;
+  align-items: center;
+  inset-block-start: calc(100% + var(--fads-ref-space-1));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+}
+.bubble[data-placement='inline-start'] {
+  flex-direction: row;
+  align-items: center;
+  inset-inline-end: calc(100% + var(--fads-ref-space-1));
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+}
+.bubble[data-placement='inline-end'] {
+  flex-direction: row-reverse;
+  align-items: center;
+  inset-inline-start: calc(100% + var(--fads-ref-space-1));
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+}
+
+.panel {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-inset-sm);
+  min-inline-size: var(--fads-sys-tooltip-min-width);
+  max-inline-size: var(--fads-sys-tooltip-max-width);
+  padding: var(--fads-sys-space-inset-sm);
+  border-radius: var(--fads-sys-radius-sm);
+  box-shadow: var(--fads-sys-tooltip-shadow);
+  background-color: var(--fads-sys-tooltip-background-light);
+  color: var(--fads-sys-tooltip-text-paragraph-light);
+}
+.bubble[data-inverted] .panel {
+  background-color: var(--fads-sys-tooltip-background-dark);
+  color: var(--fads-sys-tooltip-text-paragraph-dark);
+}
+
+.beak {
+  inline-size: var(--fads-sys-tooltip-beak-size);
+  block-size: var(--fads-sys-tooltip-beak-size);
+  flex: none;
+  transform: rotate(45deg);
+  background-color: var(--fads-sys-tooltip-background-light);
+}
+.bubble[data-inverted] .beak {
+  background-color: var(--fads-sys-tooltip-background-dark);
+}
+.bubble[data-placement='top'] .beak {
+  margin-block-start: calc(var(--fads-sys-tooltip-beak-size) / -2);
+}
+.bubble[data-placement='bottom'] .beak {
+  margin-block-end: calc(var(--fads-sys-tooltip-beak-size) / -2);
+}
+.bubble[data-placement='inline-start'] .beak {
+  margin-inline-start: calc(var(--fads-sys-tooltip-beak-size) / -2);
+}
+.bubble[data-placement='inline-end'] .beak {
+  margin-inline-end: calc(var(--fads-sys-tooltip-beak-size) / -2);
+}
+
+.icon {
+  flex: none;
+  color: var(--fads-sys-tooltip-icon-color-light);
+}
+.bubble[data-inverted] .icon {
+  color: var(--fads-sys-tooltip-icon-color-dark);
+}
+
+.textWrapper {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--fads-sys-space-inset-sm);
+  min-inline-size: 0;
+}
+
+.title {
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-xs);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  line-height: var(--fads-ref-line-height-normal);
+  color: var(--fads-sys-tooltip-text-heading-light);
+}
+.bubble[data-inverted] .title {
+  color: var(--fads-sys-tooltip-text-heading-dark);
+}
+
+.content {
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-xs);
+  font-weight: var(--fads-ref-font-weight-regular);
+  line-height: var(--fads-ref-line-height-normal);
+  word-break: break-word;
+}

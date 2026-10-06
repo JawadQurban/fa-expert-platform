@@ -1,0 +1,108 @@
+/* Live-verified against the official Platforms Code Figma Loading component set
+   (node 5698:11136) — see docs/FIGMA_LOADING_SPECIFICATION.md. */
+.loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.spinner {
+  display: inline-block;
+  border-style: solid;
+  border-width: var(--fads-sys-loading-stroke-width);
+  border-radius: var(--fads-sys-radius-pill);
+  animation: fads-loading-spin var(--fads-sys-motion-duration-slow) linear infinite;
+}
+
+.spinner[data-mood='neutral'] {
+  border-color: var(--fads-sys-loading-track-neutral);
+  border-block-start-color: var(--fads-sys-loading-indicator-neutral);
+}
+
+.spinner[data-mood='primary'] {
+  border-color: var(--fads-sys-loading-track-primary);
+  border-block-start-color: var(--fads-sys-loading-indicator-primary);
+}
+
+.spinner[data-mood='onColor'] {
+  border-color: var(--fads-sys-loading-track-oncolor);
+  border-block-start-color: var(--fads-sys-loading-indicator-oncolor);
+}
+
+.spinner[data-size='xxs'] {
+  inline-size: var(--fads-sys-loading-size-xxs);
+  block-size: var(--fads-sys-loading-size-xxs);
+}
+.spinner[data-size='xs'] {
+  inline-size: var(--fads-sys-loading-size-xs);
+  block-size: var(--fads-sys-loading-size-xs);
+}
+.spinner[data-size='sm'] {
+  inline-size: var(--fads-sys-loading-size-sm);
+  block-size: var(--fads-sys-loading-size-sm);
+}
+.spinner[data-size='md'] {
+  inline-size: var(--fads-sys-loading-size-md);
+  block-size: var(--fads-sys-loading-size-md);
+}
+.spinner[data-size='lg'] {
+  inline-size: var(--fads-sys-loading-size-lg);
+  block-size: var(--fads-sys-loading-size-lg);
+}
+.spinner[data-size='xl'] {
+  inline-size: var(--fads-sys-loading-size-xl);
+  block-size: var(--fads-sys-loading-size-xl);
+}
+.spinner[data-size='xxl'] {
+  inline-size: var(--fads-sys-loading-size-xxl);
+  block-size: var(--fads-sys-loading-size-xxl);
+}
+
+@keyframes fads-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  inline-size: 100%;
+}
+
+.skeletonLine {
+  display: block;
+  block-size: var(--fads-ref-space-4);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-color-background-subtle);
+  animation: fads-loading-shimmer var(--fads-sys-motion-duration-slow) ease-in-out infinite
+    alternate;
+}
+
+.skeletonLine:last-child {
+  inline-size: 60%;
+}
+
+@keyframes fads-loading-shimmer {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* WCAG 2.3.3 removes the motion, not the "in progress" cue — the static ring
+     still shows a distinctly-colored start edge (set by the [data-mood] rules
+     above), which stays visible without needing to keep spinning. */
+  .spinner {
+    animation: none;
+  }
+
+  .skeletonLine {
+    animation: none;
+    opacity: 0.75;
+  }
+}

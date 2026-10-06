@@ -1,0 +1,89 @@
+/* TocItem — token-based, live-Figma-verified styles.
+   See docs/FIGMA_TOC_ITEM_SPECIFICATION.md. */
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  inline-size: 100%;
+  min-inline-size: 140px;
+  padding-inline-start: var(--fads-sys-tocitem-padding-inline-start);
+  padding-inline-end: var(--fads-sys-tocitem-padding-inline-end);
+  border: none;
+  border-radius: var(--fads-sys-tocitem-radius);
+  background-color: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: start;
+}
+
+.nestingBar {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  inline-size: var(--fads-sys-tocitem-nesting-slot);
+}
+.nestingBar::before {
+  content: '';
+  display: block;
+  inline-size: var(--fads-sys-tocitem-nesting-bar-width);
+  border-radius: var(--fads-sys-tocitem-nesting-bar-width);
+  background-color: var(--fads-sys-tocitem-nesting-bar-color);
+}
+
+.label {
+  flex: 1 0 0;
+  min-inline-size: 0;
+  padding-block: var(--fads-sys-tocitem-padding-block);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  font-weight: var(--fads-ref-font-weight-regular);
+  color: var(--fads-sys-tocitem-text-unselected);
+  word-break: break-word;
+}
+
+.indicator {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0;
+  inline-size: var(--fads-sys-tocitem-indicator-width);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: transparent;
+}
+
+.item[data-selected] .label {
+  font-weight: var(--fads-ref-font-weight-semibold);
+  color: var(--fads-sys-tocitem-text-selected);
+}
+.item[data-selected] .indicator {
+  background-color: var(--fads-sys-tocitem-indicator-selected);
+}
+
+.item:not([data-selected]):hover {
+  background-color: var(--fads-sys-tocitem-bg-hover);
+}
+.item:not([data-selected]):hover .label {
+  color: var(--fads-sys-tocitem-text-selected);
+}
+.item:not([data-selected]):hover .indicator {
+  background-color: var(--fads-sys-tocitem-indicator-hover);
+}
+
+.item:not([data-selected]):active {
+  background-color: var(--fads-sys-tocitem-bg-active);
+}
+.item:not([data-selected]):active .label {
+  color: var(--fads-sys-tocitem-text-selected);
+}
+.item:not([data-selected]):active .indicator {
+  background-color: var(--fads-sys-tocitem-indicator-active);
+}
+
+.item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--fads-sys-tocitem-focus-ring);
+}
+.item:focus-visible .indicator {
+  background-color: transparent;
+}

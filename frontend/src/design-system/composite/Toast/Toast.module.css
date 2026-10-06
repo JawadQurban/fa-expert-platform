@@ -1,0 +1,160 @@
+/* Notification Toast (CMP-22) — token-based, live-Figma-verified styles.
+   See docs/FIGMA_NOTIFICATION_TOAST_SPECIFICATION.md. */
+
+.viewport {
+  position: fixed;
+  inset-block-end: var(--fads-sys-space-inset-lg);
+  inset-inline-end: var(--fads-sys-space-inset-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-toast-gap);
+  z-index: var(--fads-sys-z-toast);
+  max-inline-size: min(
+    var(--fads-sys-toast-width),
+    calc(100vw - 2 * var(--fads-sys-space-inset-lg))
+  );
+}
+
+.toast {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-toast-gap);
+  padding-inline: var(--fads-sys-toast-padding-inline);
+  padding-block: var(--fads-sys-toast-padding-block);
+  border-radius: var(--fads-sys-toast-radius);
+  background-color: var(--fads-sys-toast-background);
+  box-shadow: var(--fads-sys-toast-shadow);
+  overflow: clip;
+}
+
+.stripe {
+  position: absolute;
+  opacity: 0.7;
+  background-color: var(--fads-sys-toast-stripe-neutral);
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--fads-sys-toast-stripe-thickness);
+}
+.toast[data-tone='info'] .stripe {
+  background-color: var(--fads-sys-toast-stripe-info);
+}
+.toast[data-tone='success'] .stripe {
+  background-color: var(--fads-sys-toast-stripe-success);
+}
+.toast[data-tone='warning'] .stripe {
+  background-color: var(--fads-sys-toast-stripe-warning);
+}
+.toast[data-tone='error'] .stripe {
+  background-color: var(--fads-sys-toast-stripe-error);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--fads-sys-toast-header-gap);
+  inline-size: 100%;
+}
+
+.iconCircle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-toast-icon-circle-size);
+  block-size: var(--fads-sys-toast-icon-circle-size);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: var(--fads-sys-toast-icon-bg-neutral);
+  color: var(--fads-sys-toast-icon-neutral);
+}
+.iconCircle[data-tone='info'] {
+  background-color: var(--fads-sys-toast-icon-bg-info);
+  color: var(--fads-sys-toast-icon-info);
+}
+.iconCircle[data-tone='success'] {
+  background-color: var(--fads-sys-toast-icon-bg-success);
+  color: var(--fads-sys-toast-icon-success);
+}
+.iconCircle[data-tone='warning'] {
+  background-color: var(--fads-sys-toast-icon-bg-warning);
+  color: var(--fads-sys-toast-icon-warning);
+}
+.iconCircle[data-tone='error'] {
+  background-color: var(--fads-sys-toast-icon-bg-error);
+  color: var(--fads-sys-color-status-error);
+}
+.iconCircle svg {
+  inline-size: 60%;
+  block-size: 60%;
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 0;
+  min-inline-size: 0;
+  gap: var(--fads-sys-toast-text-gap);
+  justify-content: center;
+  min-block-size: var(--fads-sys-toast-icon-circle-size);
+}
+
+.title {
+  margin: 0;
+  color: var(--fads-sys-toast-title-color);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+}
+
+.description {
+  margin: 0;
+  color: var(--fads-sys-toast-description-color);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+
+.close {
+  flex: none;
+}
+
+.actions {
+  display: flex;
+  gap: var(--fads-sys-toast-actions-gap);
+  padding-inline-start: var(--fads-sys-toast-actions-padding-start);
+  inline-size: 100%;
+}
+
+@media (max-width: 30rem) {
+  .toast {
+    padding-inline: var(--fads-sys-toast-padding-inline-mobile);
+    max-inline-size: var(--fads-sys-toast-width-mobile);
+  }
+
+  .stripe {
+    inset-inline: 0;
+    inset-block-start: 0;
+    inline-size: auto;
+    block-size: var(--fads-sys-toast-stripe-thickness);
+  }
+
+  .iconCircle {
+    order: 0;
+  }
+
+  .close {
+    order: 1;
+    margin-inline-start: auto;
+  }
+
+  .textBlock {
+    order: 2;
+    flex-basis: 100%;
+    min-block-size: 0;
+  }
+
+  .actions {
+    flex-direction: column;
+    padding-inline-start: 0;
+  }
+}

@@ -1,0 +1,117 @@
+/* Staff workspace card (Option B prototype `.cd` / `.ch` / `.cdp`) — token-only.
+   Composes the DS Card (elevated) and adds the prototype's hairline edge; the
+   card's own padding and 24px gap give way to the header/body regions below. */
+
+.panel {
+  gap: 0;
+  padding: 0;
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  min-inline-size: 0;
+}
+
+/* The DS Card wraps children in a gapped column; the regions own the spacing. */
+.panel > * {
+  gap: 0;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  padding-block: var(--fads-ref-space-3);
+  padding-inline: var(--fads-sys-space-inset-md);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.title {
+  margin: 0;
+  color: var(--fads-sys-color-text-default);
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-bold);
+  line-height: var(--fads-sys-typography-line-height-md);
+}
+
+/* Programmatic focus target only — see PageHead.module.css. */
+.title:focus {
+  outline: none;
+}
+
+.meta {
+  margin-inline-start: auto;
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+  line-height: var(--fads-sys-typography-line-height-xs);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  margin-inline-start: auto;
+}
+
+.meta + .actions {
+  margin-inline-start: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-3);
+  padding: var(--fads-sys-space-inset-md);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-3);
+  padding: var(--fads-sys-space-inset-md);
+  min-inline-size: 0;
+}
+
+.body[data-flush] {
+  gap: 0;
+  padding: 0;
+}
+
+/* A table meeting the card edge: the header rule would double the region's. */
+.body[data-flush] :global(thead th) {
+  border-block-start-color: transparent;
+}
+
+.body[data-flush] :global(tbody tr:last-child td) {
+  border-block-end-color: transparent;
+}
+
+.inlineHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.inlineTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.description {
+  margin: 0;
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  padding-block: var(--fads-ref-space-2);
+  padding-inline: var(--fads-sys-space-inset-md);
+  border-block-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}

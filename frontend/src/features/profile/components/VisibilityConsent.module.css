@@ -1,0 +1,8 @@
+/* Visibility consent — layout-only, token-only (DC-04/DC-23). */
+
+.wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+}

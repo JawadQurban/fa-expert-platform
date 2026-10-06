@@ -1,0 +1,93 @@
+/* EH-INT-02b request detail — layout-only, token-only (DC-04/DC-23). */
+
+/* The trainer context and the request read as one column; the decision sits
+   beside them in a narrow column, so it is taken with both in view (F2/AC-1). */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--fads-sys-space-stack-md);
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mainColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  min-inline-size: 0;
+}
+
+.metaTerm {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.metaValue {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.submitted {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+}
+
+.submittedItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+/* Attachment rows meet the card edges, ruled between (Option B `.rows`). */
+.attachments {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attachmentRow {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  padding-block: var(--fads-ref-space-3);
+  padding-inline: var(--fads-sys-space-inset-md);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.attachmentRow:last-child {
+  border-block-end: 0;
+}
+
+.attachmentText {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.attachmentName {
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+
+.fileName {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.addendumRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}

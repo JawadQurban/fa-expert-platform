@@ -1,0 +1,18 @@
+/* EH-INT-02b service-request queue — layout-only, token-only (DC-04/DC-23). */
+
+/* The filter bar is the list card's toolbar. */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  align-items: end;
+  gap: var(--fads-ref-space-3) var(--fads-sys-space-inline-md);
+}
+
+/* The active-filter row spans the whole bar, under the controls. */
+.activeChips {
+  grid-column: 1 / -1;
+}
+
+.activeChips:empty {
+  display: none;
+}

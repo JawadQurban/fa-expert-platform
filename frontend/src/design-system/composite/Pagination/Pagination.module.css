@@ -1,0 +1,143 @@
+/* Live-verified against the official Platforms Code Figma Pagination component set
+   (node 7936:8133) — see docs/FIGMA_PAGINATION_SPECIFICATION.md. */
+
+.pagination {
+  display: flex;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-pagination-items-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.control,
+.page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 0;
+  border-radius: var(--fads-sys-pagination-radius);
+  background: transparent;
+  color: var(--fads-sys-pagination-text);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.control:disabled {
+  cursor: not-allowed;
+  opacity: var(--fads-sys-opacity-disabled);
+}
+
+.page[aria-current='page'] {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.selector {
+  position: absolute;
+  inset-block-end: 0;
+  block-size: var(--fads-sys-pagination-selector-height);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: var(--fads-sys-pagination-selector-bg);
+}
+
+.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-pagination-ellipsis-border);
+  border-radius: var(--fads-sys-pagination-radius);
+  color: var(--fads-sys-pagination-text);
+}
+
+.chevron {
+  display: inline-block;
+  inline-size: 0.5em;
+  block-size: 0.5em;
+  border-inline-start: 2px solid currentColor;
+  border-block-start: 2px solid currentColor;
+}
+
+.chevronStart {
+  transform: rotate(-45deg);
+}
+
+.chevronEnd {
+  transform: rotate(135deg);
+}
+
+.chevronStart:dir(rtl) {
+  transform: scaleX(-1) rotate(-45deg);
+}
+
+.chevronEnd:dir(rtl) {
+  transform: scaleX(-1) rotate(135deg);
+}
+
+/* Large */
+.list[data-size='lg'] .control,
+.list[data-size='lg'] .page {
+  min-inline-size: var(--fads-sys-pagination-item-size-lg);
+  block-size: var(--fads-sys-pagination-item-size-lg);
+  padding-inline: var(--fads-sys-pagination-item-padding-lg);
+  font-size: var(--fads-sys-pagination-text-size-lg);
+  line-height: var(--fads-sys-pagination-line-height-lg);
+}
+.list[data-size='lg'] .control {
+  inline-size: var(--fads-sys-pagination-item-size-lg);
+  font-size: var(--fads-sys-pagination-icon-size-lg);
+}
+.list[data-size='lg'] .ellipsis {
+  min-inline-size: var(--fads-sys-pagination-item-size-lg);
+  block-size: var(--fads-sys-pagination-item-size-lg);
+}
+.list[data-size='lg'] .selector {
+  inline-size: var(--fads-sys-pagination-selector-width-lg);
+}
+
+/* Medium */
+.list[data-size='md'] .control,
+.list[data-size='md'] .page {
+  min-inline-size: var(--fads-sys-pagination-item-size-md);
+  block-size: var(--fads-sys-pagination-item-size-md);
+  padding-inline: var(--fads-sys-pagination-item-padding-md);
+  font-size: var(--fads-sys-pagination-text-size-md);
+  line-height: var(--fads-sys-pagination-line-height-md);
+}
+.list[data-size='md'] .control {
+  inline-size: var(--fads-sys-pagination-item-size-md);
+  font-size: var(--fads-sys-pagination-icon-size-md);
+}
+.list[data-size='md'] .ellipsis {
+  min-inline-size: var(--fads-sys-pagination-item-size-md);
+  block-size: var(--fads-sys-pagination-item-size-md);
+}
+.list[data-size='md'] .selector {
+  inline-size: var(--fads-sys-pagination-selector-width-md);
+}
+
+/* Small */
+.list[data-size='sm'] .control,
+.list[data-size='sm'] .page {
+  min-inline-size: var(--fads-sys-pagination-item-size-sm);
+  block-size: var(--fads-sys-pagination-item-size-sm);
+  padding-inline: var(--fads-sys-pagination-item-padding-sm);
+  font-size: var(--fads-sys-pagination-text-size-sm);
+  line-height: var(--fads-sys-pagination-line-height-sm);
+}
+.list[data-size='sm'] .control {
+  inline-size: var(--fads-sys-pagination-item-size-sm);
+  font-size: var(--fads-sys-pagination-icon-size-sm);
+}
+.list[data-size='sm'] .ellipsis {
+  min-inline-size: var(--fads-sys-pagination-item-size-sm);
+  block-size: var(--fads-sys-pagination-item-size-sm);
+}
+.list[data-size='sm'] .selector {
+  inline-size: var(--fads-sys-pagination-selector-width-sm);
+}

@@ -1,0 +1,44 @@
+/*
+ * Expert Hub RUNTIME configuration TEMPLATE.
+ *
+ * The container entrypoint (docker-entrypoint.sh → /docker-entrypoint.d/) runs
+ * `envsubst` over this file at container START and writes the result to
+ *   /usr/share/nginx/html/expert-hub/config.js
+ * so the SAME image serves Development / UAT / Production with no rebuild.
+ *
+ * ⚠️ Browser-visible only — NEVER put secrets, tokens, or DB/credential values
+ * here. Everything in this file is readable by anyone who opens developer tools.
+ *
+ * ⚠️ There is deliberately NO client-secret variable. A client secret cannot be
+ * used from a browser: if the identity provider issues one, the client is
+ * confidential and its token exchange belongs in the Expert Hub API, which is
+ * the only place a secret may live. Do not add one here "temporarily".
+ */
+window.__EXPERT_HUB_RUNTIME_CONFIG__ = {
+  apiBaseUrl: '${EXPERT_HUB_API_BASE_URL}',
+  dataMode: '${EXPERT_HUB_DATA_MODE}',
+  environment: '${EXPERT_HUB_ENV}',
+  ssoEntryUrl: '${EXPERT_HUB_SSO_ENTRY_URL}',
+  telemetryUrl: '${EXPERT_HUB_TELEMETRY_URL}',
+
+  /* ── OpenID Connect (INT-01 — the Academy / FAST identity provider) ──────
+   *
+   * Fill these in once the FAST team issues the client registration. Nothing
+   * else changes: no rebuild, no code edit. While `oidcClientId` is empty the
+   * app stays on its development sign-in placeholder rather than half-attempting
+   * a real login. See docs/specification/16_SSO_OIDC_CONFIGURATION.md. */
+  oidcIssuer: '${EXPERT_HUB_OIDC_ISSUER}',
+  oidcDiscoveryUrl: '${EXPERT_HUB_OIDC_DISCOVERY_URL}',
+  oidcClientId: '${EXPERT_HUB_OIDC_CLIENT_ID}',
+  oidcScopes: '${EXPERT_HUB_OIDC_SCOPES}',
+  oidcRedirectUri: '${EXPERT_HUB_OIDC_REDIRECT_URI}',
+  oidcPostLogoutRedirectUri: '${EXPERT_HUB_OIDC_POST_LOGOUT_REDIRECT_URI}',
+
+  /* Claim mapping — name AND values are still open (G16/G28), so both are
+   * configuration: when FAST says which claim carries the role, that is a
+   * config change and not a release. */
+  oidcRoleClaim: '${EXPERT_HUB_OIDC_ROLE_CLAIM}',
+  oidcInternalRoleValues: '${EXPERT_HUB_OIDC_INTERNAL_ROLE_VALUES}',
+  oidcTrainerRoleValues: '${EXPERT_HUB_OIDC_TRAINER_ROLE_VALUES}',
+  oidcNameClaim: '${EXPERT_HUB_OIDC_NAME_CLAIM}',
+};

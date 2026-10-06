@@ -1,0 +1,60 @@
+/* Icon wrapper — token-only. ⚠ Pending final DGA token values (Q3). */
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: currentcolor;
+}
+
+.icon[data-size='sm'] {
+  inline-size: var(--fads-sys-icon-size-sm);
+  block-size: var(--fads-sys-icon-size-sm);
+}
+.icon[data-size='md'] {
+  inline-size: var(--fads-sys-icon-size-md);
+  block-size: var(--fads-sys-icon-size-md);
+}
+.icon[data-size='featured'] {
+  inline-size: var(--fads-sys-icon-size-featured);
+  block-size: var(--fads-sys-icon-size-featured);
+}
+
+/* Tone (status tones for status only — DC-05) */
+.icon[data-tone='neutral'] {
+  color: var(--fads-sys-color-text-muted);
+}
+.icon[data-tone='primary'] {
+  color: var(--fads-sys-color-primary);
+}
+.icon[data-tone='success'] {
+  color: var(--fads-sys-color-status-success);
+}
+.icon[data-tone='error'] {
+  color: var(--fads-sys-color-status-error);
+}
+.icon[data-tone='warning'] {
+  color: var(--fads-sys-color-status-warning);
+}
+.icon[data-tone='information'] {
+  color: var(--fads-sys-color-status-information);
+}
+
+/* Glyph fills the box */
+.icon > svg,
+.icon > img {
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+}
+
+/* Directional icons (arrows, chevrons) — opt-in per usage (Icon.types.ts). */
+.icon[data-mirror-rtl='true']:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+/* Missing-registry fallback glyph — visibly distinct in dev builds. */
+.icon[data-missing='true'] {
+  color: var(--fads-sys-color-status-error);
+}

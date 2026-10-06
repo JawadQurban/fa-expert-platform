@@ -1,0 +1,53 @@
+/* EH-INT-04 Interview Evaluation (J-07 / J-06 staff) — layout-only, token-only (DC-04/DC-23). */
+
+/* Committee responses — reference material behind a closed disclosure, laid out
+   as a workspace card whose whole header row is the toggle (Option B
+   prototype). Token-only, logical properties. */
+.committeeDisclosure {
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-sys-card-bg);
+  box-shadow: var(--fads-sys-card-shadow);
+}
+
+.committeeSummary {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  padding-block: var(--fads-ref-space-3);
+  padding-inline: var(--fads-sys-space-inset-md);
+  cursor: pointer;
+  list-style: none;
+}
+
+.committeeSummary::-webkit-details-marker {
+  display: none;
+}
+
+/* A disclosure chevron that mirrors under RTL and turns when open. */
+.committeeSummary::after {
+  content: '';
+  margin-inline-start: auto;
+  inline-size: var(--fads-ref-space-2);
+  block-size: var(--fads-ref-space-2);
+  border-inline-end: var(--fads-sys-border-width-thick) solid var(--fads-sys-color-text-muted);
+  border-block-end: var(--fads-sys-border-width-thick) solid var(--fads-sys-color-text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+.committeeDisclosure[open] .committeeSummary::after {
+  transform: rotate(-135deg);
+}
+
+.committeeSummary:focus-visible {
+  outline: var(--fads-sys-focus-ring-width) solid var(--fads-sys-focus-ring-color);
+  outline-offset: var(--fads-sys-focus-ring-offset);
+  border-radius: var(--fads-sys-radius-lg);
+}
+
+.committeeBody {
+  padding-inline: var(--fads-sys-space-inset-md);
+  padding-block: var(--fads-ref-space-3) var(--fads-sys-space-inset-md);
+  border-block-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}

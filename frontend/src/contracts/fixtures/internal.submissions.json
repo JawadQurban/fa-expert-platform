@@ -1,0 +1,22 @@
+[
+  {
+    "submissionId": "981754a9-708a-4ea7-8cec-b7ca76201273",
+    "engagementId": "891ddd9b-0780-48be-aa8f-aaaa49730561",
+    "kind": "training-material",
+    "status": "changes_requested",
+    "syncState": "none",
+    "trainerName": "مدرب 0",
+    "openedAt": "2026-09-16T20:57:17Z",
+    "rounds": [
+      {
+        "roundNumber": 1,
+        "fileName": "material-v1.pdf",
+        "decision": "changes_requested",
+        "note": "أضف تمارين تطبيقية.",
+        "decidedByName": "موظف",
+        "decidedAt": "2026-09-16T20:57:18Z",
+        "uploadedAt": "2026-09-16T20:57:17Z"
+      }
+    ]
+  }
+]

@@ -1,0 +1,36 @@
+/* J-20 review history — layout-only, token-only (DC-04/DC-23). */
+
+.rounds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding: var(--fads-sys-space-inset-sm);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-ref-primary-25);
+}
+
+.roundHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* The note is the whole reason a new round exists, so it is set apart. */
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding-inline-start: var(--fads-sys-space-inset-sm);
+  border-inline-start: 2px solid var(--fads-sys-color-border-default);
+}

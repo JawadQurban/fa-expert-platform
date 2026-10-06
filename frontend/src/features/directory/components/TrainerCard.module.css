@@ -1,0 +1,114 @@
+/* Directory result card — layout-only, token-only (DC-04/DC-23).
+
+   The rating and bio rules were deleted on 2026-08-19 with the markup they
+   styled — J-24 publishes neither (`DECISIONS.md` P-40/P-41). */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  block-size: 100%;
+  overflow: hidden;
+  transition: border-color 120ms ease;
+}
+
+/* Interactive affordance — the crest strip deepens rather than the whole card,
+   so the tint stays where the identity is. */
+.card:hover .header,
+.card:focus-within .header {
+  background-color: var(--fads-sys-itemicon-contained-bg);
+}
+
+/*
+  A tinted crest strip across the head of the card (FADS Expert Hub kit,
+  EH-PUB-02), so a result reads as a credential rather than a contact row.
+
+  The negative inset pulls it out to the card's own edges — the card owns the
+  padding, and the strip has to escape it to bleed. Only the top corners are
+  rounded, matching the card's radius, or the strip's square corners would show
+  through the card's rounded ones.
+*/
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+  margin: calc(-1 * var(--fads-sys-space-inset-md));
+  margin-block-end: 0;
+  padding: var(--fads-sys-space-inset-md);
+  border-start-start-radius: var(--fads-sys-radius-lg);
+  border-start-end-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-ref-primary-25);
+  transition: background-color 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header {
+    transition: none;
+  }
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  align-items: flex-start;
+  min-inline-size: 0;
+}
+
+.name {
+  margin: 0;
+}
+
+.nameLink {
+  overflow-wrap: anywhere;
+}
+
+/* The specialty rail is the card's only body — it takes the slack the removed
+   rating row and bio used to occupy, so cards in a row stay equal height. */
+.specialties {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--fads-sys-space-inline-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* City and programmes — two labelled facts, set side by side as the kit does. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.factLabel {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.factValue {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+/* The accreditation and the way through to the full profile, on one line at
+   the card's foot above a hairline. */
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+  padding-block-start: var(--fads-sys-space-stack-sm);
+  border-block-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}

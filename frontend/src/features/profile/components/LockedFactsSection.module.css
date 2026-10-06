@@ -1,0 +1,37 @@
+/* J-14/F2 locked facts — layout-only, token-only (DC-04/DC-23). */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding: var(--fads-sys-space-inset-sm);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-ref-primary-25);
+}
+
+.term {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  margin: 0;
+  font-weight: var(--fads-ref-font-weight-medium);
+}

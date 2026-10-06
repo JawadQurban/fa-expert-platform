@@ -1,0 +1,89 @@
+/* EH-PUB-03 Public Trainer Profile — layout-only, token-only (DC-04/DC-23).
+
+   Trimmed on 2026-08-19 alongside the J-24 conformance fix: the classification,
+   overall-rating, per-specialty breakdown, "by the numbers" and bio rules were
+   deleted with the markup they styled (`DECISIONS.md` P-40/P-41). */
+
+/* Profile header (P-10 public variant) — avatar + identity, side-by-side, wraps
+   to stacked on narrow viewports (`05` §17). */
+/* The breadcrumb keeps the page's own ground: a dark strip above a dark band
+   would read as one enormous header, and the trail is navigation, not identity. */
+.crumbs {
+  padding-block-start: var(--fads-sys-space-stack-md);
+}
+
+/* Identity band — the same dark ground as the trainer's own portal home, so
+   the platform's two «who is this person» screens read as one product. */
+.band {
+  padding-block: var(--fads-ref-space-7);
+  margin-block-start: var(--fads-sys-space-stack-md);
+  background-color: var(--fads-sys-footer-bg-oncolor);
+}
+
+.bandInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-lg);
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+
+.specialtiesBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.specialties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Programs delivered with the Academy (J-24/F2/AC-1). */
+.programsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  max-inline-size: 46rem;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.programsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.programRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+  padding-block-end: var(--fads-sys-space-stack-sm);
+  border-block-end: 1px solid var(--fads-sys-color-border-default);
+}
+
+.backRow {
+  display: flex;
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}

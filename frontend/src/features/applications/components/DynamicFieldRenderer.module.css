@@ -1,0 +1,24 @@
+/* Schema-driven multi-select group — layout-only, token-only (DC-04/DC-23),
+   mirroring the ServiceSelection fieldset pattern. */
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  padding: 0;
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding-block: var(--fads-sys-space-stack-xs);
+}

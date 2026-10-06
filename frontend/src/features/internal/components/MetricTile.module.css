@@ -1,0 +1,62 @@
+/* P-22 Metric Tile (link) — layout-only, token-only (DC-04/DC-23).
+   Option B KPI tile: icon + label on one line, the figure large beneath it,
+   and a quiet caption. */
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  inline-size: 100%;
+  block-size: 100%;
+  padding: var(--fads-sys-space-inset-md);
+  border-radius: var(--fads-sys-radius-lg);
+  /* White surface + shadow on the subtle page ground so the tile reads as a
+     card (background-default was identical to the page — an invisible card). */
+  border: 1px solid var(--fads-sys-card-border-stroke);
+  background-color: var(--fads-sys-card-bg);
+  box-shadow: var(--fads-sys-card-shadow);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.tile:hover,
+.tile:focus-visible {
+  background-color: var(--fads-ref-primary-25);
+  border-color: var(--fads-sys-color-primary);
+}
+
+/* Icon and label read as one line — the tile says what it counts first. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  min-inline-size: 0;
+}
+
+.label {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  min-inline-size: 0;
+}
+
+/* ⚠️ Ink, not the brand green: five green figures in a row read as five links,
+   and the tile's colour is already in the icon. */
+.value {
+  font-size: var(--fads-sys-typography-display-lg);
+  font-weight: var(--fads-ref-font-weight-bold);
+  line-height: var(--fads-ref-line-height-tight);
+  font-variant-numeric: tabular-nums;
+  margin-block-start: auto;
+}
+
+/* The week-on-week change, quieter than the figure it sits under: it is
+   context for the figure, not a second figure. */
+.delta {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}

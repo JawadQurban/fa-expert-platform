@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ExpertHub.Core\ExpertHub.Core.csproj" />
+    <ProjectReference Include="..\ExpertHub.Infrastructure\ExpertHub.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.19" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The test project exercises internal seams (e.g. the open-redirect
+         guard) directly; internal is still the right visibility for callers. -->
+    <InternalsVisibleTo Include="ExpertHub.Api.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+</Project>

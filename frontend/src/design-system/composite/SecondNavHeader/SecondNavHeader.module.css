@@ -1,0 +1,80 @@
+/* SecondNavHeader — token-based, live-Figma-verified styles.
+   See docs/FIGMA_SECOND_NAV_HEADER_SPECIFICATION.md. */
+
+.bar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  block-size: var(--fads-sys-secondnavheader-height);
+  padding-inline: var(--fads-sys-secondnavheader-padding-inline);
+  background-color: var(--fads-sys-secondnavheader-bg-gray);
+}
+.bar[data-variant='primary'] {
+  background-color: var(--fads-sys-secondnavheader-bg-primary);
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-secondnavheader-items-gap);
+  inline-size: 100%;
+}
+
+.items {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: var(--fads-sys-secondnavheader-items-gap);
+  min-inline-size: 0;
+}
+
+.item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--fads-sys-secondnavheader-item-gap);
+}
+
+.itemIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-secondnavheader-icon-size);
+  block-size: var(--fads-sys-secondnavheader-icon-size);
+  color: var(--fads-sys-secondnavheader-text-gray);
+}
+
+.itemLabel {
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  font-weight: var(--fads-ref-font-weight-regular);
+  color: var(--fads-sys-secondnavheader-text-gray);
+}
+
+.bar[data-variant='primary'] .itemIcon,
+.bar[data-variant='primary'] .itemLabel {
+  color: var(--fads-sys-secondnavheader-text-primary);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--fads-sys-secondnavheader-actions-gap);
+}
+
+.bar[data-divider]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 1px;
+  background-color: var(--fads-sys-secondnavheader-divider-gray);
+}
+.bar[data-variant='primary'][data-divider]::after {
+  background-color: var(--fads-sys-secondnavheader-divider-primary);
+}

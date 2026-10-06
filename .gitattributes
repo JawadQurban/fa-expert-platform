@@ -1,0 +1,8 @@
+# Line-ending policy — normalize all text files to LF in the repository.
+#
+# `text=auto` lets Git detect text vs binary; `eol=lf` forces LF in the working
+# tree and the index for text files, so commits never introduce CRLF noise
+# (the .prettierrc requires `endOfLine: "lf"`). This applies going forward — no
+# existing files are reformatted by adding this file.
+* text=auto eol=lf
+graphify-out/graph.json merge=graphify

@@ -1,0 +1,54 @@
+<Project>
+
+  <!--
+    Expert Hub backend — settings every project inherits.
+
+    ⚠️ THE RUNTIME VERSION IS A KNOWN DEBT, AND IT LIVES HERE SO IT IS ONE EDIT.
+
+    `net9.0` is what this machine's SDK can build today (9.0.300 / 9.0.317), and
+    **.NET 9 is STS, not LTS — its support window closed in May 2026**. A
+    DGA-registered government platform must not release on an out-of-support
+    runtime.
+
+    The fix is to install the current LTS SDK and change `TargetFramework`
+    below — one line, because nothing else names a framework version. Do it
+    before the first release, and see `docs/specification/17_STACK_DECISION.md` §4:
+    which runtimes the Academy already hosts is an infrastructure question that
+    should be answered first.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!--
+      Nullable reference types on, and warnings are errors.
+
+      The frontend spent this project encoding rules so that forbidden states
+      cannot be represented (P-137, P-148, P-156). The backend gets the same
+      treatment from the compiler: a nullable warning is a state the code did
+      not think about, and it should fail the build rather than reach a review.
+    -->
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+
+    <!-- Arabic is the primary language; the API must never assume otherwise. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <!-- Deterministic output, so the same source produces the same binary. -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!--
+      ⚠️ No secret ever enters source control. Connection strings, the OIDC
+      client secret and every integration credential come from environment
+      variables or the platform's secret store at runtime — the same rule the
+      frontend follows for `config.js`, and the reason `appsettings.json` in
+      this repository contains no credential.
+    -->
+    <UserSecretsId>expert-hub-api</UserSecretsId>
+  </PropertyGroup>
+
+</Project>

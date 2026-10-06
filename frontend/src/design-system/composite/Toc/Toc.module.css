@@ -1,0 +1,36 @@
+/* Toc — token-based, live-Figma-verified styles.
+   See docs/FIGMA_TOC_SPECIFICATION.md. */
+
+.toc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-toc-gap);
+  inline-size: 100%;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-toc-heading-gap);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-toc-eyebrow-color);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fads-sys-toc-title-font-size);
+  line-height: var(--fads-sys-toc-title-line-height);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  color: var(--fads-sys-toc-title-color);
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+}

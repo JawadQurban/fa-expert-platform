@@ -1,0 +1,37 @@
+{
+  "engagementId": "98325f63-855d-4980-9f2e-5d1f9ec5da68",
+  "requestId": "1c86a48d-b2b2-4313-9952-938f045d230a",
+  "slotNumber": 1,
+  "status": "upcoming",
+  "confirmedAt": "2026-09-16T20:57:15Z",
+  "details": {
+    "reference": "ASR-2026-0001",
+    "serviceType": "trainer",
+    "programName": "برنامج القيادة",
+    "days": 3,
+    "dateFrom": "2026-11-01T00:00:00Z",
+    "dateTo": "2026-11-03T00:00:00Z",
+    "language": "ar",
+    "deliveryMechanism": "onsite",
+    "city": "الرياض",
+    "specializationDomain": "dom-003",
+    "meetingUrl": null
+  },
+  "enrolment": {
+    "available": false,
+    "reason": "Q20",
+    "takers": []
+  },
+  "attendance": {
+    "available": false,
+    "reason": "Q20",
+    "days": []
+  },
+  "scheduleChangedAt": null,
+  "evaluations": {
+    "available": false,
+    "reason": "Q29",
+    "items": []
+  },
+  "termination": null
+}

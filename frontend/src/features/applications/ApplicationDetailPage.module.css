@@ -1,0 +1,208 @@
+/* EH-TP-03 Application Details — layout-only, token-only, logical properties
+   (DC-04/DC-23). All components are approved Design System components. */
+
+/* Soft branded focal header. */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+  margin-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-lg);
+  background-color: var(--fads-ref-primary-25);
+}
+
+.summaryHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.summaryBadge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-ref-space-9);
+  block-size: var(--fads-ref-space-9);
+  border-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-sys-color-primary);
+  color: var(--fads-sys-color-on-color-text);
+}
+
+.summaryHeadings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+}
+
+/* The reference number as a prominent pill. */
+.referenceChip {
+  align-self: flex-start;
+  padding-block: var(--fads-ref-space-1);
+  padding-inline: var(--fads-sys-space-inline-md);
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-sys-color-background-default);
+  color: var(--fads-sys-color-primary);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.draftReference {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.metaTerm {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.metaValue {
+  margin: 0;
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.summaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* Rejection reason — sits between the summary and the detail grid. */
+.rejectionNotice {
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+/* Section lead-in — icon badge + heading. */
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* Two-column on desktop: timeline/outcomes + action/attachments (§17). */
+.grid {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: var(--fads-sys-space-stack-lg);
+  align-items: start;
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}
+
+.mainColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+  min-inline-size: 0;
+}
+
+.perService {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.outcomeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outcomeGrid > li {
+  display: flex;
+}
+
+.outcomeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-sm);
+  inline-size: 100%;
+}
+
+.actionCard,
+.attachments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.attachmentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attachmentRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.attachmentName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.modalActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.errorHome {
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}
+
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Tablet/mobile: single column, action prioritized after summary (§17). */
+@media (max-width: 64rem) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sideColumn {
+    order: -1;
+  }
+}

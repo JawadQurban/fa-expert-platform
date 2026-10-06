@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+
+# Build output / artifacts
+dist
+storybook-static
+*.tsbuildinfo
+
+# Test / coverage
+coverage
+*.lcov
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Editor / IDE settings
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Claude Code: local settings stay out, shared skills are versioned with the repo
+# so everyone working here gets them. `**/` so a nested .claude (e.g.
+# frontend/.claude) is covered too — a root-anchored pattern is not.
+**/.claude/*
+!**/.claude/skills/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc local
+*.local
+
+# Expert Hub API server secrets (deploy/env/) - never committed
+api.secrets.env
+
+# graphify knowledge graph: generated locally, rebuilt by the git hooks
+graphify-out/
+
+# Visual Studio (fa standard scaffold)
+/.vs

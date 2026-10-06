@@ -1,0 +1,42 @@
+/* Divider — token-only styling.
+   Colors and thickness are sourced from the official Platforms Code Figma Divider
+   component (file Sv0oWOS1SjWnwhQwdzRJIE, node 18697:19412), verified live via the
+   Figma MCP — see docs/FIGMA_DIVIDER_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Divider/VISUAL_COMPLIANCE_DIVIDER.md. `inset` reuses the
+   existing shared --fads-sys-space-inset-md scale (no Figma inset variant exists). */
+
+.divider {
+  flex-shrink: 0;
+  border: none;
+  background-color: var(--fads-sys-divider-color-neutral);
+}
+
+.divider[data-orientation='horizontal'] {
+  block-size: var(--fads-sys-divider-thickness);
+}
+.divider[data-orientation='horizontal'][data-full-width='true'] {
+  inline-size: 100%;
+}
+.divider[data-orientation='horizontal'][data-inset='true'] {
+  margin-inline: var(--fads-sys-space-inset-md);
+}
+
+.divider[data-orientation='vertical'] {
+  inline-size: var(--fads-sys-divider-thickness);
+}
+.divider[data-orientation='vertical'][data-full-width='true'] {
+  block-size: 100%;
+}
+.divider[data-orientation='vertical'][data-inset='true'] {
+  margin-block: var(--fads-sys-space-inset-md);
+}
+
+.divider[data-color='primary'] {
+  background-color: var(--fads-sys-divider-color-primary);
+}
+.divider[data-color='white'] {
+  background-color: var(--fads-sys-divider-color-white);
+}
+.divider[data-color='alphaWhite'] {
+  background-color: var(--fads-sys-divider-color-alpha-white);
+}

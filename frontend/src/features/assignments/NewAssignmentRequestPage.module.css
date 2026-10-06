@@ -1,0 +1,38 @@
+/* EH-INT-09 centre request form — layout-only, token-only (DC-04/DC-23). */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* The workbook's field rows — a responsive two-column grid of DS fields. */
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--fads-sys-space-stack-md) var(--fads-sys-space-inline-md);
+}
+
+/* J-16/F4 — the named experts, one card per slot. */
+.nominees {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.nomineeList {
+  display: grid;
+  /* `min()` keeps a card from forcing a horizontal scroll under 16rem. */
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  gap: var(--fads-sys-space-stack-sm) var(--fads-sys-space-inline-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nomineeCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  block-size: 100%;
+}

@@ -1,0 +1,43 @@
+/* Expert Hub auth pages (login / callback) — token-only layout. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-md);
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+/* Development test personas — removed with the placeholder adapter. */
+.personas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  inline-size: 100%;
+}
+
+.personaGrid {
+  display: grid;
+  gap: var(--fads-sys-space-stack-sm);
+  margin-block-start: var(--fads-sys-space-stack-xs);
+}
+
+.persona {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+@media (min-width: 40rem) {
+  .personaGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

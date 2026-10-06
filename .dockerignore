@@ -1,0 +1,45 @@
+# Docker build context filter (the build context is the repository root; see
+# deploy/Dockerfile and deploy/api.Dockerfile). Keeps the context small and keeps
+# node_modules, build output and every secret OUT of the images.
+
+# VCS + repo meta
+.git
+.gitattributes
+.github
+.claude
+
+# Not needed to build either image
+docs
+context
+diary
+references
+tools
+graphify-out
+CHANGELOG.md
+CLAUDE.md
+
+# Frontend dependencies + build artifacts (reinstalled/rebuilt in the image)
+frontend/node_modules
+frontend/dist
+frontend/coverage
+frontend/storybook-static
+frontend/**/*.tsbuildinfo
+frontend/.storybook
+
+# Backend build artifacts
+backend/**/bin
+backend/**/obj
+
+# Logs
+**/*.log
+
+# Environment / secrets — never send these to the build context
+**/.env
+**/.env.*
+deploy/env/api.secrets.env
+
+# Local editor/OS
+**/.DS_Store
+**/.idea
+**/.vscode
+**/.vs

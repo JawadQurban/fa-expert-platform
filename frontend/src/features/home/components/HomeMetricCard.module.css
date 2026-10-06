@@ -1,0 +1,35 @@
+/* P-22 personal metric tile — layout-only, token-only (DC-04/DC-23).
+   Mirrors the staff dashboard's KPI tile (EH-INT-01): icon + label on one line,
+   the figure beneath, so a metric reads identically on both sides of the
+   product. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  block-size: 100%;
+}
+
+/* ⚠️ The icon was a hand-rolled badge on `--fads-ref-primary-25` — a T1
+   reference token, which products must not use. `ItemIcon` carries the same
+   treatment on the system token. The earlier sweep of these missed this one
+   because the class was called `.icon` rather than `.badge`. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  min-inline-size: 0;
+}
+
+.label {
+  min-inline-size: 0;
+}
+
+/* ⚠️ The figure is INK, not the brand green. Four green numbers in a row read
+   as four links, and the tile's colour already lives in the icon. The kit sets
+   no colour here, and it is right. */
+.value {
+  margin-block-start: auto;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--fads-ref-line-height-tight);
+}

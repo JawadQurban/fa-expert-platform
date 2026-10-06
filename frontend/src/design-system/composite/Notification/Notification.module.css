@@ -1,0 +1,146 @@
+/* Notification (CMP-24) — token-based, live-Figma-verified styles.
+   See docs/FIGMA_NOTIFICATION_SPECIFICATION.md. */
+
+.notification {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-notification-gap);
+  padding-inline: var(--fads-sys-notification-padding-inline);
+  padding-block: var(--fads-sys-notification-padding-block);
+  border-radius: var(--fads-sys-notification-radius);
+  background-color: var(--fads-sys-notification-tint-info);
+  overflow: clip;
+}
+.notification[data-tone='neutral'] {
+  background-color: var(--fads-sys-notification-tint-neutral);
+}
+.notification[data-tone='success'] {
+  background-color: var(--fads-sys-notification-tint-success);
+}
+.notification[data-tone='warning'] {
+  background-color: var(--fads-sys-notification-tint-warning);
+}
+.notification[data-tone='error'] {
+  background-color: var(--fads-sys-notification-tint-error);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+  padding-inline: var(--fads-sys-notification-padding-inline);
+  inline-size: 100%;
+}
+.row[data-dismissible] {
+  padding-inline-end: calc(var(--fads-sys-notification-padding-inline) + 24px);
+}
+
+.content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex: 1 0 0;
+  min-inline-size: 0;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.iconCircle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-notification-icon-size);
+  block-size: var(--fads-sys-notification-icon-size);
+  border-radius: var(--fads-sys-radius-full);
+  color: var(--fads-sys-notification-icon-oncolor);
+  background-color: var(--fads-sys-notification-solid-neutral);
+}
+.iconCircle[data-tone='info'] {
+  background-color: var(--fads-sys-notification-solid-info);
+}
+.iconCircle[data-tone='success'] {
+  background-color: var(--fads-sys-notification-solid-success);
+}
+.iconCircle[data-tone='warning'] {
+  background-color: var(--fads-sys-notification-solid-warning);
+}
+.iconCircle[data-tone='error'] {
+  background-color: var(--fads-sys-notification-solid-error);
+}
+.iconCircle svg {
+  inline-size: 60%;
+  block-size: 60%;
+}
+
+.title {
+  margin: 0;
+  flex: none;
+  white-space: nowrap;
+  font-weight: var(--fads-ref-font-weight-bold);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  color: var(--fads-sys-notification-text-info);
+}
+
+.message {
+  flex: 1 0 0;
+  min-inline-size: 0;
+  font-weight: var(--fads-ref-font-weight-regular);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  color: var(--fads-sys-notification-text-info);
+}
+
+.notification[data-tone='neutral'] .title,
+.notification[data-tone='neutral'] .message {
+  color: var(--fads-sys-notification-text-neutral);
+}
+.notification[data-tone='success'] .title,
+.notification[data-tone='success'] .message {
+  color: var(--fads-sys-notification-text-success);
+}
+.notification[data-tone='warning'] .title,
+.notification[data-tone='warning'] .message {
+  color: var(--fads-sys-notification-text-warning);
+}
+.notification[data-tone='error'] .title,
+.notification[data-tone='error'] .message {
+  color: var(--fads-sys-notification-text-error);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  flex: none;
+}
+
+.close {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: -8px;
+}
+
+.accent {
+  position: absolute;
+  opacity: 0.7;
+  background-color: var(--fads-sys-notification-solid-info);
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 2px;
+}
+.notification[data-tone='neutral'] .accent {
+  opacity: 0.6;
+  background-color: var(--fads-sys-notification-solid-neutral);
+}
+.notification[data-tone='success'] .accent {
+  background-color: var(--fads-sys-notification-solid-success);
+}
+.notification[data-tone='warning'] .accent {
+  background-color: var(--fads-sys-notification-solid-warning);
+}
+.notification[data-tone='error'] .accent {
+  background-color: var(--fads-sys-notification-solid-error);
+}

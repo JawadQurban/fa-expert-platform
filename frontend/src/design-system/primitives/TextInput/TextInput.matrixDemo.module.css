@@ -1,0 +1,197 @@
+/* Storybook-only demo classes — NOT part of the public TextInput API and NOT
+   consumed by TextInput.tsx/TextInput.module.css. `Hovered`/`Pressed`/`Focused`
+   are real CSS pseudo-classes (:hover/:active/:focus-within) per
+   docs/FIGMA_TEXT_INPUT_SPECIFICATION.md's documented design decision — correct
+   for real users, but invisible in a static Storybook render. These classes
+   re-declare the *exact same token values* the real pseudo-class rules in
+   TextInput.module.css already use, keyed to a demo-only class instead, purely so
+   the `OfficialFigmaMatrix` story can render a static side-by-side comparison
+   against the Figma matrix screenshot. See
+   reports/VISUAL_COMPLIANCE/TextInput/TEXTINPUT_STORYBOOK_FIGMA_DIFF.md §5. */
+
+.forceHover {
+  border-color: var(--fads-sys-textinput-border-hovered) !important;
+}
+.forceHover input {
+  color: var(--fads-sys-textinput-text-hovered) !important;
+}
+/* Filled darker/lighter reveal the plain default-gray border on Hover, not the
+   Default style's darker hover shade (live-verified, see TextInput.module.css). */
+.forceHover[data-surface='filledDarker'],
+.forceHover[data-surface='filledLighter'] {
+  border-color: var(--fads-sys-textinput-border-default) !important;
+}
+
+.forcePressed {
+  background-color: var(--fads-sys-textinput-bg-darker) !important;
+}
+.forcePressed::after {
+  background-color: var(--fads-sys-textinput-border-pressed) !important;
+}
+.forcePressed input {
+  color: var(--fads-sys-textinput-text-pressed) !important;
+}
+.forcePressed[data-surface='filledDarker'],
+.forcePressed[data-surface='filledLighter'] {
+  border-color: var(--fads-sys-textinput-border-default) !important;
+}
+
+.forceFocused {
+  box-shadow: var(--fads-sys-textinput-focus-shadow) !important;
+}
+.forceFocused::after {
+  background-color: var(--fads-sys-textinput-border-pressed) !important;
+}
+.forceFocused input {
+  color: var(--fads-sys-textinput-text-focused) !important;
+}
+/* Filled darker/lighter behave differently on Focus (live-verified, spec §6) —
+   darker fully reverts to the Default style's white bg + border; lighter keeps
+   its own bg but gains the border. */
+.forceFocused[data-surface='filledDarker'] {
+  background-color: var(--fads-sys-textinput-bg-default) !important;
+  border-color: var(--fads-sys-textinput-border-default) !important;
+}
+.forceFocused[data-surface='filledLighter'] {
+  border-color: var(--fads-sys-textinput-border-default) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   OfficialFigmaMatrix layout — Storybook-only chrome (headings, grid, legend).
+   No component-visual token exists at the generic "page layout" level in this
+   design system (no --fads-sys-spacing-* scale is generated), so spacing here
+   uses plain rem values; colors/typography reuse the shared generic SYS tokens
+   already used by other Storybook docs chrome in this codebase.
+   --------------------------------------------------------------------------- */
+
+.matrixPage {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  padding: 1.5rem;
+  max-inline-size: 1200px;
+  margin-inline: auto;
+}
+
+.matrixIntro {
+  max-inline-size: 60ch;
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-color-text-muted);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--fads-sys-color-border-default);
+  border-radius: 4px;
+  font-size: var(--fads-sys-typography-text-xs);
+  color: var(--fads-sys-color-text-muted);
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.sizeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--fads-sys-color-border-default);
+}
+.sizeSection:first-of-type {
+  border-block-start: none;
+  padding-block-start: 0;
+}
+.sizeHeading {
+  font-size: var(--fads-sys-typography-text-lg);
+  font-weight: var(--fads-ref-font-weight-semibold, 600);
+  color: var(--fads-sys-color-text-default);
+  margin: 0;
+}
+
+.surfaceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.surfaceHeading {
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-semibold, 600);
+  color: var(--fads-sys-color-text-default);
+  margin: 0;
+}
+
+.directionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.directionHeading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--fads-sys-typography-text-xs);
+  font-weight: var(--fads-ref-font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fads-sys-color-text-muted);
+  margin: 0;
+}
+
+/* Responsive grid: row-label column + 4 data columns (Filled/Placeholder ×
+   No-error/Error). Only 4 data columns per group (RTL/LTR and Surface are
+   already split into separate sections above) keeps this within normal
+   desktop Storybook canvas width — the prior single 9-column layout
+   (RTL × Filled × Error all in one row) is what caused the oversized
+   horizontal canvas this rebuild fixes. `overflow-x: auto` is a defensive
+   fallback only, not the primary fit strategy. */
+.matrixGrid {
+  display: grid;
+  grid-template-columns: minmax(84px, auto) repeat(4, minmax(176px, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+  overflow-x: auto;
+}
+
+.colHeader {
+  font-size: var(--fads-sys-typography-text-2xs);
+  color: var(--fads-sys-color-text-muted);
+  text-align: center;
+  padding-block-end: 0.25rem;
+}
+
+.rowLabel {
+  display: flex;
+  align-items: center;
+  font-size: var(--fads-sys-typography-text-xs);
+  font-weight: var(--fads-ref-font-weight-semibold, 600);
+  color: var(--fads-sys-color-text-default);
+}
+
+.cell {
+  position: relative;
+  inline-size: 100%;
+}
+
+.needsConfirmation {
+  outline: 1px dashed var(--fads-sys-color-border-strong);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.needsConfirmationBadge {
+  position: absolute;
+  inset-block-start: -0.5rem;
+  inset-inline-end: -0.25rem;
+  z-index: 1;
+  font-size: var(--fads-sys-typography-text-2xs);
+  font-weight: var(--fads-ref-font-weight-semibold, 600);
+  color: var(--fads-sys-color-text-inverse);
+  background-color: var(--fads-sys-color-border-strong);
+  border-radius: 3px;
+  padding: 0 0.25rem;
+  line-height: 1.4;
+}

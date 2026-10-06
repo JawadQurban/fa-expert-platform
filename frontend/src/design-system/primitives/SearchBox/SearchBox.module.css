@@ -1,0 +1,207 @@
+/* SearchBox — token-only styling.
+   Field chrome, label, and helper/error colors are all sourced from the
+   official Platforms Code Figma Search Box component set (file
+   J0xq7JG3JKshRDzrgAM7E0, node 30150:90990), verified live via the Figma MCP
+   read-only tools — see docs/FIGMA_SEARCH_BOX_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/SearchBox/VISUAL_COMPLIANCE_SEARCH_BOX.md.
+   get_variable_defs confirmed these values are byte-identical to the
+   already-Approved TextInput's own --fads-sys-textinput-* tokens, reused
+   directly here — zero new color/typography tokens. Structurally this is its
+   own primitive, not a literal <TextInput> composition: the trailing slot
+   sits inside the same un-badged content row as the leading icon (not a
+   separately-backgrounded affix badge like TextInput's own suffix). */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-textinput-label-gap);
+  font-family: var(--fads-sys-font-family-base);
+}
+
+.labelRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--fads-sys-textinput-label-asterisk-gap);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-regular);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  color: var(--fads-sys-textinput-label-text);
+}
+.label[data-disabled] {
+  color: var(--fads-sys-textinput-label-disabled);
+}
+
+.required {
+  color: var(--fads-sys-textinput-required-color);
+}
+.label[data-disabled] .required {
+  color: inherit;
+}
+
+/* Input Field — the bordered/filled container, reusing TextInput's own
+   verified tokens (see module doc for why this isn't a literal
+   <TextInput> composition). */
+.inputField {
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: var(--fads-sys-textinput-height-lg);
+  overflow: hidden;
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-textinput-border-default);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-textinput-bg-default);
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    box-shadow var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+.inputField[data-size='md'] {
+  block-size: var(--fads-sys-textinput-height-md);
+}
+
+.inputField[data-surface='filledDarker'] {
+  border-color: transparent;
+  background-color: var(--fads-sys-textinput-bg-darker);
+}
+.inputField[data-surface='filledLighter'] {
+  border-color: transparent;
+  background-color: var(--fads-sys-textinput-bg-lighter);
+}
+
+.inputField:hover:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-textinput-border-hovered);
+}
+.inputField[data-surface='filledDarker']:hover:not([data-disabled]):not([data-readonly]),
+.inputField[data-surface='filledLighter']:hover:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-textinput-border-default);
+}
+
+.inputField:active:not([data-disabled]):not([data-readonly]) {
+  background-color: var(--fads-sys-textinput-bg-darker);
+}
+.inputField[data-surface='filledDarker']:active:not([data-disabled]):not([data-readonly]),
+.inputField[data-surface='filledLighter']:active:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-textinput-border-default);
+}
+
+.inputField:focus-within:not([data-disabled]) {
+  box-shadow: var(--fads-sys-textinput-focus-shadow);
+}
+.inputField[data-surface='filledDarker']:focus-within:not([data-disabled]) {
+  background-color: var(--fads-sys-textinput-bg-default);
+  border-color: var(--fads-sys-textinput-border-default);
+}
+.inputField[data-surface='filledLighter']:focus-within:not([data-disabled]) {
+  border-color: var(--fads-sys-textinput-border-default);
+}
+
+.inputField[data-invalid] {
+  border-color: var(--fads-sys-textinput-border-error);
+}
+
+.inputField[data-readonly] {
+  background-color: transparent;
+  border-color: var(--fads-sys-textinput-border-readonly);
+  box-shadow: none;
+}
+.inputField[data-disabled] {
+  background-color: transparent;
+  border-color: var(--fads-sys-textinput-border-disabled);
+  box-shadow: none;
+}
+
+/* Content row — leading icon, input, and trailing slot all share this one
+   un-badged row (live-verified — no separate affix background for the
+   trailing icon, unlike TextInput's own suffix). */
+.content {
+  display: flex;
+  flex: 1 1 0%;
+  align-items: center;
+  min-inline-size: 0;
+  block-size: 100%;
+  gap: var(--fads-sys-textinput-icon-gap);
+  padding-inline-start: var(--fads-sys-textinput-content-padding-start);
+  padding-inline-end: var(--fads-sys-textinput-content-padding-end);
+}
+
+.icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-textinput-icon-size);
+  block-size: var(--fads-sys-textinput-icon-size);
+}
+
+.input {
+  flex: 1 1 0%;
+  min-inline-size: 0;
+  block-size: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  color: var(--fads-sys-textinput-text-filled);
+}
+.inputField[data-size='md'] .input {
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+.input::placeholder {
+  color: var(--fads-sys-textinput-text-placeholder);
+}
+.inputField:hover:not([data-disabled]):not([data-readonly]) .input {
+  color: var(--fads-sys-textinput-text-hovered);
+}
+.inputField:active:not([data-disabled]):not([data-readonly]) .input {
+  color: var(--fads-sys-textinput-text-pressed);
+}
+.inputField:focus-within:not([data-disabled]) .input {
+  color: var(--fads-sys-textinput-text-focused);
+}
+.input:read-only {
+  color: var(--fads-sys-textinput-text-readonly);
+}
+.input:disabled {
+  color: var(--fads-sys-textinput-text-disabled);
+  cursor: not-allowed;
+}
+
+/* Helper text — live-verified as always pairing a help-circle icon with the
+   text, a structure TextInput's own helper row has never had. */
+.helper,
+.error {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-textinput-helper-gap);
+  margin: 0;
+  padding-block: var(--fads-sys-textinput-helper-padding-block);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+.helper {
+  color: var(--fads-sys-textinput-helper-text);
+}
+.error {
+  color: var(--fads-sys-textinput-helper-error);
+}
+.field[data-disabled] .helper,
+.field[data-disabled] .error {
+  color: var(--fads-sys-textinput-text-disabled);
+}
+
+.helperIcon {
+  flex: none;
+  inline-size: var(--fads-sys-searchbox-helper-icon-size);
+  block-size: var(--fads-sys-searchbox-helper-icon-size);
+}

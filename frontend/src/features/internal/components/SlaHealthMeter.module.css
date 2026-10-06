@@ -1,0 +1,112 @@
+/* EH-INT-01 SLA health meters — layout-only, token-only (DC-04/DC-23).
+   The number is the fact and the bar is the illustration (same rule as the
+   stage distribution): every figure is shown as text, and an absent target /
+   unmeasured actual is worded, never a zero. */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding-block-end: var(--fads-sys-space-stack-sm);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.row:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.name {
+  font-weight: var(--fads-ref-font-weight-medium);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.id {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.state {
+  margin-inline-start: auto;
+}
+
+/* Decorative meter — everything it encodes is in the stats below it. */
+.track {
+  block-size: var(--fads-ref-space-2);
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-ref-neutral-100);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  block-size: 100%;
+  border-radius: var(--fads-sys-radius-pill);
+}
+
+.fill[data-state='ok'] {
+  background-color: var(--fads-sys-color-status-success);
+}
+
+.fill[data-state='breached'] {
+  background-color: var(--fads-sys-color-status-error);
+}
+
+.stats {
+  display: flex;
+  gap: var(--fads-sys-space-inline-lg);
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.stat dt {
+  margin: 0;
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.stat dd {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ⚠️ An absent figure is muted and worded, never a zero. */
+.absent {
+  color: var(--fads-sys-color-text-muted);
+  font-weight: var(--fads-ref-font-weight-regular);
+}
+
+.measured {
+  color: var(--fads-sys-color-text-muted);
+  font-weight: var(--fads-ref-font-weight-regular);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.breach {
+  color: var(--fads-sys-tag-error-text);
+  font-weight: var(--fads-ref-font-weight-bold);
+}

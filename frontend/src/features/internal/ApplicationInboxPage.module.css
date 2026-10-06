@@ -1,0 +1,51 @@
+/* EH-INT-02 Application Inbox — layout-only, token-only (DC-04/DC-23). */
+
+/* The filter bar is the list panel's toolbar (Option B prototype `.flt`). */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--fads-ref-space-3) var(--fads-sys-space-inline-md);
+}
+
+.search {
+  flex: 0 1 20rem;
+  min-inline-size: 0;
+}
+
+.select {
+  flex: 0 1 12rem;
+  min-inline-size: 0;
+}
+
+.clear {
+  margin-inline-start: auto;
+  padding-block-end: var(--fads-ref-space-1);
+}
+
+/* The active-filter row sits under the controls, spanning the whole bar. */
+.activeChips {
+  flex-basis: 100%;
+}
+
+.activeChips:empty {
+  display: none;
+}
+
+/* Paging row in the panel footer: the slice on the start side, pages at the end. */
+.range {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+  line-height: var(--fads-sys-typography-line-height-xs);
+}
+
+.pager {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 47.98rem) {
+  .search,
+  .select {
+    flex: 1 1 100%;
+  }
+}

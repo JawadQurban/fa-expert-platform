@@ -1,0 +1,58 @@
+/* EH-INT-04 individual evaluation form (J-07/F1) — layout-only, token-only (DC-04/DC-23). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.service {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding: var(--fads-sys-space-inset-md);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-sys-color-background-subtle);
+}
+
+.axes {
+  display: grid;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.axis {
+  min-inline-size: 0;
+}
+
+.errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding: var(--fads-sys-space-inset-md);
+  border: var(--fads-sys-border-width-thick) solid var(--fads-sys-color-status-error);
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.errorList {
+  margin: 0;
+  padding-inline-start: var(--fads-sys-space-inset-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  font: var(--fads-sys-typography-text-md);
+  color: var(--fads-sys-color-text-default);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+@media (min-width: 48rem) {
+  .axes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--fads-sys-space-inline-lg);
+  }
+}

@@ -1,0 +1,36 @@
+/* Expert Hub header — Level 2 (service information bar). Layout-only, token-only,
+   logical properties (DC-04 / DC-23). No color, spacing, or radius is hardcoded. */
+
+.bar {
+  background-color: var(--fads-sys-color-background-subtle);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+  padding-block: var(--fads-ref-space-2);
+}
+
+.info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Items are separated by a subtle inline divider drawn from a border token (no
+   generated text content, so nothing extra reaches assistive tech). */
+.item + .item {
+  border-inline-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  margin-inline-start: var(--fads-sys-space-inline-md);
+  padding-inline-start: var(--fads-sys-space-inline-md);
+}
+
+.utilities {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}

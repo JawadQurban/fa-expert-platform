@@ -1,0 +1,33 @@
+/* EH-INT-03 recorded decision — layout-only, token-only (DC-04/DC-23). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.summary {
+  margin: 0;
+  display: grid;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.row dt,
+.row dd {
+  margin: 0;
+}
+
+@media (min-width: 48rem) {
+  .row {
+    display: grid;
+    grid-template-columns: minmax(10rem, 18rem) 1fr;
+    align-items: start;
+    gap: var(--fads-sys-space-inline-md);
+  }
+}

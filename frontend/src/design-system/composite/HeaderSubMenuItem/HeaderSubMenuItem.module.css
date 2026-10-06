@@ -1,0 +1,91 @@
+/* HeaderSubMenuItem — token-based, live-Figma-verified styles.
+   See docs/FIGMA_HEADER_SUB_MENU_ITEM_SPECIFICATION.md. */
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-headersubmenuitem-gap);
+  inline-size: 100%;
+  padding-inline: var(--fads-sys-headersubmenuitem-padding-inline);
+  padding-block: var(--fads-sys-headersubmenuitem-padding-block);
+  border: 1px solid var(--fads-sys-headersubmenuitem-border);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: start;
+}
+.item[data-oncolor] {
+  border-color: var(--fads-sys-headersubmenuitem-border-oncolor);
+}
+
+.content {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--fads-sys-headersubmenuitem-content-gap);
+  min-inline-size: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-headersubmenuitem-row-gap);
+  inline-size: 100%;
+}
+
+.label {
+  overflow: hidden;
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-headersubmenuitem-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.helper {
+  overflow: hidden;
+  inline-size: 100%;
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  font-weight: var(--fads-ref-font-weight-regular);
+  color: var(--fads-sys-headersubmenuitem-helper-text);
+  text-overflow: ellipsis;
+}
+
+.item[data-oncolor] .label,
+.item[data-oncolor] .helper {
+  color: var(--fads-sys-headersubmenuitem-text-oncolor);
+}
+
+.item:hover,
+.item:active {
+  background-color: var(--fads-sys-headersubmenuitem-bg-hover);
+}
+.item:active {
+  background-color: var(--fads-sys-headersubmenuitem-bg-active);
+}
+.item[data-oncolor]:hover,
+.item[data-oncolor]:active {
+  background-color: var(--fads-sys-headersubmenuitem-bg-hover-oncolor);
+}
+.item[data-oncolor]:active {
+  background-color: var(--fads-sys-headersubmenuitem-bg-active-oncolor);
+}
+
+.item:hover .label,
+.item:active .label,
+.item:focus-visible .label {
+  text-decoration: underline;
+  text-decoration-skip-ink: none;
+}
+
+.item:focus-visible {
+  outline: none;
+  border-color: transparent;
+  box-shadow: inset 0 0 0 2px var(--fads-sys-headersubmenuitem-focus-ring);
+}
+.item[data-oncolor]:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--fads-sys-headersubmenuitem-focus-ring-oncolor);
+}

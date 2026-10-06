@@ -1,0 +1,55 @@
+/* EH-TP-05 service selection — layout-only, token-only (DC-04/DC-23). */
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  padding: 0;
+  font-size: var(--fads-sys-typography-text-lg);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+/* A grid of choices, not a column of checkboxes — the services are the
+   decision the rest of the form depends on. */
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--fads-sys-space-stack-sm);
+  padding-block: var(--fads-sys-space-stack-xs);
+}
+
+/* A container around the checkbox, not a control: see the note in the TSX for
+   why the whole card is deliberately not clickable. */
+.option {
+  display: flex;
+  align-items: center;
+  padding: var(--fads-sys-space-inset-md);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-sys-color-background-raised);
+  transition:
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+/* Chosen: the brand's own border and tint, so a selection is legible at a
+   glance across the grid rather than only from the tick. */
+.option[data-selected] {
+  border-color: var(--fads-sys-color-primary-strong);
+  background-color: var(--fads-sys-itemicon-contained-bg);
+}
+
+/* ⚠️ Colour is not the only signal — the checkbox's tick carries it too, which
+   is what keeps this legible without colour vision. */
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+}

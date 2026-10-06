@@ -1,0 +1,69 @@
+/* Active filter chips — layout-only, token-only (DC-04/DC-23).
+   Expert-Hub-owned composition; not a Design System component. */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  flex-wrap: wrap;
+}
+
+.label {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-ref-space-1);
+  /* Padding is asymmetric on purpose: the remove control carries its own
+     hit area on the inline-end side. */
+  padding-inline: var(--fads-sys-space-inset-sm) var(--fads-ref-space-1);
+  padding-block: var(--fads-ref-space-1);
+  border-radius: var(--fads-sys-radius-pill);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  background-color: var(--fads-sys-color-background-subtle);
+  font-size: var(--fads-sys-typography-text-xs);
+  color: var(--fads-sys-color-text-default);
+}
+
+.chipLabel {
+  min-inline-size: 0;
+}
+
+.chipKey {
+  color: var(--fads-sys-color-text-muted);
+}
+
+/* The remove control. A real button: it is an action, and a keyboard user has
+   to be able to reach and fire it. */
+.remove {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--fads-ref-space-5);
+  block-size: var(--fads-ref-space-5);
+  padding: 0;
+  border: 0;
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: transparent;
+  color: var(--fads-sys-color-text-muted);
+  cursor: pointer;
+  transition: background-color var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+
+.remove:hover {
+  background-color: var(--fads-ref-neutral-200);
+  color: var(--fads-sys-color-text-default);
+}
+
+.remove:focus-visible {
+  outline: var(--fads-sys-focus-ring-width) solid var(--fads-sys-focus-ring-color);
+  outline-offset: var(--fads-sys-focus-ring-offset);
+}
+
+.removeGlyph {
+  inline-size: var(--fads-ref-space-3);
+  block-size: var(--fads-ref-space-3);
+}

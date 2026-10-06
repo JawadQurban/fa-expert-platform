@@ -1,0 +1,19 @@
+<Project>
+
+  <!-- Inherit everything from the repository root, then relax what only makes
+       sense for production code. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!--
+      CA1707 forbids underscores in member names. In test projects that rule is
+      backwards: `Health_reports_healthy_without_touching_a_dependency` is the
+      readable convention, and a test's name is documentation read in a failure
+      report rather than an API someone calls.
+
+      Suppressed here only — production code still obeys it.
+    -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+</Project>

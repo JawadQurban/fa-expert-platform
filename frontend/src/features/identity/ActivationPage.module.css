@@ -1,0 +1,59 @@
+/* J-02/F4 nominee activation — layout-only, token-only (DC-04/DC-23). */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin-block: var(--fads-sys-space-stack-lg);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: var(--fads-sys-space-inset-sm);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-ref-primary-25);
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.metaTerm {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.metaValue {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+/* The verification step sits below the context, separated by a rule: the
+   nominee reads what this is about before being asked for anything. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  padding-block-start: var(--fads-sys-space-stack-md);
+  border-block-start: 1px solid var(--fads-sys-color-border-default);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+  margin-block-start: var(--fads-sys-space-stack-md);
+}

@@ -1,0 +1,208 @@
+/* Textarea (CMP-14) — token-only styling.
+   Every color, size, and typography value below is sourced from the official
+   Platforms Code Figma Textarea component set (file J0xq7JG3JKshRDzrgAM7E0, node
+   5462:417368), verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_TEXTAREA_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Textarea/VISUAL_COMPLIANCE_TEXTAREA.md.
+   Nothing here is a placeholder or an invented value. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-textarea-label-gap);
+  font-family: var(--fads-sys-font-family-base);
+}
+
+.labelRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--fads-ref-space-1);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-regular);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  color: var(--fads-sys-textarea-text-filled);
+}
+.label[data-disabled] {
+  color: var(--fads-sys-textarea-text-disabled);
+}
+
+.required {
+  color: var(--fads-sys-textarea-border-error);
+}
+.label[data-disabled] .required {
+  color: inherit;
+}
+
+/* Wrapper — the bordered/filled container around the native <textarea>. Reserves a
+   transparent border by default so surfaces without one (Filled darker/lighter at
+   rest) never shift size relative to the Default style's real border. */
+.wrapper {
+  position: relative;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: var(--fads-sys-textarea-min-height);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-textarea-border-default);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-textarea-bg-default);
+  overflow: hidden;
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    box-shadow var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+/* Thin underline accent — shown only on Pressed/Focused, live-verified full-width. */
+.wrapper::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: var(--fads-sys-textarea-underline-height);
+  background-color: transparent;
+  transition: background-color var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+
+/* Style (surface) — Default keeps the reserved border; Filled darker/lighter
+   replace it with a flat, borderless fill at rest (live-verified). */
+.wrapper[data-surface='filledDarker'] {
+  border-color: transparent;
+  background-color: var(--fads-sys-textarea-bg-darker);
+}
+.wrapper[data-surface='filledLighter'] {
+  border-color: transparent;
+  background-color: var(--fads-sys-textarea-bg-lighter);
+}
+
+/* Hovered — border color only for Default; Filled darker/lighter reveal the plain
+   default-gray border they lack at rest (live-verified this pass, independently
+   corroborating the identical TextInput finding — see spec §3). */
+.wrapper:hover:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-textarea-border-hovered);
+}
+.wrapper[data-surface='filledDarker']:hover:not([data-disabled]):not([data-readonly]),
+.wrapper[data-surface='filledLighter']:hover:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-textarea-border-default);
+}
+
+/* Pressed (native :active — bubbles from the inner <textarea> to this wrapper,
+   same as TextInput's own pattern) — darkens the background regardless of surface
+   and shows the bottom underline accent. */
+.wrapper:active:not([data-disabled]):not([data-readonly]) {
+  background-color: var(--fads-sys-textarea-bg-darker);
+}
+.wrapper:active:not([data-disabled]):not([data-readonly])::after {
+  background-color: var(--fads-sys-textarea-border-pressed);
+}
+
+/* Focused (:focus-within, since the real <textarea> receives focus) — adds the
+   official soft drop-shadow + bottom underline; border color unchanged for the
+   Default style. Filled darker fully reverts to the Default style's white
+   background + border; Filled lighter keeps its own background but gains the
+   border — same pattern already verified for TextInput. */
+.wrapper:focus-within:not([data-disabled]) {
+  box-shadow: var(--fads-sys-textarea-focus-shadow);
+}
+.wrapper:focus-within:not([data-disabled])::after {
+  background-color: var(--fads-sys-textarea-border-pressed);
+}
+.wrapper[data-surface='filledDarker']:focus-within:not([data-disabled]) {
+  background-color: var(--fads-sys-textarea-bg-default);
+  border-color: var(--fads-sys-textarea-border-default);
+}
+.wrapper[data-surface='filledLighter']:focus-within:not([data-disabled]) {
+  border-color: var(--fads-sys-textarea-border-default);
+}
+
+/* Error — a state/style-independent border-color override. */
+.wrapper[data-invalid] {
+  border-color: var(--fads-sys-textarea-border-error);
+}
+
+/* Read-only and Disabled are uniform across every Style/surface — no fill, a
+   neutral gray border (live-verified: both share border-neutral-primary here,
+   unlike TextInput's own distinct Disabled border token — spec §3). Declared last
+   so they win over surface/hover/pressed/focused/error. */
+.wrapper[data-readonly] {
+  background-color: transparent;
+  border-color: var(--fads-sys-textarea-border-readonly);
+  box-shadow: none;
+}
+.wrapper[data-disabled] {
+  background-color: transparent;
+  border-color: var(--fads-sys-textarea-border-disabled);
+  box-shadow: none;
+}
+
+.textarea {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: calc(var(--fads-sys-textarea-min-height) - 2 * var(--fads-sys-border-width-thin));
+  border: none;
+  outline: none;
+  background: transparent;
+  margin: 0;
+  padding-inline: var(--fads-sys-textarea-padding-inline);
+  padding-block: var(--fads-sys-textarea-padding-block);
+  font-family: inherit;
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  color: var(--fads-sys-textarea-text-filled);
+  resize: vertical;
+  /* Native, cross-browser-supported approximation of the official custom scrollbar
+     (spec §5) — not a pixel-exact reproduction, a progressive enhancement. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--fads-sys-textarea-scrollbar-thumb) var(--fads-sys-textarea-scrollbar-track);
+}
+.textarea::placeholder {
+  color: var(--fads-sys-textarea-text-placeholder);
+}
+.wrapper:hover:not([data-disabled]):not([data-readonly]) .textarea {
+  color: var(--fads-sys-textarea-text-hovered);
+}
+.wrapper:active:not([data-disabled]):not([data-readonly]) .textarea {
+  color: var(--fads-sys-textarea-text-pressed);
+}
+.wrapper:focus-within:not([data-disabled]) .textarea {
+  color: var(--fads-sys-textarea-text-focused);
+}
+.textarea:read-only {
+  color: var(--fads-sys-textarea-text-readonly);
+  resize: none;
+}
+.textarea:disabled {
+  color: var(--fads-sys-textarea-text-disabled);
+  cursor: not-allowed;
+  resize: none;
+}
+
+.count {
+  margin: 0;
+  align-self: flex-end;
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-textarea-text-placeholder);
+}
+
+.helper,
+.error {
+  margin: 0;
+  padding-block: var(--fads-ref-space-1);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+.helper {
+  color: var(--fads-sys-textarea-helper-text);
+}
+.error {
+  color: var(--fads-sys-textarea-helper-error);
+}
+.field[data-disabled] .helper,
+.field[data-disabled] .error {
+  color: var(--fads-sys-textarea-text-disabled);
+}

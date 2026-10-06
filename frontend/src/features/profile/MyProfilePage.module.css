@@ -1,0 +1,100 @@
+/* EH-TP-04 My Profile — layout-only, token-only (DC-04/DC-23). */
+
+.subtitle {
+  margin-block: 0 var(--fads-sys-space-stack-md);
+  max-inline-size: 46rem;
+}
+
+.feedback {
+  margin-block-end: var(--fads-sys-space-stack-md);
+}
+
+/* Tab-panel content stacks a set of section cards. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+  margin-block-start: var(--fads-sys-space-stack-md);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin-block-start: var(--fads-sys-space-stack-md);
+}
+
+.stack .card {
+  margin-block-start: 0;
+}
+
+/* Services & specialties. */
+.scope {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--fads-sys-space-stack-lg);
+}
+
+.scopeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Programs. */
+.programs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.programRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+  padding-block-end: var(--fads-sys-space-stack-sm);
+  border-block-end: 1px solid var(--fads-sys-color-border-default);
+}
+
+.programName {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.programMeta {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+/* Dialogs. */
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.modalActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.errorHome {
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}

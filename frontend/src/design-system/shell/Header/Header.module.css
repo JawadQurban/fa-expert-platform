@@ -1,0 +1,231 @@
+/* Header (DGA CMP-01 Nav Header). Token-only, logical properties only
+   (DESIGN_CONSTRAINTS.md DC-04/DC-23). Verified against
+   docs/FIGMA_HEADER_SPECIFICATION.md. */
+
+.header {
+  inline-size: 100%;
+  background-color: var(--fads-sys-header-bg);
+  font-family: var(--fads-sys-font-family-base);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-header-group-gap);
+  min-block-size: var(--fads-sys-header-height);
+  padding-inline: var(--fads-sys-header-padding-inline);
+}
+
+/* Leading group: brand + inline nav (official "Logo & Menu Items"). */
+.lead {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-header-group-gap);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* Compact (< 960px): brand centers between the toggle and the actions. */
+.header[data-compact] .lead {
+  justify-content: center;
+}
+
+/* Brand / logo slot. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-header-logo-gap);
+  padding-block: 5px;
+  padding-inline: var(--fads-ref-space-1);
+  color: inherit;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--fads-sys-header-logo-icon-size);
+}
+
+.logo :is(img, svg) {
+  block-size: 100%;
+  inline-size: auto;
+}
+
+.logoLabel {
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-header-logo-label-text);
+}
+
+/* Inline primary navigation (desktop). */
+.navInline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Collapsible navigation panel (compact). */
+.navPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-header-item-gap);
+  padding-inline: var(--fads-sys-header-padding-inline);
+  padding-block: var(--fads-sys-header-item-padding-block);
+  border-block-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.navPanel .item {
+  justify-content: flex-start;
+}
+
+/* A single nav item (official "Header Menu Item"). */
+.item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fads-sys-header-item-gap);
+  min-block-size: var(--fads-sys-header-height);
+  padding-inline: var(--fads-sys-header-item-padding-inline);
+  padding-block: var(--fads-sys-header-item-padding-block);
+  border: var(--fads-sys-border-width-thick) solid transparent;
+  border-radius: var(--fads-sys-header-item-radius);
+  background-color: transparent;
+  color: var(--fads-sys-header-item-text);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  font-weight: var(--fads-ref-font-weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+
+.item:hover {
+  background-color: var(--fads-sys-header-item-bg-hover);
+}
+
+.item:active {
+  background-color: var(--fads-sys-header-item-bg-pressed);
+}
+
+.item:focus-visible {
+  outline: none;
+  border-color: var(--fads-sys-header-item-border-focus);
+}
+
+.item[aria-disabled='true'] {
+  color: var(--fads-sys-header-item-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Selected (current page) — official green tab treatment. */
+.item[data-selected] {
+  background-color: var(--fads-sys-header-selected-bg);
+  color: var(--fads-sys-header-selected-text);
+}
+
+.item[data-selected]:hover {
+  background-color: var(--fads-sys-header-selected-bg-hover);
+}
+
+.item[data-selected]:active {
+  background-color: var(--fads-sys-header-selected-bg-pressed);
+}
+
+.item[data-selected][aria-disabled='true'] {
+  background-color: var(--fads-sys-header-item-bg-disabled);
+  color: var(--fads-sys-header-item-text-disabled);
+}
+
+/* Selection indicator bar. */
+.item[data-selected]::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--fads-sys-header-item-padding-block);
+  inset-block-end: 0;
+  block-size: var(--fads-sys-header-indicator-height);
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-sys-header-indicator);
+}
+
+.item[data-selected][aria-disabled='true']::after {
+  content: none;
+}
+
+.itemLabel {
+  white-space: nowrap;
+}
+
+.chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-header-chevron-size);
+  block-size: var(--fads-sys-header-chevron-size);
+  line-height: 1;
+}
+
+/* Trailing actions slot. */
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-header-item-gap);
+  flex-shrink: 0;
+}
+
+/* Responsive menu toggle (official "Header Menu"). */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-header-toggle-size);
+  block-size: var(--fads-sys-header-toggle-size);
+  padding: 0;
+  border: var(--fads-sys-border-width-thick) solid transparent;
+  border-radius: var(--fads-sys-header-item-radius);
+  background-color: transparent;
+  color: var(--fads-sys-header-item-text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle:hover {
+  background-color: var(--fads-sys-header-item-bg-hover);
+}
+
+.toggle:active {
+  background-color: var(--fads-sys-header-item-bg-pressed);
+}
+
+.toggle:focus-visible {
+  outline: none;
+  border-color: var(--fads-sys-header-item-border-focus);
+}
+
+.toggleIcon {
+  font-size: var(--fads-sys-header-icon-size);
+  line-height: 1;
+}
+
+/* Compact padding at the smallest breakpoint (official <600 variant). */
+@media (max-width: 599.98px) {
+  .bar {
+    padding-inline: var(--fads-sys-header-padding-inline-compact);
+  }
+
+  .navPanel {
+    padding-inline: var(--fads-sys-header-padding-inline-compact);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

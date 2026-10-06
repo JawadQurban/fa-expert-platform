@@ -1,0 +1,14 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="24" height="24" fill="#F1F1F1"/>
+<g id="Shapes">
+<rect width="1932" height="730" transform="translate(-550 -364)" fill="white"/>
+<g id="oval">
+<rect x="-19.5" y="-19.5" width="415" height="63" rx="4.5" stroke="#9747FF" stroke-dasharray="10 5"/>
+<g id="Style=Stroke, Type=Rounded">
+<g id="elements">
+<path id="Icon" fill-rule="evenodd" clip-rule="evenodd" d="M12 3.75C6.81508 3.75 2.75 7.51603 2.75 12C2.75 16.484 6.81508 20.25 12 20.25C17.1849 20.25 21.25 16.484 21.25 12C21.25 7.51603 17.1849 3.75 12 3.75ZM1.25 12C1.25 6.54285 6.13922 2.25 12 2.25C17.8608 2.25 22.75 6.54285 22.75 12C22.75 17.4572 17.8608 21.75 12 21.75C6.13922 21.75 1.25 17.4572 1.25 12Z" fill="#161616"/>
+</g>
+</g>
+</g>
+</g>
+</svg>

@@ -1,0 +1,53 @@
+/* EH-INT-01 stage distribution — layout-only, token-only (DC-04/DC-23). */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+/* A fixed measure so every bar starts at the same place and the lengths are
+   actually comparable — the one thing a bar chart has to get right. */
+.label {
+  flex: 0 0 11rem;
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.track {
+  flex: 1 1 auto;
+  block-size: var(--fads-ref-space-2);
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-ref-neutral-100);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  block-size: 100%;
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-sys-color-primary-strong);
+}
+
+.value {
+  flex: 0 0 3rem;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .label {
+    flex-basis: 7rem;
+  }
+}

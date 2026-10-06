@@ -1,0 +1,25 @@
+/* Expert Hub system-message layout — token-only. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-md);
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+/* The error variant centres its column, as the kit composes it — but the body
+   text keeps its own start alignment inside it, because a centred paragraph of
+   Arabic is harder to read than a centred heading is striking. */
+.stack[data-tone='error'] {
+  align-items: center;
+  text-align: center;
+}
+
+.stack[data-tone='error'] p {
+  text-align: start;
+}
+
+.mark {
+  background-color: var(--fads-sys-alert-icon-bg-error);
+}

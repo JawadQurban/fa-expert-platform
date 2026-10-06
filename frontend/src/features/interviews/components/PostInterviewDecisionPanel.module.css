@@ -1,0 +1,18 @@
+/* EH-INT-04 post-interview decision (J-07/F3) — layout-only, token-only (DC-04/DC-23). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-md);
+  margin-block-start: var(--fads-sys-space-stack-xs);
+}
+
+.dialogField {
+  margin-block-start: var(--fads-sys-space-stack-sm);
+}

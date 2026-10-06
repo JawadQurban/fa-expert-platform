@@ -1,0 +1,84 @@
+/* Modal (CMP-25) — token-based, live-Figma-verified styles.
+   See docs/FIGMA_MODAL_SPECIFICATION.md. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--fads-sys-space-inset-md);
+  background-color: var(--fads-sys-color-overlay);
+  z-index: var(--fads-sys-z-modal);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  inline-size: min(var(--fads-sys-modal-width), 100%);
+  max-block-size: 90vh;
+  padding: var(--fads-sys-modal-padding);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-sys-modal-background);
+  box-shadow: var(--fads-sys-modal-shadow);
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.titleRow {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+.iconBadge {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: var(--fads-sys-radius-full);
+  background-color: var(--fads-sys-color-background-subtle);
+}
+
+.close {
+  position: absolute;
+  inset-block-start: -10px;
+  inset-inline-end: -10px;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-lg);
+  line-height: var(--fads-sys-typography-line-height-lg);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  color: var(--fads-sys-modal-title-color);
+}
+
+.body {
+  padding-block-end: var(--fads-sys-space-inset-md);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  font-weight: var(--fads-ref-font-weight-regular);
+  color: var(--fads-sys-modal-body-color);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+@media (max-width: 480px) {
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

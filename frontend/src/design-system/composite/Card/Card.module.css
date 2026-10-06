@@ -1,0 +1,100 @@
+/* Card (CMP-07) — token-only styling.
+   Colors, radius, gap, shadow, and typography are sourced from the official
+   Platforms Code Figma Card component (file Sv0oWOS1SjWnwhQwdzRJIE, node
+   30195:10358), verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_CARD_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Card/VISUAL_COMPLIANCE_CARD.md.
+
+   Hover/Focused/Disabled color treatment on the `actionable` variant is
+   borrowed from the official Type=Selectable state set — the closest verified
+   analog, since a plain single-action clickable card (no checkbox, no
+   expand/collapse) has no direct official Type equivalent. See the report's
+   §6 "Incorrect Interaction" for the reasoning. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-card-gap);
+  padding: var(--fads-sys-space-inset-md);
+  border: none;
+  border-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-sys-card-bg);
+  color: var(--fads-sys-card-text);
+  box-shadow: var(--fads-sys-card-shadow);
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+/* Effect variant — official Type=Default: With Shadow (default) / No Shadow / Stroke. */
+.card[data-effect='none'] {
+  box-shadow: none;
+}
+
+.card[data-effect='stroke'] {
+  box-shadow: none;
+  border: 1px solid var(--fads-sys-card-border-stroke);
+}
+
+.card[data-actionable='true'] {
+  cursor: pointer;
+}
+
+.card[data-actionable='true']:hover:not([data-disabled='true']) {
+  background-color: var(--fads-sys-card-bg-hover);
+}
+
+.card[data-actionable='true']:focus-visible:not([data-disabled='true']) {
+  background-color: var(--fads-sys-card-bg-focused);
+  border: 2px solid var(--fads-sys-card-border-focus);
+}
+
+.card[data-disabled='true'] {
+  background-color: var(--fads-sys-card-bg-disabled);
+  color: var(--fads-sys-card-text-disabled);
+  border-color: transparent;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Content — groups Title + Description at the official 8px gap, separate from
+   the card's own 24px inter-section gap. */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-lg);
+  font-weight: var(--fads-ref-font-weight-bold);
+  line-height: var(--fads-sys-typography-line-height-lg);
+  color: var(--fads-sys-card-text);
+}
+
+.description {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-regular);
+  line-height: var(--fads-sys-typography-line-height-md);
+  color: var(--fads-sys-card-text);
+}
+
+/* `children` slot — no official one-to-one match; kept structurally separate
+   (own 24px gap from Content/footer) rather than merged into Content. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+/* `footer` slot — no verified official equivalent (closest analog, the Rating
+   caption, uses a tertiary/muted color not resolved this pass — Needs
+   Confirmation per the report). Left as a muted caption rather than the
+   card's primary text color, which is a defensible default, not a Figma-
+   confirmed value. */
+.footer {
+  margin: 0;
+  color: var(--fads-sys-color-text-muted);
+}

@@ -1,0 +1,122 @@
+/* =============================================================================
+   FADS Design Tokens — additive placeholder layer
+   -----------------------------------------------------------------------------
+   The Figma-sourced reference scale (color/spacing/radius/typography/motion)
+   and its base semantic (--fads-sys-*) layer are generated from
+   references/figma/foundations/Values.tokens.json — see
+   ./generated/tokens.css, produced by scripts/generate-tokens.mjs
+   (`npm run tokens:generate`). Do NOT redeclare those tokens here.
+
+   This file holds only the component/interactive/layout tokens that are NOT
+   yet part of the Figma export: clearly-marked NON-DGA placeholders pending
+   validation against the official DGA Platforms Code (docs/DESIGN_TOKENS.md
+   §10, QUESTIONS.md Q33/Q3). `global.css` imports `./generated/tokens.css`
+   first, then this file, so these declarations may safely reference
+   Figma-sourced reference and system tokens (--fads-ref- and --fads-sys-
+   prefixed names) defined there.
+
+   Token tiers (docs/DESIGN_TOKENS.md §2):
+     --fads-ref-*  reference/primitive (raw scale)
+     --fads-sys-*  system/semantic     (purpose → reference)
+
+   Naming is RTL-safe / logical: no left/right (DESIGN_CONSTRAINTS.md DC-23).
+   ========================================================================== */
+
+:root {
+  /* =========================================================================
+     Component/interactive tokens (PLACEHOLDER) — added for the primitives
+     layer. Values map to the placeholder reference scale; they MUST be
+     validated against the official DGA Platforms Code (docs/DESIGN_TOKENS.md
+     §10, QUESTIONS.md Q33). Do not treat as approved DGA values.
+     ====================================================================== */
+
+  /* Reference: border widths */
+  --fads-ref-border-width-thin: 1px;
+  --fads-ref-border-width-thick: 2px;
+
+  /* Reference: elevation / shadow (PLACEHOLDER) */
+  --fads-ref-shadow-1: 0 1px 2px rgba(23, 26, 29, 0.08);
+  --fads-ref-shadow-2: 0 4px 12px rgba(23, 26, 29, 0.12);
+
+  /* Border widths */
+  --fads-sys-border-width-thin: var(--fads-ref-border-width-thin);
+  --fads-sys-border-width-thick: var(--fads-ref-border-width-thick);
+
+  /* Elevation */
+  --fads-sys-elevation-0: none;
+  --fads-sys-elevation-1: var(--fads-ref-shadow-1);
+  --fads-sys-elevation-2: var(--fads-ref-shadow-2);
+
+  /* Interactive color states */
+  --fads-sys-color-primary-hover: var(--fads-ref-primary-600);
+  --fads-sys-color-primary-pressed: var(--fads-ref-primary-700);
+  --fads-sys-color-text-on-primary: var(--fads-sys-color-on-color-text);
+  --fads-sys-color-background-hover: var(--fads-ref-neutral-100);
+  --fads-sys-color-background-pressed: var(--fads-ref-neutral-200);
+  --fads-sys-color-text-disabled: var(--fads-ref-neutral-400);
+  --fads-sys-color-border-disabled: var(--fads-ref-neutral-200);
+  --fads-sys-color-link-hover: var(--fads-ref-primary-700);
+  --fads-sys-color-link-visited: var(--fads-ref-primary-700);
+
+  /* Disabled */
+  --fads-sys-opacity-disabled: 0.5;
+
+  /* Form fields */
+  --fads-sys-color-field-background: var(--fads-sys-color-background-default);
+  --fads-sys-color-field-border: var(--fads-sys-color-border-strong);
+  --fads-sys-color-field-placeholder: var(--fads-ref-neutral-400);
+  --fads-sys-color-field-border-error: var(--fads-sys-color-status-error);
+
+  /* Controls — heights & inline padding (PLACEHOLDER sizing) */
+  --fads-sys-control-height-sm: 2rem;
+  --fads-sys-control-height-md: 2.5rem;
+  --fads-sys-control-height-lg: 3rem;
+  --fads-sys-control-padding-inline-sm: var(--fads-ref-space-3);
+  --fads-sys-control-padding-inline-md: var(--fads-ref-space-4);
+  --fads-sys-control-padding-inline-lg: var(--fads-ref-space-5);
+  --fads-sys-control-radius: var(--fads-sys-radius-md);
+  --fads-sys-control-gap: var(--fads-ref-space-2);
+
+  /* =========================================================================
+     Phase 5 layout / composite / shell PLACEHOLDER tokens.
+     Same policy: NON-DGA placeholders → validate against official Platforms
+     Code (docs/DESIGN_TOKENS.md §10, QUESTIONS.md Q33/Q3).
+     ====================================================================== */
+
+  /* Container max-widths (layout) */
+  --fads-sys-container-page: 75rem; /* ~1200px */
+  --fads-sys-container-prose: 42rem; /* Arabic reading measure */
+  --fads-sys-container-form: 40rem;
+
+  /* Icon sizes — ≤24px standard; >24px = Featured icon (S3: F10) */
+  --fads-ref-icon-size-sm: 1rem; /* 16px */
+  --fads-ref-icon-size-md: 1.5rem; /* 24px */
+  --fads-ref-icon-size-featured: 2.5rem; /* 40px */
+  --fads-sys-icon-size-sm: var(--fads-ref-icon-size-sm);
+  --fads-sys-icon-size-md: var(--fads-ref-icon-size-md);
+  --fads-sys-icon-size-featured: var(--fads-ref-icon-size-featured);
+
+  /* Selection controls (checkbox / radio / switch) */
+  --fads-sys-selection-size: 1.25rem;
+  --fads-sys-selection-color-checked: var(--fads-sys-color-primary);
+  --fads-sys-switch-track-inline: 2.75rem;
+  --fads-sys-switch-track-block: 1.5rem;
+  --fads-sys-switch-thumb-size: 1.125rem;
+
+  /* Surfaces & overlays (menus, modals, drawers, toasts, cards) */
+  --fads-ref-overlay: rgba(23, 26, 29, 0.5);
+  --fads-sys-color-overlay: var(--fads-ref-overlay);
+  --fads-sys-color-surface-raised: var(--fads-sys-color-background-raised);
+  --fads-sys-color-surface-hover: var(--fads-sys-color-background-hover);
+
+  /* Data display (table) */
+  --fads-sys-color-table-header-background: var(--fads-sys-color-background-subtle);
+  --fads-sys-color-table-row-border: var(--fads-sys-color-border-default);
+}
+
+/* Explicit light theme (default). Dark theme is intentionally NOT defined —
+   it is not a DGA requirement (QUESTIONS.md Q22). The [data-theme] hook exists
+   so a future theme can be layered without touching component code. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}

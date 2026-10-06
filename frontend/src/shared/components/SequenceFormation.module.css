@@ -1,0 +1,96 @@
+/* P-J1 sequence formation (J-09/F2, reused by J-10/F2) — token-only (DC-04/DC-23). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.templateRow {
+  max-inline-size: var(--fads-sys-container-form);
+}
+
+.members {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin-block-start: var(--fads-sys-space-stack-xs);
+}
+
+.member {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding: var(--fads-sys-space-inset-md);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-sys-color-background-subtle);
+}
+
+.memberHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.memberActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.addRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--fads-sys-space-inline-md);
+  margin-block-start: var(--fads-sys-space-stack-sm);
+}
+
+.addField {
+  flex: 1 1 18rem;
+  min-inline-size: 0;
+}
+
+.templateSave {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  max-inline-size: var(--fads-sys-container-form);
+}
+
+.errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding: var(--fads-sys-space-inset-md);
+  border: var(--fads-sys-border-width-thick) solid var(--fads-sys-color-status-error);
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.errorList {
+  margin: 0;
+  padding-inline-start: var(--fads-sys-space-inset-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  font: var(--fads-sys-typography-text-md);
+  color: var(--fads-sys-color-text-default);
+}
+
+/* J-10 only: e-signer designation sits under the obligation choice. */
+.signerRow {
+  padding-block-start: var(--fads-sys-space-stack-xs);
+  border-block-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}

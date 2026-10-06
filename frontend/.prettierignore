@@ -1,0 +1,6 @@
+dist
+coverage
+storybook-static
+node_modules
+*.min.*
+package-lock.json

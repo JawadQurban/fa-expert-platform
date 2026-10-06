@@ -1,0 +1,226 @@
+/* CAP-08 access administration — layout-only, token-only (DC-04/DC-23). */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-2);
+  margin-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-lg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+/* 58 features x 6 roles will not fit a phone. The grid scrolls inside its own
+   container so the page itself never scrolls sideways. */
+.matrixScroll {
+  overflow-x: auto;
+  margin-block-end: var(--fads-sys-space-stack-lg);
+  border: 1px solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.matrix {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.caption {
+  padding: var(--fads-sys-space-inset-sm);
+  text-align: start;
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.matrix th,
+.matrix td {
+  padding: var(--fads-sys-space-inset-sm);
+  border-block-end: 1px solid var(--fads-sys-color-border-default);
+  text-align: start;
+  vertical-align: top;
+}
+
+/* The grid reads as the DS table does: a quiet header band, striped rows. */
+.matrix thead th {
+  position: sticky;
+  inset-block-start: 0;
+  background-color: var(--fads-sys-table-bg-header);
+  color: var(--fads-sys-table-text-head);
+  font-size: var(--fads-sys-table-head-font-size);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.matrix tbody tr:nth-child(even) > * {
+  background-color: var(--fads-sys-table-bg-row-alt);
+}
+
+.matrix tbody tr:last-child > * {
+  border-block-end: 0;
+}
+
+/* The grid inside its list card: it meets the card edges and scrolls within.
+   `position: relative` makes the scroller the containing block, so the
+   checkboxes' visually-hidden labels are clipped with the grid instead of
+   widening the page on narrow screens. */
+.matrixFlush {
+  position: relative;
+  overflow-x: auto;
+}
+
+.matrixControls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  align-items: end;
+  gap: var(--fads-ref-space-3) var(--fads-sys-space-inline-md);
+}
+
+.featureCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  min-inline-size: 14rem;
+}
+
+.grantCell {
+  display: table-cell;
+  min-inline-size: 8rem;
+}
+
+.trail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trailRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding-inline-start: var(--fads-sys-space-inset-sm);
+  border-inline-start: 2px solid var(--fads-sys-color-border-default);
+}
+
+.users {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One person per ruled row, meeting the list card's edges (Option B `.rows`). */
+.userRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding-block: var(--fads-ref-space-3);
+  padding-inline: var(--fads-sys-space-inset-md);
+  border-block-end: 1px solid var(--fads-sys-color-border-default);
+}
+
+.userRow:last-child {
+  border-block-end: 0;
+}
+
+.userSearch {
+  max-inline-size: 24rem;
+}
+
+/* One row per held role: the chip, who assigned it, and the revoke action. */
+.roleChips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.roleChip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.assignRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+/* The area's screens as a tab strip (Option B prototype `.tabs`): the current
+   one underlined in the brand colour, named by `aria-current`, not colour. */
+.areaNav {
+  display: flex;
+  flex-wrap: wrap;
+  padding-inline: var(--fads-sys-space-inset-sm);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-ref-neutral-300);
+  border-start-start-radius: var(--fads-sys-radius-lg);
+  border-start-end-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-sys-card-bg);
+}
+
+.areaNav > a {
+  padding-block: var(--fads-ref-space-2);
+  padding-inline: var(--fads-ref-space-3);
+  border-block-end: 2px solid transparent;
+  color: var(--fads-ref-neutral-700);
+  font-size: var(--fads-sys-typography-text-sm);
+  text-decoration: none;
+}
+
+.areaNav > a[aria-current='page'] {
+  border-block-end-color: var(--fads-ref-primary-600);
+  color: var(--fads-ref-primary-700);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+/* What FAST holds about this person — set apart from the roles granted here,
+   because the two must never read as one list (`P-181`). */
+.fastPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding: var(--fads-sys-space-inset-sm);
+  border-radius: var(--fads-sys-radius-sm);
+  background: var(--fads-sys-color-background-subtle);
+  border-inline-start: 2px solid var(--fads-sys-color-border-default);
+}
+
+.fastFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-md);
+  margin: 0;
+}
+
+.fastFact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.fastTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* A person's row leads with the person. */
+.userIdentity {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.userNames {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  min-inline-size: 0;
+}

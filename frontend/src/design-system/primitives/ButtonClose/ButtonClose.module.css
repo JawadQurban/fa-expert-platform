@@ -1,0 +1,95 @@
+/* ButtonClose — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Button-Close component set (file J0xq7JG3JKshRDzrgAM7E0, node 2763:420129),
+   verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_BUTTON_CLOSE_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/ButtonClose/VISUAL_COMPLIANCE_BUTTON_CLOSE.md. */
+
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: var(--fads-sys-border-width-thick) solid transparent;
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  color: var(--fads-sys-buttonclose-icon-default);
+  cursor: pointer;
+  transition: background-color var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+/* No "Disabled" variant was sampled in the live Figma component set (only
+   Default/Hovered/Pressed/Focused × onColor) — a close/dismiss action isn't
+   typically disabled. `disabled` is still supported (native button
+   semantics, no hover/press feedback below) since every other FADS
+   interactive primitive accepts it; only `cursor` changes since there is no
+   Figma-verified disabled color to reuse. */
+.button:disabled {
+  cursor: not-allowed;
+}
+.button:disabled:hover,
+.button:disabled:active {
+  background-color: transparent;
+}
+
+.icon {
+  inline-size: var(--fads-sys-buttonclose-icon-size-xs);
+  block-size: var(--fads-sys-buttonclose-icon-size-xs);
+}
+
+/* Size — box + icon dimensions (official `Size` property). */
+.button[data-size='xs'] {
+  inline-size: var(--fads-sys-buttonclose-size-xs);
+  block-size: var(--fads-sys-buttonclose-size-xs);
+}
+.button[data-size='sm'] {
+  inline-size: var(--fads-sys-buttonclose-size-sm);
+  block-size: var(--fads-sys-buttonclose-size-sm);
+}
+.button[data-size='sm'] .icon,
+.button[data-size='md'] .icon {
+  inline-size: var(--fads-sys-buttonclose-icon-size-sm);
+  block-size: var(--fads-sys-buttonclose-icon-size-sm);
+}
+.button[data-size='md'] {
+  inline-size: var(--fads-sys-buttonclose-size-md);
+  block-size: var(--fads-sys-buttonclose-size-md);
+}
+.button[data-size='lg'] {
+  inline-size: var(--fads-sys-buttonclose-size-lg);
+  block-size: var(--fads-sys-buttonclose-size-lg);
+}
+.button[data-size='lg'] .icon {
+  inline-size: var(--fads-sys-buttonclose-icon-size-lg);
+  block-size: var(--fads-sys-buttonclose-icon-size-lg);
+}
+
+/* Default (not on-color) — Hovered/Pressed get a neutral gray fill. */
+.button:hover:not(:disabled) {
+  background-color: var(--fads-sys-buttonclose-bg-hovered);
+}
+.button:active:not(:disabled) {
+  background-color: var(--fads-sys-buttonclose-bg-pressed);
+}
+.button:focus-visible {
+  border-color: var(--fads-sys-buttonclose-focus-ring);
+}
+
+/* On-color — icon inverts to white, Hovered/Pressed get a semi-transparent
+   white fill instead of the neutral gray (live-verified as its own token
+   family, not a filter/invert of the default one). */
+.button[data-oncolor] {
+  color: var(--fads-sys-buttonclose-icon-oncolor);
+}
+.button[data-oncolor]:hover:not(:disabled) {
+  background-color: var(--fads-sys-buttonclose-bg-oncolor-hovered);
+}
+.button[data-oncolor]:active:not(:disabled) {
+  background-color: var(--fads-sys-buttonclose-bg-oncolor-pressed);
+}
+.button[data-oncolor]:focus-visible {
+  border-color: var(--fads-sys-buttonclose-focus-ring-oncolor);
+}

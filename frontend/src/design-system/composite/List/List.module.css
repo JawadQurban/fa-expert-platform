@@ -1,0 +1,11 @@
+/* List — token-based, live-Figma-verified styles.
+   See docs/FIGMA_LIST_SPECIFICATION.md. */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-list-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

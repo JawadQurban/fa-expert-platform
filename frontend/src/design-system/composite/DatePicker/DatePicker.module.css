@@ -1,0 +1,297 @@
+/* DatePicker (CMP-19) — token-only styles.
+   The trigger's visual chrome reuses TextInput's own live-verified tokens
+   (--fads-sys-textinput-*) for pixel parity with the live "Date Field" node —
+   see docs/FIGMA_DATE_PICKER_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/DatePicker/VISUAL_COMPLIANCE_DATE_PICKER.md for
+   why the trigger stays a <button> rather than a literal <TextInput>. */
+
+.datePicker {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.rangeTriggers {
+  display: flex;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-textinput-label-gap);
+  min-inline-size: 12rem;
+  block-size: var(--fads-sys-textinput-height-lg);
+  padding-inline: var(--fads-sys-textinput-content-padding-start)
+    var(--fads-sys-textinput-content-padding-end);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-textinput-border-default);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-textinput-bg-default);
+  cursor: pointer;
+  justify-content: center;
+}
+
+.trigger:hover:not(:disabled) {
+  border-color: var(--fads-sys-textinput-border-hovered);
+}
+.trigger:focus-visible {
+  border-color: var(--fads-sys-textinput-border-pressed);
+}
+.trigger[data-invalid] {
+  border-color: var(--fads-sys-textinput-border-error);
+}
+.trigger:disabled {
+  cursor: not-allowed;
+  border-color: var(--fads-sys-textinput-border-disabled);
+  background-color: transparent;
+}
+
+.required {
+  color: var(--fads-sys-textinput-required-color);
+}
+
+.triggerLabel {
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-textinput-label-text);
+}
+
+.triggerValue {
+  font-size: var(--fads-sys-typography-text-md);
+  color: var(--fads-sys-textinput-text-filled);
+}
+
+.triggerValue[data-placeholder='true'] {
+  color: var(--fads-sys-textinput-text-placeholder);
+}
+
+.helper,
+.error {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+}
+.helper {
+  color: var(--fads-sys-textinput-helper-text);
+}
+.error {
+  color: var(--fads-sys-textinput-helper-error);
+}
+
+.popover {
+  /* `position: fixed` + `top`/`left` are set inline (DatePicker.tsx), computed
+     from the trigger's `getBoundingClientRect()` — the popover is portaled to
+     `document.body`, so it is no longer a positioned descendant of
+     `.datePicker` and can't rely on that ancestor for anchoring. */
+  position: fixed;
+  z-index: var(--fads-sys-z-drawer);
+  border-radius: var(--fads-sys-datepicker-popover-radius);
+  background-color: var(--fads-sys-color-surface-raised);
+  box-shadow: var(--fads-sys-datepicker-popover-shadow);
+}
+
+.popoverBody {
+  display: flex;
+  align-items: flex-start;
+}
+
+.quickOptions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  inline-size: 10rem;
+  padding: var(--fads-sys-space-inset-md);
+  flex: none;
+}
+
+.quickOptionsLabel {
+  margin: 0;
+  padding-block: var(--fads-sys-space-stack-xs);
+  font-size: var(--fads-sys-typography-text-xs);
+  font-weight: var(--fads-ref-font-weight-bold);
+  color: var(--fads-sys-color-text-muted);
+}
+
+.quickOption {
+  inline-size: 100%;
+  padding: var(--fads-sys-space-inset-sm);
+  border: none;
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: transparent;
+  color: var(--fads-sys-color-text-default);
+  text-align: start;
+  cursor: pointer;
+}
+.quickOption:hover {
+  background-color: var(--fads-sys-color-background-subtle);
+}
+
+.calendars {
+  display: flex;
+  gap: var(--fads-sys-space-inset-md);
+}
+
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding: var(--fads-sys-space-inset-md);
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.monthLabel {
+  margin: 0;
+  flex: 1 0 0%;
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+
+.navButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-control-height-sm);
+  block-size: var(--fads-sys-control-height-sm);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-sys-color-background-default);
+  cursor: pointer;
+}
+
+.yearDropdown {
+  position: relative;
+  flex: none;
+}
+
+.yearButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fads-sys-space-stack-xs);
+  padding-inline: var(--fads-sys-space-inset-sm);
+  block-size: var(--fads-sys-control-height-sm);
+  border: none;
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: transparent;
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-color-text-default);
+  cursor: pointer;
+}
+.yearButton:hover {
+  background-color: var(--fads-sys-color-background-subtle);
+}
+
+.yearMenu {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  z-index: 1;
+  max-block-size: 12rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--fads-ref-space-1);
+  list-style: none;
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-textinput-border-default);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-textinput-bg-default);
+  box-shadow: var(--fads-sys-elevation-2);
+}
+
+.yearOption {
+  inline-size: 100%;
+  padding: var(--fads-sys-space-inset-sm);
+  border: none;
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: transparent;
+  color: var(--fads-sys-color-text-default);
+  text-align: start;
+  cursor: pointer;
+}
+.yearOption:hover {
+  background-color: var(--fads-sys-color-background-subtle);
+}
+.yearOption[data-selected] {
+  background-color: var(--fads-sys-color-primary);
+  color: var(--fads-sys-color-text-on-primary);
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.weekRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--fads-ref-space-1);
+}
+
+.weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fads-sys-typography-text-xs);
+  color: var(--fads-sys-color-text-muted);
+}
+
+.gridcell {
+  display: flex;
+  position: relative;
+}
+
+/* Range highlight — a background band spanning the whole cell, behind the
+   day button; start/end cells cap it with a rounded edge on their own side,
+   matching the live node's "Range highlight left/middle/right" pieces. */
+.gridcell::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.125rem;
+  inset-inline: 0;
+  background-color: transparent;
+}
+
+.day {
+  position: relative;
+  z-index: 1;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border: 0;
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: transparent;
+  color: var(--fads-sys-color-text-default);
+  cursor: pointer;
+}
+
+.day[data-outside='true'] {
+  color: var(--fads-sys-color-text-disabled);
+}
+
+.day[data-today='true'] {
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-primary);
+}
+
+.day[data-selected='true'],
+.day[data-range-start='true'],
+.day[data-range-end='true'] {
+  background-color: var(--fads-sys-datepicker-selected-bg);
+  color: var(--fads-sys-datepicker-selected-text);
+}
+
+.gridcell:has(.day[data-in-range='true'])::before,
+.gridcell:has(.day[data-range-start='true'])::before,
+.gridcell:has(.day[data-range-end='true'])::before {
+  background-color: var(--fads-sys-datepicker-range-bg);
+}
+.gridcell:has(.day[data-range-start='true'])::before {
+  inset-inline-start: 50%;
+}
+.gridcell:has(.day[data-range-end='true'])::before {
+  inset-inline-end: 50%;
+}

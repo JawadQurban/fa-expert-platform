@@ -1,0 +1,35 @@
+/* Staff inbox list — layout-only, token-only (DC-04/DC-23). */
+
+.reference {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  /* The list sits in a flush panel, so it brings its own inset. */
+  padding: var(--fads-sys-space-inset-md);
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.cardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* Ages line up under each other so the longest wait is findable by eye. */
+.age {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

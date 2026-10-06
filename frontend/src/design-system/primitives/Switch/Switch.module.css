@@ -1,0 +1,158 @@
+/* Switch (CMP-18) — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Switch component set (file J0xq7JG3JKshRDzrgAM7E0, node 30150:69895) and the
+   Switch Label sub-component (node 30150:69998), verified live via the Figma MCP
+   read-only tools — see docs/FIGMA_SWITCH_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Switch/VISUAL_COMPLIANCE_SWITCH.md. */
+
+.root {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-control-gap);
+  font-family: var(--fads-sys-font-family-base);
+}
+
+.track {
+  position: relative;
+  flex: none;
+  inline-size: var(--fads-sys-switch-track-inline);
+  block-size: var(--fads-sys-switch-track-block);
+  padding: 0;
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-switch-border-default);
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+/* Hover/Pressed ripple halo — a fixed 4px-all-around blended overlay, live-verified
+   identical in both directions (not a percentage of track size coincidentally
+   landing on the same px value — 16.67% of 24px block-size and 8.33% of 48px
+   inline-size both independently resolve to 4px). */
+.track::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: transparent;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.track:hover:not(:disabled)::before,
+.track:active:not(:disabled)::before {
+  background-color: var(--fads-sys-switch-ripple);
+}
+
+/* Real keyboard focus ring — a distinct rectangular (radius-xs) overlay around the
+   pill-shaped track, live-verified as its own separate treatment from the
+   Hover/Pressed ripple above (not the same element reused). */
+.track::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--fads-sys-switch-focus-ring-radius);
+  border: var(--fads-sys-border-width-thick) solid transparent;
+  pointer-events: none;
+}
+.track:focus-visible::after {
+  border-color: var(--fads-sys-switch-focus-ring-off);
+}
+.track[data-checked]:focus-visible::after {
+  border-color: var(--fads-sys-switch-focus-ring-on);
+}
+
+.track:hover:not(:disabled) {
+  border-color: var(--fads-sys-switch-border-hovered);
+}
+.track:active:not(:disabled) {
+  border-color: var(--fads-sys-switch-border-pressed);
+}
+
+.track[data-checked] {
+  border-color: transparent;
+  background-color: var(--fads-sys-switch-bg-checked);
+}
+.track[data-checked]:hover:not(:disabled) {
+  border-color: transparent;
+  background-color: var(--fads-sys-switch-bg-checked-hovered);
+}
+.track[data-checked]:active:not(:disabled) {
+  border-color: transparent;
+  background-color: var(--fads-sys-switch-bg-checked-pressed);
+}
+
+/* Disabled — solid uniform colors (not opacity), matching every other rebuilt FADS
+   control's disabled pattern. Declared last so it wins (equal-specificity,
+   last-wins). */
+.track:disabled {
+  cursor: not-allowed;
+  border-color: var(--fads-sys-switch-border-disabled);
+  background-color: transparent;
+}
+.track:disabled[data-checked] {
+  border-color: transparent;
+  background-color: var(--fads-sys-switch-bg-checked-disabled);
+}
+.track:disabled::before {
+  background-color: transparent;
+}
+
+.thumb {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: var(--fads-sys-switch-thumb-inset);
+  inline-size: var(--fads-sys-switch-thumb-size);
+  block-size: var(--fads-sys-switch-thumb-size);
+  border-radius: var(--fads-sys-radius-pill);
+  background-color: var(--fads-sys-switch-thumb-bg);
+  box-shadow: var(--fads-sys-switch-thumb-shadow);
+  transform: translateY(-50%);
+  transition: inset-inline-start var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+
+/* On: move the thumb to the logical end (flips correctly in RTL). */
+.track[data-checked] .thumb {
+  inset-inline-start: calc(
+    var(--fads-sys-switch-track-inline) - var(--fads-sys-switch-thumb-size) -
+      var(--fads-sys-switch-thumb-inset)
+  );
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.label {
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-switch-label-text);
+  cursor: pointer;
+}
+.root[data-disabled] .label {
+  color: var(--fads-sys-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.description {
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-switch-description-text);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-switch-error-gap);
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-switch-error-text);
+}
+
+.errorIcon {
+  flex: none;
+}

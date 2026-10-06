@@ -1,0 +1,46 @@
+/* Menu — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Menu component set (file J0xq7JG3JKshRDzrgAM7E0, node 30195:22214), verified
+   live via the Figma MCP read-only tools — see docs/FIGMA_MENU_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Menu/VISUAL_COMPLIANCE_MENU.md. The panel border and
+   radius reuse the already-Approved Button's own tokens directly (confirmed
+   byte-identical). */
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  box-sizing: border-box;
+  inline-size: var(--fads-sys-menu-width);
+  overflow: hidden;
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-button-border-neutral);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-sys-menu-bg);
+  box-shadow: var(--fads-sys-menu-shadow);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-menu-section-gap);
+  padding: var(--fads-sys-space-inset-sm);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-menu-section-border);
+}
+.section:last-child {
+  border-block-end: none;
+}
+
+.groupLabel {
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-xs);
+  font-weight: var(--fads-ref-font-weight-bold);
+  line-height: var(--fads-sys-typography-line-height-xs);
+  color: var(--fads-sys-menu-group-label-text);
+  text-transform: uppercase;
+}
+
+.itemsGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}

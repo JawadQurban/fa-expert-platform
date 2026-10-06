@@ -1,0 +1,213 @@
+/* Radio + RadioGroup (CMP-16) — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Radio component set (file J0xq7JG3JKshRDzrgAM7E0, node 30195:23385) and the
+   Radio Label sub-component (node 30195:23490), verified live via the Figma MCP
+   read-only tools — see docs/FIGMA_RADIO_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Radio/VISUAL_COMPLIANCE_RADIO.md. */
+
+.group {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  font-family: var(--fads-sys-font-family-base);
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: var(--fads-sys-space-stack-xs);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-color-text-default);
+}
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-control-gap);
+}
+
+.box {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-radio-hit-size);
+  block-size: var(--fads-sys-radio-hit-size);
+}
+
+/* Real, fully-interactive native input — visually hidden, not display:none, so
+   focus/keyboard/AT behavior stays native. The decorative .visual sibling ignores
+   pointer events so clicks always land on the input beneath it. */
+.input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  inline-size: 100%;
+  block-size: 100%;
+}
+.input:disabled {
+  cursor: not-allowed;
+}
+
+.visual {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-radio-size);
+  block-size: var(--fads-sys-radio-size);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-radio-border-default);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: transparent;
+  pointer-events: none;
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+/* Ripple / interaction circle — Hovered and Pressed, live-verified as a fixed 48px
+   circle centered on a 24px dot (i.e. exactly double the diameter), regardless of
+   checked state. */
+.visual::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  border-radius: var(--fads-sys-radius-full);
+  background-color: transparent;
+}
+.input:hover:not(:disabled):not([data-readonly]) ~ .visual::before,
+.input:active:not(:disabled):not([data-readonly]) ~ .visual::before {
+  background-color: var(--fads-sys-radio-ripple);
+}
+
+/* Inner dot — a reconstructed CSS shape, not a literal Figma vector export: the
+   official checked states are opaque raster/vector image assets in the extracted
+   markup, not inline path data (unlike Checkbox's checkmark, which was inline SVG).
+   50% is a faithful visual match to the live screenshot's ring+dot look, not an
+   independently color/size-picked value — flagged Needs Confirmation, non-blocking. */
+.dot {
+  inline-size: 50%;
+  block-size: 50%;
+  border-radius: var(--fads-sys-radius-full);
+  background-color: transparent;
+  transition: background-color var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+.input:checked ~ .visual .dot {
+  background-color: var(--fads-sys-radio-primary-checked);
+}
+.box[data-mood='neutral'] .input:checked ~ .visual .dot {
+  background-color: var(--fads-sys-radio-neutral-checked);
+}
+
+/* Pressed — unchecked fills with the shared gray pressed color; checked dot
+   darkens further. Ring border color itself never changes (live-verified). */
+.input:active:not(:disabled):not([data-readonly]):not(:checked) ~ .visual {
+  background-color: var(--fads-sys-radio-bg-pressed-unchecked);
+}
+.input:active:not(:disabled):not([data-readonly]):checked ~ .visual .dot {
+  background-color: var(--fads-sys-radio-primary-pressed);
+}
+.box[data-mood='neutral'] .input:active:not(:disabled):not([data-readonly]):checked ~ .visual .dot {
+  background-color: var(--fads-sys-radio-neutral-pressed);
+}
+
+/* Hovered (not pressed) — checked dot changes shade; unchecked ring is unchanged
+   (only the ripple appears, live-verified). */
+.input:hover:not(:disabled):not([data-readonly]):not(:active):checked ~ .visual .dot {
+  background-color: var(--fads-sys-radio-primary-hovered);
+}
+.box[data-mood='neutral']
+  .input:hover:not(:disabled):not([data-readonly]):not(:active):checked
+  ~ .visual
+  .dot {
+  background-color: var(--fads-sys-radio-neutral-hovered);
+}
+
+/* Focused — real, visible ring around the full 32px hit target; ring/dot color
+   unchanged from whatever checked/unchecked state was already showing
+   (live-verified: focus never recolors, matches Checkbox's own finding). */
+.input:focus-visible ~ .visual {
+  outline: var(--fads-sys-border-width-thin) solid var(--fads-sys-radio-focus-ring);
+  outline-offset: 4px;
+}
+
+/* Read-only — border-only ring for unchecked (identical to Disabled's unchecked
+   ring, live-verified); checked keeps its full mood color (not muted/grayed),
+   distinct from Disabled's checked state — same "stays visually answered, just
+   non-interactive" precedent as TextInput/Checkbox's own Read-only states.
+   Needs Confirmation: the exact checked-read-only color wasn't independently
+   pixel-picked (raster asset, not inline data) — implemented as unchanged from
+   Default's checked color, the same reasoning already used for Focused above. */
+.input[data-readonly] ~ .visual {
+  border-color: var(--fads-sys-radio-border-readonly);
+}
+.input[data-readonly]:not(:checked) ~ .visual {
+  background-color: transparent;
+}
+
+/* Disabled — solid uniform gray dot regardless of mood (live-verified: the same
+   asset is reused for both Primary and Neutral Disabled-checked), border-only
+   ring for unchecked — not opacity, matching every other rebuilt FADS control's
+   disabled pattern (Checkbox, Button, Card). Declared last so it wins over
+   hover/pressed/focus/read-only (equal-specificity, last-wins). */
+.input:disabled ~ .visual {
+  border-color: var(--fads-sys-radio-border-readonly);
+  background-color: transparent;
+}
+.input:disabled ~ .visual .dot {
+  background-color: transparent;
+}
+.input:disabled:checked ~ .visual .dot {
+  background-color: var(--fads-sys-radio-bg-disabled);
+}
+.input:disabled ~ .visual::before {
+  background-color: transparent;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.label {
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-radio-label-text);
+  cursor: pointer;
+}
+.input:disabled ~ .text .label,
+.input[data-readonly] ~ .text .label {
+  cursor: not-allowed;
+}
+.root:has(.input:disabled) .label {
+  color: var(--fads-sys-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.description {
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-radio-description-text);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-radio-error-gap);
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-radio-error-text);
+}
+
+.errorIcon {
+  flex: none;
+}

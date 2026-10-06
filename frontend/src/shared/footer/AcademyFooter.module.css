@@ -1,0 +1,70 @@
+/* Matches the on-color typography/spacing tokens the Approved Footer itself
+   uses for its dark-green variant (Footer.module.css) — the `utilities` slot's
+   content isn't reachable by Footer's own scoped classes, so `.socialHeading`
+   re-applies the same semantic tokens directly rather than inventing new
+   values (same treatment as Footer's own `.groupLabel`). */
+
+.socialHeading {
+  margin: 0;
+  padding-block-end: var(--fads-sys-footer-group-gap);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-footer-border-oncolor);
+  color: var(--fads-sys-footer-text-oncolor);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.socialList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-footer-group-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Icon-sized bordered button — sized/rounded from existing generic tokens
+   only (`--fads-ref-space-7` = 2.5rem, the same scale the `featured` icon
+   size and FloatingButton's own icon-button sizing draw from;
+   `--fads-sys-radius-sm` is the same radius ButtonClose already reuses).
+   `.socialIcon` inside sizes the glyph itself with the same
+   `--fads-sys-icon-size-sm` token `Icon` uses for its own `size="sm"`. */
+.socialLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-ref-space-7);
+  block-size: var(--fads-ref-space-7);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-footer-border-oncolor);
+  border-radius: var(--fads-sys-radius-sm);
+  color: var(--fads-sys-footer-link-oncolor);
+  text-decoration: none;
+}
+
+.socialLink:hover {
+  background-color: var(--fads-sys-footer-border-oncolor);
+}
+
+.socialIcon {
+  display: inline-flex;
+  inline-size: var(--fads-sys-icon-size-sm);
+  block-size: var(--fads-sys-icon-size-sm);
+}
+
+.socialIcon svg {
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+}
+
+.logos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inset-lg);
+}
+
+.logo {
+  block-size: var(--fads-ref-space-6);
+  inline-size: auto;
+}

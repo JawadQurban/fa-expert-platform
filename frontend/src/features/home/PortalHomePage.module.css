@@ -1,0 +1,185 @@
+/* EH-TP-01 Portal Home — layout-only, token-only (DC-04/DC-23). */
+
+/* The identity band — full-bleed dark green, the one high-emphasis moment on
+   the page (FADS Expert Hub UI kit, EH-TP-01). Full-bleed on purpose: a
+   contained coloured card reads as a widget, and this is the page's masthead.
+
+   ⚠️ FLAT, with no pattern over it. The brand pattern was blended in with
+   `soft-light` at first, which lightened the ground by roughly half a step and
+   made it read as a mid green rather than the brand's dark one — the kit's
+   band is a single flat colour and it is right: the identity here is the
+   person's, and a texture behind their name competes with it. */
+.band {
+  padding-block: var(--fads-ref-space-8) var(--fads-ref-space-9);
+  background-color: var(--fads-sys-footer-bg-oncolor);
+}
+
+.bandInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-lg);
+}
+
+.bandIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-lg);
+  min-inline-size: 0;
+}
+
+/* The figures and the call to action, kept together at the band's trailing
+   edge so the eye lands on the name first and the numbers second. */
+.bandFacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--fads-sys-space-inline-lg);
+}
+
+.bandStat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+/* A hairline between the two figures. Decorative, and hidden from assistive
+   technology — it separates nothing that is not already two elements. */
+.bandRule {
+  inline-size: 1px;
+  block-size: 3.5rem;
+  background-color: var(--fads-sys-footer-border-oncolor);
+}
+
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* Metric tiles, LIFTED so the row straddles the band's lower edge — the
+   kit's own composition. The pull is exactly one space step, so the cards
+   overlap the green by a predictable amount at every width. */
+.metrics {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: calc(-1 * var(--fads-ref-space-6)) 0 var(--fads-sys-space-stack-lg);
+  padding: 0;
+  list-style: none;
+}
+
+/* ⚠️ Below the mobile breakpoint the cards stack, and a lifted stack would
+   cover the band's own text rather than sitting under it. */
+@media (max-width: 600px) {
+  .metrics {
+    margin-block-start: var(--fads-sys-space-stack-md);
+  }
+}
+
+.metricItem {
+  display: flex;
+}
+
+/* Two-column: main (rating + shortcuts) / side (notifications + visibility). */
+/* Two columns of comparable weight, as the kit composes them — 1.4fr against
+   0.6fr made the side column too narrow for a notification's text to breathe,
+   and the cards in it wrapped to three lines where the kit's take two. */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: var(--fads-sys-space-stack-lg);
+  align-items: start;
+}
+
+.mainColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+  min-inline-size: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.visibilityRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* Shortcuts. */
+.shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.shortcutGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shortcutItem {
+  display: flex;
+}
+
+.shortcutCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  inline-size: 100%;
+  padding: var(--fads-sys-space-inset-lg);
+  border-radius: var(--fads-sys-radius-lg);
+  border: 1px solid var(--fads-sys-color-border-default);
+  background-color: var(--fads-sys-color-background-default);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.shortcutCard:hover,
+.shortcutCard:focus-visible {
+  background-color: var(--fads-ref-primary-25);
+  border-color: var(--fads-sys-color-primary);
+}
+
+.shortcutTitle {
+  font-size: var(--fads-sys-typography-text-lg);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.shortcutDesc {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+/* Tablet/mobile: single column. */
+@media (max-width: 64rem) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

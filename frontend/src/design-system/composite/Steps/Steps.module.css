@@ -1,0 +1,177 @@
+/* Live-verified against the official Platforms Code Figma Progress Indicator
+   component set (node 30150:68350) — see docs/FIGMA_PROGRESS_INDICATOR_SPECIFICATION.md. */
+
+.steps {
+  display: flex;
+  gap: var(--fads-sys-steps-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.steps[data-orientation='horizontal'] {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.steps[data-orientation='vertical'] {
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  flex: 1 0 0;
+  min-inline-size: 0;
+}
+
+.item[data-orientation='horizontal'] {
+  flex-direction: column;
+  gap: var(--fads-sys-steps-text-gap);
+}
+
+.item[data-orientation='vertical'] {
+  flex-direction: row;
+  gap: var(--fads-sys-steps-text-gap);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.item[data-orientation='horizontal'] .step {
+  flex-direction: row;
+  inline-size: 100%;
+}
+
+.item[data-orientation='vertical'] .step {
+  flex-direction: column;
+  block-size: 100%;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  border-radius: var(--fads-sys-radius-pill);
+}
+
+button.trigger {
+  cursor: pointer;
+}
+
+button.trigger:hover .marker[data-completed='true'] {
+  background-color: var(--fads-sys-steps-completed-hovered);
+  border-color: var(--fads-sys-steps-completed-hovered);
+}
+
+button.trigger:focus-visible {
+  outline: var(--fads-sys-focus-ring-width) solid var(--fads-sys-focus-ring-color);
+  outline-offset: var(--fads-sys-focus-ring-offset);
+}
+
+.marker {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-steps-marker-size);
+  block-size: var(--fads-sys-steps-marker-size);
+  border-radius: var(--fads-sys-radius-pill);
+  border: var(--fads-sys-steps-marker-border-width) solid var(--fads-sys-steps-upcoming);
+  color: var(--fads-sys-steps-upcoming);
+  font-family: inherit;
+  font-weight: var(--fads-ref-font-weight-medium);
+  font-size: var(--fads-sys-steps-marker-font-size);
+  flex-shrink: 0;
+}
+
+.marker[data-current='true'] {
+  border-color: var(--fads-sys-steps-current);
+  color: var(--fads-sys-steps-current);
+}
+
+.marker[data-completed='true'] {
+  background-color: var(--fads-sys-steps-completed);
+  border-color: var(--fads-sys-steps-completed);
+  color: var(--fads-sys-steps-completed-icon);
+}
+
+.marker[data-disabled='true'] {
+  background-color: transparent;
+  border-color: var(--fads-sys-steps-disabled);
+  color: var(--fads-sys-steps-disabled);
+}
+
+.marker[data-error='true'] {
+  background-color: transparent;
+  border-color: var(--fads-sys-steps-error);
+  color: var(--fads-sys-steps-error);
+}
+
+.check {
+  inline-size: 60%;
+  block-size: 60%;
+}
+
+.connector {
+  flex: 1 0 0;
+  background-color: var(--fads-sys-steps-upcoming);
+}
+
+.item[data-orientation='horizontal'] .connector {
+  block-size: var(--fads-sys-steps-connector-thickness);
+  min-inline-size: 1px;
+}
+
+.item[data-orientation='vertical'] .connector {
+  inline-size: var(--fads-sys-steps-connector-thickness);
+  min-block-size: 1px;
+}
+
+.connector[data-completed='true'] {
+  background-color: var(--fads-sys-steps-completed);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-steps-text-content-gap);
+  padding-inline-end: var(--fads-sys-steps-text-side-padding);
+}
+
+.label {
+  color: var(--fads-sys-steps-text-secondary);
+  font-weight: var(--fads-ref-font-weight-regular);
+  font-size: var(--fads-sys-steps-label-font-size);
+  line-height: var(--fads-sys-steps-label-line-height);
+}
+
+.item:has(.trigger[aria-current='step']) .label {
+  color: var(--fads-sys-steps-text-primary);
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.optional {
+  color: var(--fads-sys-steps-text-tertiary);
+  font-weight: var(--fads-ref-font-weight-regular);
+}
+
+.description {
+  color: var(--fads-sys-steps-text-secondary);
+  font-size: var(--fads-sys-steps-description-font-size);
+  line-height: var(--fads-sys-steps-description-line-height);
+}
+
+.item:has(.marker[data-disabled='true']) .label,
+.item:has(.marker[data-disabled='true']) .description {
+  color: var(--fads-sys-steps-disabled);
+}
+
+.item:has(.marker[data-error='true']) .label {
+  color: var(--fads-sys-steps-error);
+}

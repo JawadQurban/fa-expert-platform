@@ -1,0 +1,77 @@
+/* J-14/F1 self-service profile form — layout-only, token-only (DC-04/DC-23). */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+}
+
+/* The J-01 sections, kept as real fieldsets so the grouping is announced. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  color: var(--fads-sys-color-text-default);
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+}
+
+/* A repeatable section's entries, stacked — one column at every width. */
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+/* A field the trainer reads but cannot type into — FAST-owned or locked. */
+.readOnlyField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding: var(--fads-sys-space-inset-sm);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-ref-primary-25);
+}
+
+.readOnlyHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.readOnlyValue {
+  font-weight: var(--fads-ref-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+/* The pending change sits beside the current value, never replacing it. */
+.pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.actions {
+  display: flex;
+}

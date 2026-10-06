@@ -1,0 +1,171 @@
+/* Tag (CMP-26) — token-only styling.
+   Every color, size, and typography value below is sourced from the official
+   Platforms Code Figma Tag component set (file Sv0oWOS1SjWnwhQwdzRJIE, node
+   421:110968), verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_TAG_SPECIFICATION.md and reports/VISUAL_COMPLIANCE/Tag/VISUAL_COMPLIANCE_TAG.md.
+   Nothing here is a placeholder or an invented value. */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fads-sys-tag-gap);
+  box-sizing: border-box;
+  block-size: var(--fads-sys-tag-height-md);
+  padding-inline: var(--fads-sys-tag-padding-inline-md);
+  padding-block: 0;
+  /* Reserve a transparent border so filled moods (no visible border, e.g. on-color)
+     and outline moods (visible border) never differ in outer box size. */
+  border: var(--fads-sys-border-width-thin) solid transparent;
+  border-radius: var(--fads-sys-radius-sm);
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  font-weight: var(--fads-ref-font-weight-medium);
+  white-space: nowrap;
+}
+
+/* Size — xs/sm/md map 1:1 to the official x Small/Small/Medium variants (height,
+   padding-inline, icon size, typography all live-verified). Medium is the default
+   (matches .tag above). Gap is uniform (4px) across all sizes. */
+.tag[data-size='xs'] {
+  block-size: var(--fads-sys-tag-height-xs);
+  padding-inline: var(--fads-sys-tag-padding-inline-xs);
+  font-size: var(--fads-sys-typography-text-2xs);
+  line-height: var(--fads-sys-typography-line-height-2xs);
+  /* Live-verified: x Small uses SemiBold, unlike sm/md's Medium weight — a
+     deliberate legibility choice at the smallest size, not an inconsistency. */
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+.tag[data-size='sm'] {
+  block-size: var(--fads-sys-tag-height-sm);
+  padding-inline: var(--fads-sys-tag-padding-inline-sm);
+  font-size: var(--fads-sys-typography-text-xs);
+  line-height: var(--fads-sys-typography-line-height-xs);
+}
+
+/* Rounded — pill shape instead of the default radius-sm. */
+.tag[data-rounded='true'] {
+  border-radius: var(--fads-sys-radius-pill);
+}
+
+/* Mood: neutral (default). Icon color is verified live to differ from text color
+   (a shared "icon-default" token, not the tag's own text color). */
+.tag[data-variant='neutral'] {
+  background-color: var(--fads-sys-tag-neutral-bg);
+  border-color: var(--fads-sys-tag-neutral-border-light);
+  color: var(--fads-sys-tag-neutral-text);
+}
+.tag[data-variant='neutral'] .icon {
+  color: var(--fads-sys-tag-neutral-icon);
+}
+.tag[data-variant='neutral'][data-outline='true'] {
+  background-color: transparent;
+  border-color: var(--fads-sys-tag-neutral-border);
+}
+
+/* Mood: success — status only (DC-05). */
+.tag[data-variant='success'] {
+  background-color: var(--fads-sys-tag-success-bg);
+  border-color: var(--fads-sys-tag-success-border-light);
+  color: var(--fads-sys-tag-success-text);
+}
+.tag[data-variant='success'] .icon {
+  color: var(--fads-sys-tag-success-icon);
+}
+.tag[data-variant='success'][data-outline='true'] {
+  background-color: transparent;
+  border-color: var(--fads-sys-tag-success-border);
+}
+
+/* Mood: error — status only (DC-05). */
+.tag[data-variant='error'] {
+  background-color: var(--fads-sys-tag-error-bg);
+  border-color: var(--fads-sys-tag-error-border-light);
+  color: var(--fads-sys-tag-error-text);
+}
+.tag[data-variant='error'] .icon {
+  color: var(--fads-sys-tag-error-icon);
+}
+.tag[data-variant='error'][data-outline='true'] {
+  background-color: transparent;
+  border-color: var(--fads-sys-tag-error-border);
+}
+
+/* Mood: warning — status only (DC-05). */
+.tag[data-variant='warning'] {
+  background-color: var(--fads-sys-tag-warning-bg);
+  border-color: var(--fads-sys-tag-warning-border-light);
+  color: var(--fads-sys-tag-warning-text);
+}
+.tag[data-variant='warning'] .icon {
+  color: var(--fads-sys-tag-warning-icon);
+}
+.tag[data-variant='warning'][data-outline='true'] {
+  background-color: transparent;
+  border-color: var(--fads-sys-tag-warning-border);
+}
+
+/* Mood: information — status only (DC-05); official Style name is "Info". */
+.tag[data-variant='information'] {
+  background-color: var(--fads-sys-tag-information-bg);
+  border-color: var(--fads-sys-tag-information-border-light);
+  color: var(--fads-sys-tag-information-text);
+}
+.tag[data-variant='information'] .icon {
+  color: var(--fads-sys-tag-information-icon);
+}
+.tag[data-variant='information'][data-outline='true'] {
+  background-color: transparent;
+  border-color: var(--fads-sys-tag-information-border);
+}
+
+/* Mood: onColor — for placement on a dark/colored surface. Structurally different
+   from the other 5: filled has NO border at all (verified live), only outline does. */
+.tag[data-variant='onColor'] {
+  background-color: var(--fads-sys-tag-oncolor-bg);
+  border-color: transparent;
+  color: var(--fads-sys-tag-oncolor-text);
+}
+.tag[data-variant='onColor'] .icon {
+  color: var(--fads-sys-tag-oncolor-icon);
+}
+.tag[data-variant='onColor'][data-outline='true'] {
+  background-color: transparent;
+  border-color: var(--fads-sys-tag-oncolor-border);
+}
+
+/* Icon only — drops the label, becomes a centered square matching the size's own
+   height, with reduced padding and no gap (live-verified, Size=Medium; applied by
+   extension to xs/sm per the orthogonal-axis reasoning in the spec §7). */
+.tag[data-icon-only='true'] {
+  inline-size: var(--fads-sys-tag-height-md);
+  padding-inline: var(--fads-sys-tag-icon-only-padding);
+  gap: 0;
+}
+.tag[data-icon-only='true'][data-size='xs'] {
+  inline-size: var(--fads-sys-tag-height-xs);
+}
+.tag[data-icon-only='true'][data-size='sm'] {
+  inline-size: var(--fads-sys-tag-height-sm);
+}
+
+.label {
+  display: inline;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-tag-icon-size-md);
+  block-size: var(--fads-sys-tag-icon-size-md);
+}
+.tag[data-size='xs'] .icon {
+  inline-size: var(--fads-sys-tag-icon-size-xs);
+  block-size: var(--fads-sys-tag-icon-size-xs);
+}
+.tag[data-size='sm'] .icon {
+  inline-size: var(--fads-sys-tag-icon-size-sm);
+  block-size: var(--fads-sys-tag-icon-size-sm);
+}

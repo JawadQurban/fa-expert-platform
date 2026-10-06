@@ -1,0 +1,78 @@
+/* MenuListItem — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Menu list item component set (file J0xq7JG3JKshRDzrgAM7E0, node 30195:21865),
+   verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_MENU_LIST_ITEM_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/MenuListItem/VISUAL_COMPLIANCE_MENU_LIST_ITEM.md.
+   Hover/Pressed backgrounds and the leading-icon size reuse the already-Approved
+   Button's own tokens directly (confirmed byte-identical). */
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inset-sm);
+  box-sizing: border-box;
+  inline-size: 100%;
+  border: var(--fads-sys-border-width-thick) solid transparent;
+  border-radius: var(--fads-sys-radius-sm);
+  padding: var(--fads-sys-space-inset-sm);
+  background-color: transparent;
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  color: var(--fads-sys-menulistitem-text);
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+.item:hover:not(:disabled) {
+  background-color: var(--fads-sys-button-secondary-solid-bg-hover);
+}
+.item:active:not(:disabled) {
+  background-color: var(--fads-sys-button-secondary-solid-bg-pressed);
+}
+.item:focus-visible {
+  border-color: var(--fads-sys-menulistitem-focus-border);
+}
+
+/* Selected — a pale-green fill + green text (live-verified, not a checkmark;
+   see the module doc for the distinction from a consumer-composed check icon). */
+.item[data-selected] {
+  background-color: var(--fads-sys-menulistitem-bg-selected);
+  color: var(--fads-sys-menulistitem-text-selected);
+}
+
+.item:disabled {
+  color: var(--fads-sys-menulistitem-text-disabled);
+  cursor: not-allowed;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-button-icon-size-lg);
+  block-size: var(--fads-sys-button-icon-size-lg);
+}
+.item:disabled .icon {
+  color: var(--fads-sys-menulistitem-icon-disabled);
+}
+
+.label {
+  flex: 1 0 0;
+  min-inline-size: 0;
+}
+
+/* No color is set here — the live data shows different trailing content types
+   with different colors (a muted secondary tone for plain text, the default
+   icon color for a decorative checkmark, and Tag/Switch/Button's own
+   self-contained colors) rather than one uniform trailing color. Consumers
+   placing plain muted text in this slot should apply
+   var(--fads-sys-menulistitem-text-secondary) themselves. */
+.trailing {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}

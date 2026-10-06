@@ -1,0 +1,84 @@
+[
+  {
+    "slotNumber": 1,
+    "currentOffer": {
+      "offerId": "b6f41769-262b-4c79-b7b3-92e232285c86",
+      "requestId": "b0d5f4dd-ed54-499f-b6a1-7f350dab9024",
+      "slotNumber": 1,
+      "trainerId": "1d4adbf3-902e-4010-8b58-b54b6cdc74ec",
+      "trainerName": "مدرب 0",
+      "status": "awaiting-response",
+      "sentAt": "2026-09-16T20:57:24Z",
+      "responseSla": {
+        "slaId": "SLA-0501",
+        "state": "within",
+        "dueAt": "2026-09-19T20:57:24Z",
+        "daysRemaining": 2
+      },
+      "respondedAt": null,
+      "details": {
+        "reference": "ASR-2026-0001",
+        "serviceType": "trainer",
+        "programName": "برنامج القيادة",
+        "days": 3,
+        "dateFrom": "2026-11-01T00:00:00Z",
+        "dateTo": "2026-11-03T00:00:00Z",
+        "language": "ar",
+        "deliveryMechanism": "onsite",
+        "city": "الرياض",
+        "specializationDomain": "dom-003",
+        "meetingUrl": null
+      },
+      "price": {
+        "amount": null,
+        "currency": "SAR"
+      }
+    },
+    "backups": [
+      {
+        "trainerId": "ed2dc8fb-291d-42a6-8188-7c0a6f65c428",
+        "trainerName": "مدرب 2",
+        "preferenceRank": 2
+      }
+    ],
+    "history": [
+      {
+        "offerId": "b6f41769-262b-4c79-b7b3-92e232285c86",
+        "requestId": "b0d5f4dd-ed54-499f-b6a1-7f350dab9024",
+        "slotNumber": 1,
+        "trainerId": "1d4adbf3-902e-4010-8b58-b54b6cdc74ec",
+        "trainerName": "مدرب 0",
+        "status": "awaiting-response",
+        "sentAt": "2026-09-16T20:57:24Z",
+        "responseSla": {
+          "slaId": "SLA-0501",
+          "state": "within",
+          "dueAt": "2026-09-19T20:57:24Z",
+          "daysRemaining": 2
+        },
+        "respondedAt": null,
+        "details": {
+          "reference": "ASR-2026-0001",
+          "serviceType": "trainer",
+          "programName": "برنامج القيادة",
+          "days": 3,
+          "dateFrom": "2026-11-01T00:00:00Z",
+          "dateTo": "2026-11-03T00:00:00Z",
+          "language": "ar",
+          "deliveryMechanism": "onsite",
+          "city": "الرياض",
+          "specializationDomain": "dom-003",
+          "meetingUrl": null
+        },
+        "price": {
+          "amount": null,
+          "currency": "SAR"
+        }
+      }
+    ],
+    "confirmedTrainerId": null,
+    "confirmedEngagementId": null,
+    "fastSync": "none",
+    "exhausted": false
+  }
+]

@@ -1,0 +1,27 @@
+/* EH-INT-03 objective score block (J-05/F3) — layout-only, token-only (DC-04/DC-23). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  min-inline-size: 0;
+}
+
+/* «نتيجة خدمة مستشار ٨١٫٨ من ١٠٠ · الحد الأدنى ٧٥» on one line. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.scoreValue {
+  color: var(--fads-sys-color-text-default);
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.criteria {
+  min-inline-size: 0;
+}

@@ -1,0 +1,79 @@
+/* J-17 matching workspace — layout-only, token-only (DC-04/DC-23). */
+
+/* The candidates lead; the selection and the manual path sit beside them
+   (Option B prototype `.g2`). */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: var(--fads-sys-space-stack-md);
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  min-inline-size: 0;
+}
+
+.candidates,
+.excluded {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One candidate per ruled row (Option B `.rows`). */
+.candidate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding-block: var(--fads-ref-space-3);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.candidate:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+
+/* The weighted breakdown sits with the candidate it explains — F1/AC-3's
+   ranking is only trustworthy if its reasons are visible. */
+.candidateMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* Exclusions are a separate list: an exclusion is not a low score, and the two
+   lists must not read as one ordering. */
+.excludedRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+  padding-block: var(--fads-ref-space-3);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  color: var(--fads-sys-color-text-muted);
+}
+
+.excludedRow:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}

@@ -1,0 +1,28 @@
+/* Token-based empty-state styles. */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--fads-sys-space-stack-sm);
+  padding: var(--fads-sys-space-inset-lg);
+}
+
+.icon {
+  color: var(--fads-sys-color-text-muted);
+}
+
+.title {
+  margin: 0;
+  font-weight: var(--fads-ref-font-weight-semibold);
+  color: var(--fads-sys-color-text-default);
+}
+
+.description {
+  margin: 0;
+  color: var(--fads-sys-color-text-muted);
+}
+
+.action {
+  margin-block-start: var(--fads-sys-space-stack-xs);
+}

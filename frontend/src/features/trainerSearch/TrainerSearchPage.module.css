@@ -1,0 +1,26 @@
+/* EH-INT-07 trainer database — layout-only, token-only (DC-04/DC-23). */
+
+/* Seven filter dimensions (J-15/F1/AC-3) in the list card's toolbar — a grid
+   keeps them scannable rather than becoming a long column above the results. */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: end;
+  gap: var(--fads-ref-space-3) var(--fads-sys-space-inline-md);
+}
+
+/* The active-filter row spans the whole bar, under the controls. */
+.activeChips {
+  grid-column: 1 / -1;
+}
+
+.activeChips:empty {
+  display: none;
+}
+
+/* Avatar and name on one line, so a scanning eye lands on the person. */
+.nameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}

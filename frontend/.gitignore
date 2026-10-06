@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist
+storybook-static
+*.tsbuildinfo
+
+# Test / coverage
+coverage
+*.lcov
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# Env (local + all product-specific secrets; only *.example files are committed)
+.env
+.env.local
+.env.*.local
+.env.expert-hub
+.env.expert-hub.local
+
+# Vite
+*.local

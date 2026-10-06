@@ -1,0 +1,68 @@
+/* Breadcrumbs (CMP-04) — token-only styling.
+   Every color and spacing value below is sourced from the official Platforms Code
+   Figma Breadcrumb component set (file J0xq7JG3JKshRDzrgAM7E0, node 5698:2597),
+   verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_BREADCRUMB_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/Breadcrumb/VISUAL_COMPLIANCE_BREADCRUMB.md.
+   Ancestor-item link styling lives entirely in Link.module.css — Breadcrumbs composes
+   the Link component rather than duplicating its tokens here. */
+
+.breadcrumbs {
+  display: flex;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-breadcrumb-item-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-breadcrumb-item-gap);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+
+/* Current page — plain regular weight, the muted "disabled" gray (live-verified: not
+   a distinct "current page" emphasis token, and not bold). */
+.current {
+  color: var(--fads-sys-breadcrumb-text-current);
+  font-weight: var(--fads-ref-font-weight-regular);
+}
+
+/* Separator — a bidi-mirroring `›`/`‹` glyph (U+203A, Bidi_Mirrored=Yes) approximating
+   the official directional arrow icon (spec §9 item 1: the exact SVG isn't in this
+   project's Icon registry yet). */
+.separator {
+  color: var(--fads-sys-breadcrumb-separator-color);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: 1;
+}
+
+/* Levels>5 collapse-expand control — a real interactive button (live-verified, not
+   decorative text), styled with the same link-neutral color the official "..." label
+   itself uses. */
+.ellipsis {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: var(--fads-sys-breadcrumb-ellipsis-text);
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ellipsis:hover {
+  text-decoration: underline;
+}
+.ellipsis:focus-visible {
+  outline: var(--fads-sys-border-width-thin) solid var(--fads-sys-focus-ring-color);
+  outline-offset: 2px;
+  border-radius: var(--fads-sys-radius-sm);
+}

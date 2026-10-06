@@ -1,0 +1,21 @@
+/* Shared proposed-slots editor (J-05/F5, J-06/F4) — layout-only, token-only (DC-04/DC-23). */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  align-items: flex-start;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--fads-sys-space-inline-sm);
+  inline-size: 100%;
+}
+
+.field {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}

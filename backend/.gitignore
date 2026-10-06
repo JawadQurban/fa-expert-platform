@@ -1,0 +1,12 @@
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+
+# ⚠️ Local secrets — user-secrets lives outside the repository by design, but
+# guard against anything that lands here by another route.
+appsettings.*.local.json
+*.pfx
+*.p12

@@ -1,0 +1,30 @@
+/* ButtonMenu — token-based, live-Figma-verified styles.
+   See docs/FIGMA_BUTTON_MENU_SPECIFICATION.md. */
+
+.root {
+  display: inline-flex;
+  position: relative;
+}
+
+/* CSS-drawn chevron (rotated-border triangle) — the disclosed substitute for
+   the live `arrow-down-01` icon, which isn't in the Icon registry. Same
+   technique already established by Select's own dropdown indicator. */
+.chevron {
+  display: inline-block;
+  inline-size: 0;
+  block-size: 0;
+  border-inline: 4px solid transparent;
+  border-block-start: 5px solid currentcolor;
+  transition: transform var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+.chevron[data-open] {
+  transform: rotate(180deg);
+}
+
+/* Panel — portaled to document.body, positioned via the trigger's own
+   getBoundingClientRect() (see ButtonMenu.tsx), same technique as
+   Select/DatePicker. */
+.panel {
+  position: fixed;
+  z-index: 50;
+}

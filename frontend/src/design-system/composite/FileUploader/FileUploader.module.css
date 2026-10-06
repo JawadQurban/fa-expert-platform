@@ -1,0 +1,186 @@
+/* FileUploader (CMP-20) — token-only styling.
+   Every color, size, and typography value below is sourced from the official
+   Platforms Code Figma File Upload / Single and / Multiple component sets (file
+   J0xq7JG3JKshRDzrgAM7E0, nodes 30146:37020 / 30146:37007), verified live via the
+   Figma MCP read-only tools — see docs/FIGMA_FILE_UPLOAD_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/FileUploader/VISUAL_COMPLIANCE_FILEUPLOADER.md. */
+
+.uploader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-fileupload-dropzone-gap);
+}
+
+.hiddenInput {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-fileupload-content-gap);
+  inline-size: 100%;
+}
+
+/* Single variant — label + helper + button, no drop-zone box (live-verified: none
+   of the 3 sampled Single states render a dashed box). */
+.single {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-fileupload-dropzone-gap);
+}
+
+.label {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-regular);
+  color: var(--fads-sys-fileupload-file-text);
+}
+.label[data-disabled],
+.helperText[data-disabled] {
+  color: var(--fads-sys-fileupload-text-disabled);
+}
+
+.required {
+  color: var(--fads-sys-fileupload-border-error);
+  margin-inline-end: var(--fads-ref-space-1);
+}
+
+.helperText {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-xs);
+  color: var(--fads-sys-fileupload-helper-text);
+}
+
+/* Multiple variant — the drop-zone box. */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fads-sys-fileupload-dropzone-gap);
+  text-align: center;
+  padding: var(--fads-sys-fileupload-dropzone-padding);
+  border: var(--fads-sys-border-width-thin) dashed var(--fads-sys-fileupload-border);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-fileupload-dropzone-bg);
+}
+.dropzone[data-drag-active] {
+  border-color: var(--fads-sys-fileupload-icon-default);
+}
+.dropzone[data-disabled] {
+  background-color: var(--fads-sys-fileupload-bg-disabled);
+}
+
+.dropzoneIcon {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--fads-sys-fileupload-icon-default);
+}
+.dropzoneIcon[data-disabled] {
+  color: var(--fads-sys-fileupload-text-disabled);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-fileupload-heading-text);
+}
+.heading[data-disabled] {
+  color: var(--fads-sys-fileupload-text-disabled);
+}
+
+.caption {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-xs);
+  color: var(--fads-sys-fileupload-caption-text);
+}
+.caption[data-disabled] {
+  color: var(--fads-sys-fileupload-text-disabled);
+}
+
+/* File list. */
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-fileupload-file-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fileItem {
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-fileupload-border);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-fileupload-dropzone-bg);
+  overflow: hidden;
+}
+.fileItem[data-status='error'] {
+  border-color: var(--fads-sys-fileupload-border-error);
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-fileupload-file-gap);
+  padding: var(--fads-sys-fileupload-file-padding);
+}
+
+.statusIcon {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fads-sys-fileupload-success-icon);
+}
+.statusIcon[data-status='error'] {
+  color: var(--fads-sys-fileupload-border-error);
+}
+.statusIcon[data-status='uploading'] {
+  color: var(--fads-sys-fileupload-icon-default);
+}
+
+.fileName {
+  flex: 1 1 0%;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  color: var(--fads-sys-fileupload-file-text);
+}
+
+.progress {
+  flex: none;
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-fileupload-caption-text);
+}
+
+.remove {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--fads-sys-radius-sm);
+  background: transparent;
+  color: var(--fads-sys-fileupload-file-text);
+  cursor: pointer;
+}
+
+.errorMessage {
+  margin: 0;
+  padding: var(--fads-sys-fileupload-file-padding);
+  border-block-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-fileupload-border);
+  font-size: var(--fads-sys-typography-text-sm);
+  color: var(--fads-sys-fileupload-error-text);
+}

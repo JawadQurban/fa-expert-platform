@@ -1,0 +1,79 @@
+/* Typography — token-only. ⚠ Pending final DGA token values (Q3). */
+
+.typography {
+  font-family: var(--fads-sys-font-family-base);
+  color: var(--fads-sys-color-text-default);
+  margin: 0;
+}
+
+/* Variants (Display + Text token families) */
+.typography[data-variant='display-xl'] {
+  font-size: var(--fads-sys-typography-display-xl);
+  line-height: var(--fads-ref-line-height-tight);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+.typography[data-variant='display-lg'] {
+  font-size: var(--fads-sys-typography-display-lg);
+  line-height: var(--fads-ref-line-height-tight);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+.typography[data-variant='display-md'] {
+  font-size: var(--fads-sys-typography-display-md);
+  line-height: var(--fads-ref-line-height-tight);
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+.typography[data-variant='text-lg'] {
+  font-size: var(--fads-sys-typography-text-lg);
+  line-height: var(--fads-ref-line-height-normal);
+}
+.typography[data-variant='text-md'] {
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-ref-line-height-normal);
+}
+.typography[data-variant='text-sm'] {
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-ref-line-height-normal);
+}
+.typography[data-variant='text-xs'] {
+  font-size: var(--fads-sys-typography-text-xs);
+  line-height: var(--fads-ref-line-height-normal);
+}
+
+/* Weight */
+.typography[data-weight='regular'] {
+  font-weight: var(--fads-ref-font-weight-regular);
+}
+.typography[data-weight='medium'] {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+.typography[data-weight='semibold'] {
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+.typography[data-weight='bold'] {
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+/* Color */
+.typography[data-color='muted'] {
+  color: var(--fads-sys-color-text-muted);
+}
+.typography[data-color='inverse'] {
+  color: var(--fads-sys-color-text-inverse);
+}
+.typography[data-color='link'] {
+  color: var(--fads-sys-color-text-link);
+}
+.typography[data-color='primary'] {
+  color: var(--fads-sys-color-primary-strong);
+}
+
+/* Alignment (logical) */
+.typography[data-align='start'] {
+  text-align: start;
+}
+.typography[data-align='center'] {
+  text-align: center;
+}
+.typography[data-align='end'] {
+  text-align: end;
+}

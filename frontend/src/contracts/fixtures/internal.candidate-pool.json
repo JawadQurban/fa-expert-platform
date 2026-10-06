@@ -1,0 +1,43 @@
+{
+  "status": "sent",
+  "members": [
+    {
+      "trainerId": "ed2dc8fb-291d-42a6-8188-7c0a6f65c428",
+      "name": "مدرب 2",
+      "price": {
+        "inClass": null,
+        "online": null,
+        "currency": "SAR",
+        "agreementReference": ""
+      },
+      "decision": "pending",
+      "preferenceRank": null
+    },
+    {
+      "trainerId": "1d4adbf3-902e-4010-8b58-b54b6cdc74ec",
+      "name": "مدرب 0",
+      "price": {
+        "inClass": null,
+        "online": null,
+        "currency": "SAR",
+        "agreementReference": ""
+      },
+      "decision": "pending",
+      "preferenceRank": null
+    },
+    {
+      "trainerId": "f1e67af3-718e-4c9b-8eaf-18a5ebaf05b6",
+      "name": "مدرب 1",
+      "price": {
+        "inClass": null,
+        "online": null,
+        "currency": "SAR",
+        "agreementReference": ""
+      },
+      "decision": "pending",
+      "preferenceRank": null
+    }
+  ],
+  "sentAt": "2026-09-16T20:57:24Z",
+  "requiredHeadcount": 1
+}

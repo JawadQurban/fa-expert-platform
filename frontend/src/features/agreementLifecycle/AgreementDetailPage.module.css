@@ -1,0 +1,83 @@
+/* EH-INT-06 agreement detail — layout-only, token-only (DC-04/DC-23). */
+
+/* Label over value under the record head (Option B prototype `.fg` / `.ff`). */
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.metaTerm {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.metaValue {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+/* The history reads beside the actions that write to it. */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--fads-sys-space-stack-md);
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mainColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  min-inline-size: 0;
+}
+
+/* Newest first, on a rule the marker sits on. */
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historyRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-inline-sm);
+  padding-inline-start: var(--fads-sys-space-inset-xs);
+  border-inline-start: 2px solid var(--fads-sys-color-border-default);
+}
+
+.historyDot {
+  inline-size: var(--fads-ref-space-2);
+  block-size: var(--fads-ref-space-2);
+  margin-block-start: var(--fads-ref-space-1);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: var(--fads-sys-color-primary);
+  flex: 0 0 auto;
+}
+
+.historyBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  min-inline-size: 0;
+}

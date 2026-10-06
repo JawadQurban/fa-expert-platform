@@ -1,0 +1,39 @@
+/* ListItem — token-based, live-Figma-verified styles.
+   See docs/FIGMA_LIST_ITEM_SPECIFICATION.md. */
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-listitem-gap);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  font-weight: var(--fads-ref-font-weight-regular);
+  color: var(--fads-sys-listitem-text-primary);
+}
+.item[data-level='2'] {
+  padding-inline-start: var(--fads-sys-listitem-indent-level2);
+}
+.item[data-tone='neutral'] {
+  color: var(--fads-sys-listitem-text-neutral);
+}
+.item[data-tone='onColor'] {
+  color: var(--fads-sys-listitem-text-oncolor);
+}
+
+.marker,
+.icon {
+  flex: none;
+  white-space: nowrap;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-listitem-icon-size);
+  block-size: var(--fads-sys-listitem-icon-size);
+}
+
+.text {
+  min-inline-size: 0;
+}

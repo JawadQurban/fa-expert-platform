@@ -1,0 +1,93 @@
+/* ContentSwitcher — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Content Switcher component set (file J0xq7JG3JKshRDzrgAM7E0, node 8421:71014,
+   plus the _Content Switcher Item sub-component 8421:70930), verified live via the
+   Figma MCP read-only tools — see docs/FIGMA_CONTENT_SWITCHER_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/ContentSwitcher/VISUAL_COMPLIANCE_CONTENT_SWITCHER.md.
+   Colors reuse the already-Approved Button's own --fads-sys-button-* tokens directly
+   (confirmed identical Figma variable sources) — only geometry and the onColor
+   translucent-white background/border are new. Corner radius uses CSS logical
+   border-*-*-radius properties (DC-23) so it mirrors correctly under RTL without any
+   manual DOM reordering. */
+
+.root {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: var(--fads-sys-contentswitcher-min-width);
+  block-size: var(--fads-sys-contentswitcher-height-sm);
+  padding-inline: var(--fads-sys-button-padding-inline-sm);
+  border: none;
+  border-inline-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-button-border-neutral);
+  background-color: var(--fads-sys-button-secondary-solid-bg-default);
+  color: var(--fads-sys-button-label-default);
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  cursor: pointer;
+}
+.tab:last-child {
+  border-inline-end: none;
+}
+
+/* Corner radius — per-segment, logical properties (auto-mirrors under RTL). */
+.tab[data-position='first'] {
+  border-start-start-radius: var(--fads-sys-radius-md);
+  border-end-start-radius: var(--fads-sys-radius-md);
+}
+.tab[data-position='last'] {
+  border-start-end-radius: var(--fads-sys-radius-md);
+  border-end-end-radius: var(--fads-sys-radius-md);
+}
+.tab[data-position='only'] {
+  border-radius: var(--fads-sys-radius-md);
+}
+
+/* Selected — a solid dark fill, no divider border (live-verified). */
+.tab[data-selected] {
+  border-inline-end: none;
+  background-color: var(--fads-sys-button-neutral-bg-default);
+  color: var(--fads-sys-button-label-oncolor);
+}
+
+/* No Hovered/Pressed variant exists in the live 2-state set — a focus-visible
+   outline is still added (non-Figma-sampled) for WCAG 2.2 compliance. */
+.tab:focus-visible {
+  outline: var(--fads-sys-border-width-thick) solid var(--fads-sys-focus-ring-color);
+  outline-offset: -2px;
+}
+
+/* Sizes — Medium/Large use this component's own live-verified height scale
+   (distinct from Button's own), but reuse Button's own padding-inline tokens
+   directly (confirmed identical values). */
+.root[data-size='md'] .tab {
+  block-size: var(--fads-sys-contentswitcher-height-md);
+  padding-inline: var(--fads-sys-button-padding-inline-md);
+  font-size: var(--fads-sys-typography-text-lg);
+  line-height: var(--fads-sys-typography-line-height-lg);
+}
+.root[data-size='lg'] .tab {
+  block-size: var(--fads-sys-contentswitcher-height-lg);
+  padding-inline: var(--fads-sys-button-padding-inline-lg);
+  font-size: var(--fads-sys-contentswitcher-text-size-lg);
+  line-height: var(--fads-sys-contentswitcher-line-height-lg);
+}
+
+/* On-color — a translucent-white "glass" background at rest (live-verified,
+   not a hover-only state despite the underlying Figma variable's own name),
+   reusing Button's own oncolor label color; Selected switches to Button's own
+   primary (brand green) fill instead of the default black. */
+.root[data-on-color] .tab {
+  border-inline-end-color: var(--fads-sys-contentswitcher-border-oncolor);
+  background-color: var(--fads-sys-contentswitcher-bg-oncolor-default);
+  color: var(--fads-sys-button-label-oncolor);
+}
+.root[data-on-color] .tab[data-selected] {
+  background-color: var(--fads-sys-button-primary-bg-default);
+}

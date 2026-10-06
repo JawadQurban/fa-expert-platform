@@ -1,0 +1,33 @@
+# Expert Hub backend — analyzer configuration.
+# Directory.Build.props turns analyzers on with warnings-as-errors; this file
+# holds the few deliberate deviations, each with its reason.
+
+root = true
+
+[*.cs]
+# CA1711 reserves the "Permission" suffix for System.Security.Permission
+# descendants — a .NET Framework code-access-security concern. Our vocabulary
+# is the BRD's: `PERMISSION` and `ROLE_PERMISSION` are entities of
+# `10_DATABASE_DESIGN` §3.2, and renaming them in code only would break the
+# 1:1 correspondence with the design document and the BRD (§8.8.4).
+dotnet_code_quality.CA1711.allowed_suffixes = Permission
+
+# In tests, xunit's own convention names collection definitions `…Collection`
+# ([CollectionDefinition] classes) — the suffix is the framework's, not ours.
+[tests/**/*.cs]
+dotnet_code_quality.CA1711.allowed_suffixes = Permission|Collection
+
+# CA1861 wants constant array arguments hoisted to static readonly fields — a
+# performance rule for hot paths. A test body that inlines `new[] { … }` next
+# to the assertion that reads it is the readable form, and tests have no hot
+# path; production code keeps the rule.
+dotnet_diagnostic.CA1861.severity = none
+
+# EF Core migrations are emitted by `dotnet ef` and regenerated rather than
+# maintained by hand — hand-editing them to satisfy style analyzers (CA1861 on
+# inline index arrays, etc.) would be overwritten by the next generation. Mark
+# them as the generated code they are. Hand-written persistence code (the
+# DbContext, configurations) sits outside this folder and stays fully analyzed.
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none

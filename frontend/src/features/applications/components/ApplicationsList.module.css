@@ -1,0 +1,62 @@
+/* P-01 Application List — layout-only, token-only, logical properties
+   (DC-04/DC-23). Desktop uses the approved Table; below the breakpoint the list
+   stacks into Cards (no horizontal scrolling). */
+
+.reference {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+/* Drafts have no reference until submission (BR-0107) — visually distinct. */
+.draftReference {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.cardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+  inline-size: 100%;
+}
+
+.cardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  margin: 0;
+  inline-size: 100%;
+}
+
+.cardMetaRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.cardMetaRow dt {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.cardMetaRow dd {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+}

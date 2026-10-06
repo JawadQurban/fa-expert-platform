@@ -1,0 +1,24 @@
+/* EH-TP-07 My Engagements — layout-only, token-only (DC-04/DC-23). */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-2);
+  margin-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-lg);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

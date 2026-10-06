@@ -1,0 +1,25 @@
+/* ItemIcon — token-based, live-Figma-verified styles.
+   See docs/FIGMA_ITEM_ICON_SPECIFICATION.md. */
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-itemicon-size);
+  block-size: var(--fads-sys-itemicon-size);
+  color: var(--fads-sys-itemicon-color);
+}
+.icon[data-oncolor] {
+  color: var(--fads-sys-itemicon-color-oncolor);
+}
+
+.icon[data-contained] {
+  inline-size: calc(var(--fads-sys-itemicon-size) + 2 * var(--fads-sys-itemicon-contained-padding));
+  block-size: calc(var(--fads-sys-itemicon-size) + 2 * var(--fads-sys-itemicon-contained-padding));
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-sys-itemicon-contained-bg);
+}
+.icon[data-contained][data-oncolor] {
+  background-color: var(--fads-sys-itemicon-contained-bg-oncolor);
+}

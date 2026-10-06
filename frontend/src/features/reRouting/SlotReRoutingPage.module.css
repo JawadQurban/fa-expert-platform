@@ -1,0 +1,50 @@
+/* EH-INT-09d slot re-routing — layout-only, token-only (DC-04/DC-23). */
+
+.rowBetween {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.plainList,
+.candidates {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Ruled rows (Option B `.rows`). */
+.plainList > li,
+.candidate {
+  padding-block: var(--fads-ref-space-3);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.plainList > li:last-child,
+.candidate:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+
+.candidate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.candidateMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}

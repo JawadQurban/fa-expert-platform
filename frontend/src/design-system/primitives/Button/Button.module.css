@@ -1,0 +1,272 @@
+/* Button (CMP-05) — token-only styling.
+   Every color, size, and typography value below is sourced from the official
+   Platforms Code Figma Button component (file Sv0oWOS1SjWnwhQwdzRJIE, node
+   407:510376), verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_BUTTON_SPECIFICATION.md and reports/VISUAL_COMPLIANCE_BUTTON.md.
+   Nothing here is a placeholder or an invented value. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fads-sys-button-gap-md);
+  box-sizing: border-box;
+  block-size: var(--fads-sys-button-height-md);
+  padding-block: 0;
+  padding-inline: var(--fads-sys-button-padding-inline-md);
+  /* Every non-Secondary-Outline style has no border; a transparent 1px reserve
+     (matching Secondary-Outline's real, verified border width) avoids layout
+     shift when swapping variants — box-sizing: border-box means it never
+     changes the button's outer size. */
+  border: 1px solid transparent;
+  border-radius: var(--fads-sys-radius-sm);
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-medium);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+/* Sizes — sm/md/lg map 1:1 to the official Small/Medium/Large variants
+   (height, padding-inline, gap, font, line-height, icon size all verified). */
+.button[data-size='sm'] {
+  block-size: var(--fads-sys-button-height-sm);
+  padding-inline: var(--fads-sys-button-padding-inline-sm);
+  gap: var(--fads-sys-button-gap-sm);
+  font-size: var(--fads-sys-typography-text-xs);
+  line-height: var(--fads-sys-typography-line-height-xs);
+}
+
+.button[data-size='lg'] {
+  block-size: var(--fads-sys-button-height-lg);
+  padding-inline: var(--fads-sys-button-padding-inline-lg);
+  gap: var(--fads-sys-button-gap-lg);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+}
+
+.button[data-full-width='true'] {
+  inline-size: 100%;
+}
+
+/* Icon-only — fixed square footprint equal to the button's own height, no gap
+   (verified: the official icon-only Large instance hard-sets a 40×40 square and
+   overrides gap to 0, ignoring the normal hug-content padding math). */
+.button[data-icon-only='true'] {
+  inline-size: var(--fads-sys-button-height-md);
+  padding-inline: 0;
+  gap: 0;
+}
+.button[data-icon-only='true'][data-size='sm'] {
+  inline-size: var(--fads-sys-button-height-sm);
+}
+.button[data-icon-only='true'][data-size='lg'] {
+  inline-size: var(--fads-sys-button-height-lg);
+}
+
+/* Variant: primary — official Button colors, Style=Primary.
+   Selected reuses the Pressed color exactly (verified live: the official
+   "Selected" variant's background class is hard-wired to the Pressed variable,
+   not a separate one) — despite a distinct `--fads-sys-button-primary-bg-selected`
+   token existing in the generated pipeline (real Figma data, just not what the
+   live component actually applies here), it is intentionally NOT used. Focused
+   keeps the Default background and gets the shared double-ring treatment below. */
+.button[data-variant='primary'] {
+  background-color: var(--fads-sys-button-primary-bg-default);
+  color: var(--fads-sys-button-label-oncolor);
+}
+.button[data-variant='primary']:hover:not(:disabled) {
+  background-color: var(--fads-sys-button-primary-bg-hover);
+}
+.button[data-variant='primary']:active:not(:disabled),
+.button[data-variant='primary'][data-selected='true'] {
+  background-color: var(--fads-sys-button-primary-bg-pressed);
+}
+
+/* Variant: neutral — official Style=Neutral (a solid dark/black button; note the
+   underlying Figma token group is literally named "black", not "neutral" — see
+   generate-tokens.mjs). Hover, Pressed both live-verified as distinct shades. */
+.button[data-variant='neutral'] {
+  background-color: var(--fads-sys-button-neutral-bg-default);
+  color: var(--fads-sys-button-label-oncolor);
+}
+.button[data-variant='neutral']:hover:not(:disabled) {
+  background-color: var(--fads-sys-button-neutral-bg-hover);
+}
+.button[data-variant='neutral']:active:not(:disabled),
+.button[data-variant='neutral'][data-selected='true'] {
+  background-color: var(--fads-sys-button-neutral-bg-pressed);
+}
+
+/* Variant: secondarySolid — official Style=Secondary-Solid (light gray fill,
+   dark text). Hover is verified identical to Default (no visible hover change);
+   the rule is kept for structural symmetry with the other variants. */
+.button[data-variant='secondarySolid'] {
+  background-color: var(--fads-sys-button-secondary-solid-bg-default);
+  color: var(--fads-sys-button-label-default);
+}
+.button[data-variant='secondarySolid']:hover:not(:disabled) {
+  background-color: var(--fads-sys-button-secondary-solid-bg-hover);
+}
+.button[data-variant='secondarySolid']:active:not(:disabled),
+.button[data-variant='secondarySolid'][data-selected='true'] {
+  background-color: var(--fads-sys-button-secondary-solid-bg-pressed);
+}
+
+/* Variant: secondary — maps to the official Style=Secondary-Outline (neutral
+   gray border + dark text — NOT the brand-primary-colored outline this variant
+   used to render; see reports/VISUAL_COMPLIANCE_BUTTON.md). Pressed reuses the
+   same neutral-pressed fill as secondarySolid (verified live). Hover was not
+   sampled live for this style — left as Default (transparent) rather than
+   inventing a shade; ⚠ Needs Confirmation. */
+.button[data-variant='secondary'] {
+  background-color: transparent;
+  color: var(--fads-sys-button-label-default);
+  border-color: var(--fads-sys-button-border-neutral);
+}
+.button[data-variant='secondary']:active:not(:disabled),
+.button[data-variant='secondary'][data-selected='true'] {
+  background-color: var(--fads-sys-button-secondary-solid-bg-pressed);
+}
+
+/* Variant: tertiary — maps to the official Style=Transparent (NOT the
+   brand-primary-colored ghost this variant used to render). Verified live: the
+   background never gains a fill in ANY state, including Pressed — only the
+   *text* color changes (to the primary-pressed green) when pressed. Hover was
+   not sampled live for this style; left as Default rather than inventing a
+   shade — ⚠ Needs Confirmation. */
+.button[data-variant='tertiary'] {
+  background-color: transparent;
+  color: var(--fads-sys-button-label-default);
+  border-color: transparent;
+}
+.button[data-variant='tertiary']:active:not(:disabled),
+.button[data-variant='tertiary'][data-selected='true'] {
+  background-color: transparent;
+  color: var(--fads-sys-button-primary-bg-pressed);
+}
+
+/* Variant: subtle — maps to the official Style=Subtle, verified live via
+   Button-menu's own component set (node 411:4478 in J0xq7JG3JKshRDzrgAM7E0,
+   which shares this exact variant matrix — see
+   docs/FIGMA_BUTTON_MENU_SPECIFICATION.md). Transparent by default; gains a
+   neutral-100/-200 fill on Hover/Pressed while the text color stays flat
+   (unlike tertiary, whose text color itself changes). */
+.button[data-variant='subtle'] {
+  background-color: transparent;
+  color: var(--fads-sys-button-label-default);
+  border-color: transparent;
+}
+.button[data-variant='subtle']:hover:not(:disabled) {
+  background-color: var(--fads-sys-button-subtle-bg-hover);
+}
+.button[data-variant='subtle']:active:not(:disabled),
+.button[data-variant='subtle'][data-selected='true'] {
+  background-color: var(--fads-sys-button-subtle-bg-pressed);
+}
+/* Live-verified exception: Subtle's own Disabled state stays transparent,
+   unlike every other variant's shared flat-gray disabled fill below. */
+.button[data-variant='subtle']:disabled {
+  background-color: transparent;
+}
+
+/* Destructive — verified live only for Style=Primary + Destructive=yes; applied
+   here as a full color override independent of `variant` so no untested
+   variant × destructive combination is fabricated (see
+   reports/VISUAL_COMPLIANCE_BUTTON.md). Declared after the variant rules above
+   so it wins by source order (equal specificity, attribute selectors). */
+.button[data-destructive='true'] {
+  background-color: var(--fads-sys-button-danger-bg-default);
+  color: var(--fads-sys-button-label-oncolor);
+  border-color: transparent;
+}
+.button[data-destructive='true']:hover:not(:disabled) {
+  background-color: var(--fads-sys-button-danger-bg-hover);
+}
+.button[data-destructive='true']:active:not(:disabled),
+.button[data-destructive='true'][data-selected='true'] {
+  background-color: var(--fads-sys-button-danger-bg-pressed);
+}
+
+/* On-color — verified live only for Style=Primary + On-color=True (a white /
+   translucent-white treatment for buttons placed on colored surfaces); same
+   override-independent-of-variant approach as Destructive, for the same reason. */
+.button[data-on-color='true'] {
+  background-color: var(--fads-sys-button-oncolor-bg-default);
+  color: var(--fads-sys-button-label-default);
+  border-color: transparent;
+}
+.button[data-on-color='true']:hover:not(:disabled) {
+  background-color: var(--fads-sys-button-oncolor-bg-hover);
+}
+.button[data-on-color='true']:active:not(:disabled),
+.button[data-on-color='true'][data-selected='true'] {
+  background-color: var(--fads-sys-button-oncolor-bg-pressed);
+}
+
+/* Focus — official double-ring treatment (verified live on the Focused variant):
+   a 2px dark inner ring flush with the button edge, plus a separate 3px light
+   ring offset 2px further out, with a transparent gap between the two. Built
+   from non-layout-affecting properties (box-shadow + outline) so it never
+   shifts surrounding layout. */
+.button:focus-visible {
+  box-shadow: 0 0 0 2px var(--fads-sys-button-focus-ring-inner);
+  outline: 3px solid var(--fads-sys-button-focus-ring-outer);
+  outline-offset: 2px;
+}
+
+/* Disabled (covers native disabled + loading, which sets disabled) — official
+   disabled state is a flat, variant-agnostic gray, not a dimmed version of the
+   variant's own color; declared last so it wins over every variant/destructive/
+   on-color rule above (equal specificity, last-in-source). */
+.button:disabled {
+  background-color: var(--fads-sys-button-disabled-bg);
+  color: var(--fads-sys-button-disabled-label);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+.label {
+  display: inline-block;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-button-icon-size-md);
+  block-size: var(--fads-sys-button-icon-size-md);
+}
+.button[data-size='sm'] .icon {
+  inline-size: var(--fads-sys-button-icon-size-sm);
+  block-size: var(--fads-sys-button-icon-size-sm);
+}
+.button[data-size='lg'] .icon {
+  inline-size: var(--fads-sys-button-icon-size-lg);
+  block-size: var(--fads-sys-button-icon-size-lg);
+}
+
+/* Busy spinner — the Figma Button component set has no loading/spinner state to
+   verify against; the 2px weight is an implementation choice (thicker than
+   Secondary-Outline's verified 1px border, for visibility), not a Figma value.
+   Inherits the variant's own text color via currentColor, so it's always
+   correct per-variant without needing a dedicated color token. */
+.spinner {
+  inline-size: 1em;
+  block-size: 1em;
+  border: 2px solid currentColor;
+  border-block-start-color: transparent;
+  border-radius: var(--fads-sys-radius-pill);
+  animation: fads-button-spin var(--fads-sys-motion-duration-slow) linear infinite;
+}
+
+@keyframes fads-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

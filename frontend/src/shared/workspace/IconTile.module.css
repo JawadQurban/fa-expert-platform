@@ -1,0 +1,31 @@
+/* Panel / record icon tile (Option B prototype `.ic`) — token-only. */
+
+.tile {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-ref-space-6);
+  block-size: var(--fads-ref-space-6);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-ref-primary-100);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-ref-primary-50);
+  color: var(--fads-ref-primary-700);
+}
+
+.tile[data-size='lg'] {
+  inline-size: var(--fads-ref-space-8);
+  block-size: var(--fads-ref-space-8);
+}
+
+.tile[data-tone='warning'] {
+  border-color: var(--fads-sys-tag-warning-border-light);
+  background-color: var(--fads-sys-tag-warning-bg);
+  color: var(--fads-sys-tag-warning-text);
+}
+
+.tile[data-tone='error'] {
+  border-color: var(--fads-sys-tag-error-border-light);
+  background-color: var(--fads-sys-tag-error-bg);
+  color: var(--fads-sys-tag-error-text);
+}

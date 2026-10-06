@@ -1,0 +1,25 @@
+{
+  "app": {
+    "name": "Financial Academy",
+    "shortName": "Academy"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "mainLandmark": "Main content"
+  },
+  "language": {
+    "toggleLabel": "Language",
+    "arabic": "العربية",
+    "english": "English"
+  },
+  "error": {
+    "boundaryTitle": "Something went wrong",
+    "boundaryDescription": "We're sorry. Please reload the page or try again later.",
+    "retry": "Retry"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you requested could not be found.",
+    "backHome": "Back to home"
+  }
+}

@@ -1,0 +1,73 @@
+/* J-10/F3 signing timeline (same P-05 structure as the J-09 approval timeline) —
+   layout-only, token-only (DC-04/DC-23). */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-inline-md);
+  padding: var(--fads-sys-space-inset-sm);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-sys-color-background-default);
+}
+
+/* The current turn is emphasised by a thicker border, not by colour alone. */
+.item[data-state='current'] {
+  border-width: var(--fads-sys-border-width-thick);
+  border-color: var(--fads-sys-color-primary);
+}
+
+.position {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  inline-size: var(--fads-ref-space-7);
+  block-size: var(--fads-ref-space-7);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: var(--fads-ref-primary-25);
+  color: var(--fads-sys-color-primary);
+  font: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.note {
+  padding-block-start: var(--fads-ref-space-1);
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--fads-ref-space-1);
+}

@@ -1,0 +1,71 @@
+/* P-06 Ratings — layout-only, token-only (DC-04/DC-23). */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+}
+
+/* Prominent overall tile. */
+.overall {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-xs);
+  padding: var(--fads-sys-space-inset-lg);
+  border-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-ref-primary-25);
+  max-inline-size: 20rem;
+}
+
+.overallScore {
+  color: var(--fads-sys-color-primary);
+  font-size: var(--fads-sys-typography-display-lg);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.overallLabel {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+  padding-block-end: var(--fads-sys-space-stack-sm);
+  border-block-end: 1px solid var(--fads-sys-color-border-default);
+}
+
+.program {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.rowRating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.rowScore {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-bold);
+}

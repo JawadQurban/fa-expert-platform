@@ -1,0 +1,256 @@
+/* TextInput (CMP-13) — token-only styling.
+   Every color, size, and typography value below is sourced from the official
+   Platforms Code Figma Text Input component set (file J0xq7JG3JKshRDzrgAM7E0, node
+   30150:130250), verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_TEXT_INPUT_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/TextInput/VISUAL_COMPLIANCE_TEXT_INPUT.md.
+   Nothing here is a placeholder or an invented value. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-textinput-label-gap);
+  font-family: var(--fads-sys-font-family-base);
+}
+
+.labelRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--fads-sys-textinput-label-asterisk-gap);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-regular);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  color: var(--fads-sys-textinput-label-text);
+}
+.label[data-disabled] {
+  color: var(--fads-sys-textinput-label-disabled);
+}
+
+.required {
+  color: var(--fads-sys-textinput-required-color);
+}
+.label[data-disabled] .required {
+  color: inherit;
+}
+
+/* Input Field — the bordered/filled container. Reserves a transparent border by
+   default so surfaces without one (Filled darker/lighter at rest) never shift size
+   relative to the Default style's real border — same reservation pattern already
+   used by Button/Link/Tag. */
+.inputField {
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: var(--fads-sys-textinput-height-lg);
+  overflow: hidden;
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-textinput-border-default);
+  border-radius: var(--fads-sys-radius-sm);
+  background-color: var(--fads-sys-textinput-bg-default);
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    box-shadow var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+.inputField[data-size='md'] {
+  block-size: var(--fads-sys-textinput-height-md);
+}
+
+/* Thin underline accent — shown only on Pressed/Focused (live-verified: full-width
+   on Focused, inset on the sampled Pressed instance; implemented full-width in both,
+   since the inset was that one instance's own authored width, not a token). */
+.inputField::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: var(--fads-sys-textinput-underline-height);
+  background-color: transparent;
+  transition: background-color var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+
+/* Style (surface) — Default keeps the reserved border; Filled darker/lighter
+   replace it with a flat, borderless fill (live-verified). */
+.inputField[data-surface='filledDarker'] {
+  border-color: transparent;
+  background-color: var(--fads-sys-textinput-bg-darker);
+}
+.inputField[data-surface='filledLighter'] {
+  border-color: transparent;
+  background-color: var(--fads-sys-textinput-bg-lighter);
+}
+
+/* Hovered — border color only; background/text via the .input rule below. */
+.inputField:hover:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-textinput-border-hovered);
+}
+/* Filled darker/lighter have no border at rest — live-verified: Hovered/Pressed
+   reveal the plain `field-border-default` gray, not the Default style's own
+   darker `field-border-hovered` shade (confirmed via get_design_context on nodes
+   30150:131667/132979, not an extension-by-analog). */
+.inputField[data-surface='filledDarker']:hover:not([data-disabled]):not([data-readonly]),
+.inputField[data-surface='filledLighter']:hover:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-textinput-border-default);
+}
+
+/* Pressed (native :active) — darkens the background regardless of surface and
+   shows the bottom underline accent (live-verified for the Default style). */
+.inputField:active:not([data-disabled]):not([data-readonly]) {
+  background-color: var(--fads-sys-textinput-bg-darker);
+}
+.inputField:active:not([data-disabled]):not([data-readonly])::after {
+  background-color: var(--fads-sys-textinput-border-pressed);
+}
+.inputField[data-surface='filledDarker']:active:not([data-disabled]):not([data-readonly]),
+.inputField[data-surface='filledLighter']:active:not([data-disabled]):not([data-readonly]) {
+  border-color: var(--fads-sys-textinput-border-default);
+}
+
+/* Focused (:focus-within, since the real <input> receives focus) — adds the
+   official soft drop-shadow + bottom underline; border color unchanged for the
+   Default style. Filled darker fully reverts to the Default style's white
+   background + border; Filled lighter keeps its own background but gains the
+   border — both live-verified, not symmetric by accident. */
+.inputField:focus-within:not([data-disabled]) {
+  box-shadow: var(--fads-sys-textinput-focus-shadow);
+}
+.inputField:focus-within:not([data-disabled])::after {
+  background-color: var(--fads-sys-textinput-border-pressed);
+}
+.inputField[data-surface='filledDarker']:focus-within:not([data-disabled]) {
+  background-color: var(--fads-sys-textinput-bg-default);
+  border-color: var(--fads-sys-textinput-border-default);
+}
+.inputField[data-surface='filledLighter']:focus-within:not([data-disabled]) {
+  border-color: var(--fads-sys-textinput-border-default);
+}
+
+/* Error — a state/style-independent border-color override (same pattern as
+   Button's Destructive/OnColor modifiers). */
+.inputField[data-invalid] {
+  border-color: var(--fads-sys-textinput-border-error);
+}
+
+/* Read-only and Disabled are uniform across every Style/surface (live-verified for
+   Disabled on all 3 surfaces) — no fill, a neutral gray border. Declared last so
+   they win over surface/hover/pressed/focused/error (equal-specificity, last-wins). */
+.inputField[data-readonly] {
+  background-color: transparent;
+  border-color: var(--fads-sys-textinput-border-readonly);
+  box-shadow: none;
+}
+.inputField[data-disabled] {
+  background-color: transparent;
+  border-color: var(--fads-sys-textinput-border-disabled);
+  box-shadow: none;
+}
+
+/* Icon-Text-stack — the flexible content region between prefix/suffix. */
+.content {
+  display: flex;
+  flex: 1 1 0%;
+  align-items: center;
+  min-inline-size: 0;
+  block-size: 100%;
+  gap: var(--fads-sys-textinput-icon-gap);
+  padding-inline-start: var(--fads-sys-textinput-content-padding-start);
+  padding-inline-end: var(--fads-sys-textinput-content-padding-end);
+}
+
+.icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-textinput-icon-size);
+  block-size: var(--fads-sys-textinput-icon-size);
+}
+
+.input {
+  flex: 1 1 0%;
+  min-inline-size: 0;
+  block-size: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  color: var(--fads-sys-textinput-text-filled);
+}
+.inputField[data-size='md'] .input {
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+.input::placeholder {
+  color: var(--fads-sys-textinput-text-placeholder);
+}
+.inputField:hover:not([data-disabled]):not([data-readonly]) .input {
+  color: var(--fads-sys-textinput-text-hovered);
+}
+.inputField:active:not([data-disabled]):not([data-readonly]) .input {
+  color: var(--fads-sys-textinput-text-pressed);
+}
+.inputField:focus-within:not([data-disabled]) .input {
+  color: var(--fads-sys-textinput-text-focused);
+}
+.input:read-only {
+  color: var(--fads-sys-textinput-text-readonly);
+}
+.input:disabled {
+  color: var(--fads-sys-textinput-text-disabled);
+  cursor: not-allowed;
+}
+
+/* Prefix / Suffix badges. */
+.affix {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  block-size: 100%;
+  padding-inline: var(--fads-sys-textinput-affix-padding-lg);
+  background-color: var(--fads-sys-textinput-affix-bg);
+  color: var(--fads-sys-textinput-affix-text);
+  font-size: var(--fads-sys-typography-text-md);
+  line-height: var(--fads-sys-typography-line-height-md);
+  white-space: nowrap;
+}
+.inputField[data-size='md'] .affix {
+  padding-inline: var(--fads-sys-textinput-affix-padding-md);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+.inputField[data-surface='filledLighter'] .affix {
+  background-color: transparent;
+}
+.inputField[data-disabled] .affix {
+  background-color: var(--fads-sys-textinput-affix-bg-disabled);
+  color: var(--fads-sys-textinput-text-disabled);
+}
+
+.helper,
+.error {
+  margin: 0;
+  padding-block: var(--fads-sys-textinput-helper-padding-block);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+}
+.helper {
+  color: var(--fads-sys-textinput-helper-text);
+}
+.error {
+  color: var(--fads-sys-textinput-helper-error);
+}
+.field[data-disabled] .helper,
+.field[data-disabled] .error {
+  color: var(--fads-sys-textinput-text-disabled);
+}

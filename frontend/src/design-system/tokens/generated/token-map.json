@@ -1,0 +1,3558 @@
+{
+  "generatedAt": "2026-10-06T12:13:53.978Z",
+  "source": "references/figma/foundations/Values.tokens.json",
+  "tokens": {
+    "--fads-ref-neutral-25": {
+      "value": "#fcfcfd",
+      "source": "Colors.Neutral.25"
+    },
+    "--fads-ref-neutral-50": {
+      "value": "#f9fafb",
+      "source": "Colors.Neutral.50"
+    },
+    "--fads-ref-neutral-100": {
+      "value": "#f3f4f6",
+      "source": "Colors.Neutral.100"
+    },
+    "--fads-ref-neutral-200": {
+      "value": "#e5e7eb",
+      "source": "Colors.Neutral.200"
+    },
+    "--fads-ref-neutral-300": {
+      "value": "#d2d6db",
+      "source": "Colors.Neutral.300"
+    },
+    "--fads-ref-neutral-400": {
+      "value": "#9da4ae",
+      "source": "Colors.Neutral.400"
+    },
+    "--fads-ref-neutral-500": {
+      "value": "#6c737f",
+      "source": "Colors.Neutral.500"
+    },
+    "--fads-ref-neutral-600": {
+      "value": "#4d5761",
+      "source": "Colors.Neutral.600"
+    },
+    "--fads-ref-neutral-700": {
+      "value": "#384250",
+      "source": "Colors.Neutral.700"
+    },
+    "--fads-ref-neutral-800": {
+      "value": "#1f2a37",
+      "source": "Colors.Neutral.800"
+    },
+    "--fads-ref-neutral-900": {
+      "value": "#111927",
+      "source": "Colors.Neutral.900"
+    },
+    "--fads-ref-neutral-950": {
+      "value": "#0d121c",
+      "source": "Colors.Neutral.950"
+    },
+    "--fads-ref-primary-25": {
+      "value": "#f7fdf9",
+      "source": "Colors.Primary-SA-Flag.25"
+    },
+    "--fads-ref-primary-50": {
+      "value": "#f3fcf6",
+      "source": "Colors.Primary-SA-Flag.50"
+    },
+    "--fads-ref-primary-100": {
+      "value": "#dff6e7",
+      "source": "Colors.Primary-SA-Flag.100"
+    },
+    "--fads-ref-primary-200": {
+      "value": "#b8eacb",
+      "source": "Colors.Primary-SA-Flag.200"
+    },
+    "--fads-ref-primary-300": {
+      "value": "#88d8ad",
+      "source": "Colors.Primary-SA-Flag.300"
+    },
+    "--fads-ref-primary-400": {
+      "value": "#54c08a",
+      "source": "Colors.Primary-SA-Flag.400"
+    },
+    "--fads-ref-primary-500": {
+      "value": "#25935f",
+      "source": "Colors.Primary-SA-Flag.500"
+    },
+    "--fads-ref-primary-600": {
+      "value": "#1b8354",
+      "source": "Colors.Primary-SA-Flag.600"
+    },
+    "--fads-ref-primary-700": {
+      "value": "#166a45",
+      "source": "Colors.Primary-SA-Flag.700"
+    },
+    "--fads-ref-primary-800": {
+      "value": "#14573a",
+      "source": "Colors.Primary-SA-Flag.800"
+    },
+    "--fads-ref-primary-900": {
+      "value": "#104631",
+      "source": "Colors.Primary-SA-Flag.900"
+    },
+    "--fads-ref-primary-950": {
+      "value": "#092a1e",
+      "source": "Colors.Primary-SA-Flag.950"
+    },
+    "--fads-ref-success-500": {
+      "value": "#17b26a",
+      "source": "Colors.Green.500"
+    },
+    "--fads-ref-error-500": {
+      "value": "#f04438",
+      "source": "Colors.Red.500"
+    },
+    "--fads-ref-warning-500": {
+      "value": "#f79009",
+      "source": "Colors.Yellow.500"
+    },
+    "--fads-ref-information-500": {
+      "value": "#2e90fa",
+      "source": "Colors.Blue.500"
+    },
+    "--fads-sys-button-primary-bg-default": {
+      "value": "#1b8354",
+      "source": "Light.Button.button-background-primary-default"
+    },
+    "--fads-sys-button-primary-bg-hover": {
+      "value": "#166a45",
+      "source": "Light.Button.button-background-primary-hovered"
+    },
+    "--fads-sys-button-primary-bg-pressed": {
+      "value": "#104631",
+      "source": "Light.Button.button-background-primary-pressed"
+    },
+    "--fads-sys-button-primary-bg-selected": {
+      "value": "#14573a",
+      "source": "Light.Button.button-background-primary-selected"
+    },
+    "--fads-sys-button-primary-bg-focused": {
+      "value": "#1b8354",
+      "source": "Light.Button.button-background-primary-focused"
+    },
+    "--fads-sys-button-neutral-bg-default": {
+      "value": "#0d121c",
+      "source": "Light.Button.button-background-black-default"
+    },
+    "--fads-sys-button-neutral-bg-hover": {
+      "value": "#1f2a37",
+      "source": "Light.Button.button-background-black-hovered"
+    },
+    "--fads-sys-button-neutral-bg-pressed": {
+      "value": "#4d5761",
+      "source": "Light.Button.button-background-black-pressed"
+    },
+    "--fads-sys-button-neutral-bg-selected": {
+      "value": "#384250",
+      "source": "Light.Button.button-background-black-selected"
+    },
+    "--fads-sys-button-neutral-bg-focused": {
+      "value": "#0d121c",
+      "source": "Light.Button.button-background-black-focused"
+    },
+    "--fads-sys-button-secondary-solid-bg-default": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-default"
+    },
+    "--fads-sys-button-secondary-solid-bg-hover": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-hovered"
+    },
+    "--fads-sys-button-secondary-solid-bg-pressed": {
+      "value": "#e5e7eb",
+      "source": "Light.Button.button-background-neutral-pressed"
+    },
+    "--fads-sys-button-secondary-solid-bg-selected": {
+      "value": "#e5e7eb",
+      "source": "Light.Button.button-background-neutral-selected"
+    },
+    "--fads-sys-button-secondary-solid-bg-focused": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-focused"
+    },
+    "--fads-sys-button-danger-bg-default": {
+      "value": "#d92d20",
+      "source": "Light.Button.button-background-danger-primary-default"
+    },
+    "--fads-sys-button-danger-bg-hover": {
+      "value": "#b42318",
+      "source": "Light.Button.button-background-danger-primary-hovered"
+    },
+    "--fads-sys-button-danger-bg-pressed": {
+      "value": "#7a271a",
+      "source": "Light.Button.button-background-danger-primary-pressed"
+    },
+    "--fads-sys-button-danger-bg-selected": {
+      "value": "#912018",
+      "source": "Light.Button.button-background-danger-primary-selected"
+    },
+    "--fads-sys-button-danger-bg-focused": {
+      "value": "#d92d20",
+      "source": "Light.Button.button-background-danger-primary-focused"
+    },
+    "--fads-sys-button-oncolor-bg-default": {
+      "value": "#ffffff",
+      "source": "Light.Button.button-background-oncolor-default"
+    },
+    "--fads-sys-button-oncolor-bg-hover": {
+      "value": "rgba(255, 255, 255, 0.8)",
+      "source": "Light.Button.button-background-oncolor-hovered"
+    },
+    "--fads-sys-button-oncolor-bg-pressed": {
+      "value": "rgba(255, 255, 255, 0.6)",
+      "source": "Light.Button.button-background-oncolor-pressed"
+    },
+    "--fads-sys-button-oncolor-bg-selected": {
+      "value": "rgba(255, 255, 255, 0.7)",
+      "source": "Light.Button.button-background-oncolor-selected"
+    },
+    "--fads-sys-button-oncolor-bg-focused": {
+      "value": "#ffffff",
+      "source": "Light.Button.button-background-oncolor-focused"
+    },
+    "--fads-sys-button-label-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Text.text-oncolor-primary"
+    },
+    "--fads-sys-button-label-default": {
+      "value": "#161616",
+      "source": "Light.Text.text-default"
+    },
+    "--fads-sys-button-border-neutral": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-button-focus-ring-inner": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-button-focus-ring-outer": {
+      "value": "#ffffff",
+      "source": "Light.Icon.icon-oncolor"
+    },
+    "--fads-sys-button-disabled-bg": {
+      "value": "#e5e7eb",
+      "source": "Light.Global.background-disabled"
+    },
+    "--fads-sys-button-disabled-label": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-button-subtle-bg-hover": {
+      "value": "var(--fads-ref-neutral-100)",
+      "source": "Figma MCP get_design_context button-background-neutral-hovered #f3f4f6"
+    },
+    "--fads-sys-button-subtle-bg-pressed": {
+      "value": "var(--fads-ref-neutral-200)",
+      "source": "Figma MCP get_design_context button-background-neutral-pressed #e5e7eb"
+    },
+    "--fads-sys-button-height-sm": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context (Button, Size=sm, live-verified)"
+    },
+    "--fads-sys-button-padding-inline-sm": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Button/buttons-sm-padding (live-verified)"
+    },
+    "--fads-sys-button-gap-sm": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Button/buttons-sm-gap (live-verified)"
+    },
+    "--fads-sys-button-icon-size-sm": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context (Button, Size=sm, live-verified)"
+    },
+    "--fads-sys-button-height-md": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context (Button, Size=md, live-verified)"
+    },
+    "--fads-sys-button-padding-inline-md": {
+      "value": "12px",
+      "source": "Figma MCP get_variable_defs Button/buttons-md-padding (live-verified)"
+    },
+    "--fads-sys-button-gap-md": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Button/buttons-md-gap (live-verified)"
+    },
+    "--fads-sys-button-icon-size-md": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context (Button, Size=md, live-verified)"
+    },
+    "--fads-sys-button-height-lg": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context (Button, Size=lg, live-verified)"
+    },
+    "--fads-sys-button-padding-inline-lg": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Button/buttons-lg-padding (live-verified)"
+    },
+    "--fads-sys-button-gap-lg": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Button/buttons-lg-gap (live-verified)"
+    },
+    "--fads-sys-button-icon-size-lg": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context (Button, Size=lg, live-verified)"
+    },
+    "--fads-sys-typography-line-height-2xs": {
+      "value": "14px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-2xs (live-verified)"
+    },
+    "--fads-sys-typography-line-height-xs": {
+      "value": "18px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-xs (live-verified)"
+    },
+    "--fads-sys-typography-line-height-sm": {
+      "value": "20px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-sm (live-verified)"
+    },
+    "--fads-sys-typography-line-height-md": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-md (live-verified)"
+    },
+    "--fads-sys-typography-line-height-lg": {
+      "value": "28px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-lg (live-verified)"
+    },
+    "--fads-sys-card-bg": {
+      "value": "#ffffff",
+      "source": "Light.Background.background-card"
+    },
+    "--fads-sys-card-bg-hover": {
+      "value": "#f9fafb",
+      "source": "Light.Background.background-neutral-50"
+    },
+    "--fads-sys-card-bg-focused": {
+      "value": "#f9fafb",
+      "source": "Light.Background.background-neutral-50"
+    },
+    "--fads-sys-card-bg-disabled": {
+      "value": "#e5e7eb",
+      "source": "Light.Global.background-disabled"
+    },
+    "--fads-sys-card-text": {
+      "value": "#1f2a37",
+      "source": "Light.Text.text-display"
+    },
+    "--fads-sys-card-text-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-card-border-stroke": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-card-border-focus": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-card-gap": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context Card/card-lg-gap (live-verified)"
+    },
+    "--fads-sys-card-shadow": {
+      "value": "0 2px 4px -2px rgba(16, 24, 40, 0.06), 0 4px 8px -2px rgba(16, 24, 40, 0.1)",
+      "source": "Figma MCP get_design_context Shadows/shadow-md (live-verified)"
+    },
+    "--fads-sys-header-bg": {
+      "value": "#ffffff",
+      "source": "Light.Background.background-menu"
+    },
+    "--fads-sys-header-item-text": {
+      "value": "#161616",
+      "source": "Light.Text.text-default"
+    },
+    "--fads-sys-header-item-bg-hover": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-hovered"
+    },
+    "--fads-sys-header-item-bg-pressed": {
+      "value": "#e5e7eb",
+      "source": "Light.Button.button-background-neutral-pressed"
+    },
+    "--fads-sys-header-item-border-focus": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-header-item-text-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-header-item-bg-disabled": {
+      "value": "#e5e7eb",
+      "source": "Light.Global.background-disabled"
+    },
+    "--fads-sys-header-selected-bg": {
+      "value": "#1b8354",
+      "source": "Light.Button.button-background-primary-default"
+    },
+    "--fads-sys-header-selected-bg-hover": {
+      "value": "#166a45",
+      "source": "Light.Button.button-background-primary-hovered"
+    },
+    "--fads-sys-header-selected-bg-pressed": {
+      "value": "#104631",
+      "source": "Light.Button.button-background-primary-pressed"
+    },
+    "--fads-sys-header-selected-text": {
+      "value": "#ffffff",
+      "source": "Light.Text.text-oncolor-primary"
+    },
+    "--fads-sys-header-indicator": {
+      "value": "#54c08a",
+      "source": "Light.Background.background-primary-400"
+    },
+    "--fads-sys-header-logo-label-text": {
+      "value": "#6c737f",
+      "source": "Light.Text.text-secondary-paragraph"
+    },
+    "--fads-sys-header-height": {
+      "value": "72px",
+      "source": "Figma MCP get_design_context (Nav Header item height, live-verified)"
+    },
+    "--fads-sys-header-padding-inline": {
+      "value": "32px",
+      "source": "Figma MCP get_variable_defs spacing-4xl (live-verified)"
+    },
+    "--fads-sys-header-padding-inline-compact": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs spacing-xl (live-verified)"
+    },
+    "--fads-sys-header-group-gap": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs spacing-xl (live-verified)"
+    },
+    "--fads-sys-header-item-padding-inline": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs spacing-xl (live-verified)"
+    },
+    "--fads-sys-header-item-padding-block": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs spacing-md (live-verified)"
+    },
+    "--fads-sys-header-item-gap": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs spacing-xs (live-verified)"
+    },
+    "--fads-sys-header-item-radius": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs radius-sm (live-verified)"
+    },
+    "--fads-sys-header-logo-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context Logo Placeholder gap (live-verified)"
+    },
+    "--fads-sys-header-logo-icon-size": {
+      "value": "48px",
+      "source": "Figma MCP get_design_context Logo Placeholder Size=Medium emblem (live-verified)"
+    },
+    "--fads-sys-header-toggle-size": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context Header Menu button box (live-verified)"
+    },
+    "--fads-sys-header-icon-size": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context Header Action / toggle leading icon (live-verified)"
+    },
+    "--fads-sys-header-chevron-size": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context Header Menu Item chevron (live-verified)"
+    },
+    "--fads-sys-header-indicator-height": {
+      "value": "6px",
+      "source": "Figma MCP get_design_context selection indicator bar (live-verified)"
+    },
+    "--fads-sys-footer-bg": {
+      "value": "#f3f4f6",
+      "source": "Light.Background.background-neutral-100"
+    },
+    "--fads-sys-footer-group-label-text": {
+      "value": "#161616",
+      "source": "Light.Text.text-default"
+    },
+    "--fads-sys-footer-group-label-border": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-footer-link-text": {
+      "value": "#384250",
+      "source": "Light.Link.link-neutral"
+    },
+    "--fads-sys-footer-legal-text": {
+      "value": "#161616",
+      "source": "Light.Text.text-default"
+    },
+    "--fads-sys-footer-logo-label-text": {
+      "value": "#6c737f",
+      "source": "Light.Text.text-secondary-paragraph"
+    },
+    "--fads-sys-footer-bg-oncolor": {
+      "value": "#074d31",
+      "source": "Light.Background.background-SA-Flag"
+    },
+    "--fads-sys-footer-text-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Text.text-oncolor-primary"
+    },
+    "--fads-sys-footer-link-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Link.link-oncolor"
+    },
+    "--fads-sys-footer-border-oncolor": {
+      "value": "rgba(255, 255, 255, 0.3)",
+      "source": "Light.Border.border-oncolor-transparent-30"
+    },
+    "--fads-sys-footer-padding-inline": {
+      "value": "32px",
+      "source": "Figma MCP get_variable_defs spacing-4xl (live-verified)"
+    },
+    "--fads-sys-footer-max-width": {
+      "value": "1280px",
+      "source": "Figma MCP get_design_context Footer content max-width (live-verified)"
+    },
+    "--fads-sys-footer-region-gap": {
+      "value": "48px",
+      "source": "Figma MCP get_variable_defs Global/spacing-6xl (live-verified)"
+    },
+    "--fads-sys-footer-content-padding-block-start": {
+      "value": "40px",
+      "source": "Figma MCP get_variable_defs spacing-5xl (live-verified)"
+    },
+    "--fads-sys-footer-content-padding-block-end": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs spacing-3xl (live-verified)"
+    },
+    "--fads-sys-footer-groups-gap": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs spacing-3xl (live-verified)"
+    },
+    "--fads-sys-footer-group-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs spacing-md (live-verified)"
+    },
+    "--fads-sys-footer-group-min-width": {
+      "value": "180px",
+      "source": "Figma MCP get_design_context Footer group min-width (live-verified)"
+    },
+    "--fads-sys-footer-legal-gap": {
+      "value": "40px",
+      "source": "Figma MCP get_variable_defs spacing-5xl (live-verified)"
+    },
+    "--fads-sys-footer-links-gap": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs spacing-xl (live-verified)"
+    },
+    "--fads-sys-footer-legal-padding-block": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs spacing-xl (live-verified)"
+    },
+    "--fads-sys-footer-logos-opacity": {
+      "value": "0.7",
+      "source": "Figma MCP get_design_context Logos opacity (live-verified)"
+    },
+    "--fads-sys-divider-color-neutral": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-divider-color-primary": {
+      "value": "#1b8354",
+      "source": "Light.Border.border-primary"
+    },
+    "--fads-sys-divider-color-white": {
+      "value": "#ffffff",
+      "source": "Light.Border.border-white"
+    },
+    "--fads-sys-divider-color-alpha-white": {
+      "value": "rgba(255, 255, 255, 0.3)",
+      "source": "Light.Alpha.alpha-white-30"
+    },
+    "--fads-sys-divider-thickness": {
+      "value": "1px",
+      "source": "Figma MCP get_design_context Divider frame thickness (live-verified, all 8 variants)"
+    },
+    "--fads-sys-link-primary": {
+      "value": "#1b8354",
+      "source": "Light.Link.link-primary"
+    },
+    "--fads-sys-link-primary-hovered": {
+      "value": "#54c08a",
+      "source": "Light.Link.link-primary-hovered"
+    },
+    "--fads-sys-link-primary-pressed": {
+      "value": "#88d8ad",
+      "source": "Light.Link.link-primary-pressed"
+    },
+    "--fads-sys-link-primary-focused": {
+      "value": "#1b8354",
+      "source": "Light.Link.link-primary-focused"
+    },
+    "--fads-sys-link-primary-visited": {
+      "value": "#14573a",
+      "source": "Light.Link.link-primary-visited"
+    },
+    "--fads-sys-link-neutral": {
+      "value": "#384250",
+      "source": "Light.Link.link-neutral"
+    },
+    "--fads-sys-link-neutral-hovered": {
+      "value": "#6c737f",
+      "source": "Light.Link.link-neutral-hovered"
+    },
+    "--fads-sys-link-neutral-pressed": {
+      "value": "#9da4ae",
+      "source": "Light.Link.link-neutral-pressed"
+    },
+    "--fads-sys-link-neutral-focused": {
+      "value": "#384250",
+      "source": "Light.Link.link-neutral-focused"
+    },
+    "--fads-sys-link-neutral-visited": {
+      "value": "#14573a",
+      "source": "Figma MCP get_design_context node 2508:25746 (live-verified; see Needs Confirmation note above)"
+    },
+    "--fads-sys-link-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled (Primary and Neutral Disabled states both reference this shared token live, not a Link-scoped disabled color)"
+    },
+    "--fads-sys-link-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Link.link-oncolor"
+    },
+    "--fads-sys-link-oncolor-hovered": {
+      "value": "rgba(255, 255, 255, 0.8)",
+      "source": "Light.Link.link-oncolor-hovered"
+    },
+    "--fads-sys-link-oncolor-pressed": {
+      "value": "rgba(255, 255, 255, 0.6)",
+      "source": "Light.Link.link-oncolor-pressed"
+    },
+    "--fads-sys-link-oncolor-focused": {
+      "value": "#ffffff",
+      "source": "Light.Link.link-oncolor-focused"
+    },
+    "--fads-sys-link-oncolor-visited": {
+      "value": "rgba(255, 255, 255, 0.9)",
+      "source": "Light.Link.link-oncolor-visited"
+    },
+    "--fads-sys-link-oncolor-disabled": {
+      "value": "rgba(255, 255, 255, 0.3)",
+      "source": "Light.Link.link-oncolor-disabled"
+    },
+    "--fads-sys-link-focus-border-color": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-link-focus-border-color-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Border.border-white"
+    },
+    "--fads-sys-link-focus-border-width": {
+      "value": "2px",
+      "source": "Figma MCP get_design_context Focused-state border width (live-verified)"
+    },
+    "--fads-sys-link-gap-sm": {
+      "value": "4px",
+      "source": "Light.Spacing.Link/link-sm-gap (live-verified)"
+    },
+    "--fads-sys-link-gap-md": {
+      "value": "8px",
+      "source": "Light.Spacing.Link/link-md-gap (live-verified)"
+    },
+    "--fads-sys-link-icon-size-sm": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context icon slot size at Size=Small (live-verified)"
+    },
+    "--fads-sys-link-icon-size-md": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context icon slot size at Size=Medium (live-verified)"
+    },
+    "--fads-sys-tag-neutral-bg": {
+      "value": "#f9fafb",
+      "source": "Light.Tag.tag-background-neutral-light"
+    },
+    "--fads-sys-tag-neutral-border-light": {
+      "value": "#e5e7eb",
+      "source": "Light.Border.border-neutral-secondary"
+    },
+    "--fads-sys-tag-neutral-border": {
+      "value": "#4d5761",
+      "source": "Light.Tag.tag-border-neutral"
+    },
+    "--fads-sys-tag-neutral-text": {
+      "value": "#1f2a37",
+      "source": "Light.Tag.tag-text-neutral"
+    },
+    "--fads-sys-tag-neutral-icon": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default"
+    },
+    "--fads-sys-tag-success-bg": {
+      "value": "#ecfdf3",
+      "source": "Light.Tag.tag-background-success-light"
+    },
+    "--fads-sys-tag-success-border-light": {
+      "value": "#abefc6",
+      "source": "Light.Tag.tag-border-success-light"
+    },
+    "--fads-sys-tag-success-border": {
+      "value": "#067647",
+      "source": "Light.Tag.tag-border-success"
+    },
+    "--fads-sys-tag-success-text": {
+      "value": "#085d3a",
+      "source": "Light.Tag.tag-text-success"
+    },
+    "--fads-sys-tag-success-icon": {
+      "value": "#085d3a",
+      "source": "Light.Tag.tag-icon-success"
+    },
+    "--fads-sys-tag-error-bg": {
+      "value": "#fef3f2",
+      "source": "Light.Tag.tag-background-error-light"
+    },
+    "--fads-sys-tag-error-border-light": {
+      "value": "#fecdca",
+      "source": "Light.Tag.tag-border-error-light"
+    },
+    "--fads-sys-tag-error-border": {
+      "value": "#b42318",
+      "source": "Light.Tag.tag-border-error"
+    },
+    "--fads-sys-tag-error-text": {
+      "value": "#912018",
+      "source": "Light.Tag.tag-text-error"
+    },
+    "--fads-sys-tag-error-icon": {
+      "value": "#912018",
+      "source": "Light.Tag.tag-icon-error"
+    },
+    "--fads-sys-tag-warning-bg": {
+      "value": "#fffaeb",
+      "source": "Light.Tag.tag-background-warning-light"
+    },
+    "--fads-sys-tag-warning-border-light": {
+      "value": "#fedf89",
+      "source": "Light.Tag.tag-border-warning-light"
+    },
+    "--fads-sys-tag-warning-border": {
+      "value": "#b54708",
+      "source": "Light.Tag.tag-border-warning"
+    },
+    "--fads-sys-tag-warning-text": {
+      "value": "#93370d",
+      "source": "Light.Tag.tag-text-warning"
+    },
+    "--fads-sys-tag-warning-icon": {
+      "value": "#93370d",
+      "source": "Light.Tag.tag-icon-warning"
+    },
+    "--fads-sys-tag-information-bg": {
+      "value": "#eff8ff",
+      "source": "Light.Tag.tag-background-info-light"
+    },
+    "--fads-sys-tag-information-border-light": {
+      "value": "#b2ddff",
+      "source": "Light.Tag.tag-border-info-light"
+    },
+    "--fads-sys-tag-information-border": {
+      "value": "#175cd3",
+      "source": "Light.Tag.tag-border-info"
+    },
+    "--fads-sys-tag-information-text": {
+      "value": "#1849a9",
+      "source": "Light.Tag.tag-text-info"
+    },
+    "--fads-sys-tag-information-icon": {
+      "value": "#1849a9",
+      "source": "Light.Tag.tag-icon-info"
+    },
+    "--fads-sys-tag-oncolor-bg": {
+      "value": "rgba(255, 255, 255, 0.2)",
+      "source": "Light.Tag.tag-background-on-color"
+    },
+    "--fads-sys-tag-oncolor-border": {
+      "value": "rgba(255, 255, 255, 0.6)",
+      "source": "Light.Tag.tag-border-on-color"
+    },
+    "--fads-sys-tag-oncolor-text": {
+      "value": "#ffffff",
+      "source": "Light.Text.text-oncolor-primary"
+    },
+    "--fads-sys-tag-oncolor-icon": {
+      "value": "#ffffff",
+      "source": "Light.Icon.icon-oncolor"
+    },
+    "--fads-sys-tag-height-xs": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context Size=x Small (live-verified)"
+    },
+    "--fads-sys-tag-height-sm": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context Size=Small (live-verified)"
+    },
+    "--fads-sys-tag-height-md": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context Size=Medium (live-verified)"
+    },
+    "--fads-sys-tag-padding-inline-xs": {
+      "value": "8px",
+      "source": "Light.Spacing.Global/spacing-md (live-verified, Size=x Small)"
+    },
+    "--fads-sys-tag-padding-inline-sm": {
+      "value": "8px",
+      "source": "Light.Spacing.Global/spacing-md (live-verified, Size=Small)"
+    },
+    "--fads-sys-tag-padding-inline-md": {
+      "value": "12px",
+      "source": "Light.Spacing.Global/spacing-lg (live-verified, Size=Medium)"
+    },
+    "--fads-sys-tag-gap": {
+      "value": "4px",
+      "source": "Light.Spacing.Global/spacing-xs (live-verified, all sizes)"
+    },
+    "--fads-sys-tag-icon-size-xs": {
+      "value": "10px",
+      "source": "Figma MCP get_design_context icon slot size at Size=x Small (live-verified)"
+    },
+    "--fads-sys-tag-icon-size-sm": {
+      "value": "14px",
+      "source": "Figma MCP get_design_context icon slot size at Size=Small (live-verified)"
+    },
+    "--fads-sys-tag-icon-size-md": {
+      "value": "18px",
+      "source": "Figma MCP get_design_context icon slot size at Size=Medium (live-verified)"
+    },
+    "--fads-sys-tag-icon-only-padding": {
+      "value": "2px",
+      "source": "Light.Spacing.Global/spacing-xxs (live-verified, Icon only=True, all sizes)"
+    },
+    "--fads-sys-textinput-label-text": {
+      "value": "#161616",
+      "source": "Light.Form.field-text-label"
+    },
+    "--fads-sys-textinput-label-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.input-text-disabled"
+    },
+    "--fads-sys-textinput-required-color": {
+      "value": "#b42318",
+      "source": "Light.Form.field-border-error"
+    },
+    "--fads-sys-textinput-bg-default": {
+      "value": "#ffffff",
+      "source": "Light.Form.field-background-default"
+    },
+    "--fads-sys-textinput-bg-darker": {
+      "value": "#f3f4f6",
+      "source": "Light.Form.field-background-darker"
+    },
+    "--fads-sys-textinput-bg-lighter": {
+      "value": "#fcfcfd",
+      "source": "Light.Form.field-background-lighter"
+    },
+    "--fads-sys-textinput-border-default": {
+      "value": "#9da4ae",
+      "source": "Light.Form.field-border-default"
+    },
+    "--fads-sys-textinput-border-hovered": {
+      "value": "#384250",
+      "source": "Light.Form.field-border-hovered"
+    },
+    "--fads-sys-textinput-border-pressed": {
+      "value": "#0d121c",
+      "source": "Light.Form.field-border-pressed"
+    },
+    "--fads-sys-textinput-border-error": {
+      "value": "#b42318",
+      "source": "Light.Form.field-border-error"
+    },
+    "--fads-sys-textinput-border-readonly": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-textinput-border-disabled": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-disabled"
+    },
+    "--fads-sys-textinput-text-filled": {
+      "value": "#161616",
+      "source": "Light.Form.field-text-filled"
+    },
+    "--fads-sys-textinput-text-hovered": {
+      "value": "#161616",
+      "source": "Light.Form.field-text-hovered"
+    },
+    "--fads-sys-textinput-text-pressed": {
+      "value": "#384250",
+      "source": "Light.Form.field-text-pressed"
+    },
+    "--fads-sys-textinput-text-focused": {
+      "value": "#384250",
+      "source": "Light.Form.field-text-focused"
+    },
+    "--fads-sys-textinput-text-readonly": {
+      "value": "#161616",
+      "source": "Light.Form.field-text-readonly"
+    },
+    "--fads-sys-textinput-text-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-textinput-text-placeholder": {
+      "value": "#6c737f",
+      "source": "Light.Form.field-text-placeholder"
+    },
+    "--fads-sys-textinput-affix-bg": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-default"
+    },
+    "--fads-sys-textinput-affix-bg-disabled": {
+      "value": "#e5e7eb",
+      "source": "Light.Global.background-disabled"
+    },
+    "--fads-sys-textinput-affix-text": {
+      "value": "#6c737f",
+      "source": "Light.Text.text-secondary-paragraph"
+    },
+    "--fads-sys-textinput-helper-text": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph"
+    },
+    "--fads-sys-textinput-helper-error": {
+      "value": "#b42318",
+      "source": "Light.Text.text-error"
+    },
+    "--fads-sys-textinput-focus-shadow": {
+      "value": "0 2px 4px rgba(16, 24, 40, 0.06), 0 4px 8px rgba(16, 24, 40, 0.1)",
+      "source": "Figma MCP get_design_context Shadows/shadow-md on Focused state (live-verified)"
+    },
+    "--fads-sys-textinput-height-lg": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context Size=Large (live-verified)"
+    },
+    "--fads-sys-textinput-height-md": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context Size=Medium (live-verified)"
+    },
+    "--fads-sys-textinput-affix-padding-lg": {
+      "value": "16px",
+      "source": "Light.Spacing.Global/spacing-xl (live-verified, Size=Large)"
+    },
+    "--fads-sys-textinput-affix-padding-md": {
+      "value": "12px",
+      "source": "Light.Spacing.Global/spacing-lg (live-verified, Size=Medium)"
+    },
+    "--fads-sys-textinput-content-padding-start": {
+      "value": "8px",
+      "source": "Light.Spacing.Form/Input-container-padding-left (live-verified, both sizes)"
+    },
+    "--fads-sys-textinput-content-padding-end": {
+      "value": "16px",
+      "source": "Light.Spacing.Form/Input-container-padding-right (live-verified, both sizes)"
+    },
+    "--fads-sys-textinput-icon-gap": {
+      "value": "8px",
+      "source": "Light.Spacing.Form/icon-enteredtext (live-verified, both sizes)"
+    },
+    "--fads-sys-textinput-label-gap": {
+      "value": "8px",
+      "source": "Light.Spacing.Form/field-label-gap (live-verified)"
+    },
+    "--fads-sys-textinput-label-asterisk-gap": {
+      "value": "4px",
+      "source": "Light.Spacing.Form/label-gap (live-verified)"
+    },
+    "--fads-sys-textinput-helper-gap": {
+      "value": "8px",
+      "source": "Light.Spacing.Form/icon-helpertext (live-verified)"
+    },
+    "--fads-sys-textinput-helper-padding-block": {
+      "value": "4px",
+      "source": "Light.Spacing.Global/spacing-xs (live-verified)"
+    },
+    "--fads-sys-textinput-icon-size": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context leading icon slot size (live-verified)"
+    },
+    "--fads-sys-textinput-feedback-icon-size": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context feedback icon slot size (live-verified)"
+    },
+    "--fads-sys-textinput-underline-height": {
+      "value": "2px",
+      "source": "Figma MCP get_design_context Pressed/Focused-state thin underline (live-verified)"
+    },
+    "--fads-sys-breadcrumb-text-current": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-breadcrumb-separator-color": {
+      "value": "#384250",
+      "source": "Light.Icon.icon-neutral (closest generic muted-icon variable — the separator's vector asset fill was not independently color-inspectable via get_design_context, see spec §9 item 2)"
+    },
+    "--fads-sys-breadcrumb-ellipsis-text": {
+      "value": "#384250",
+      "source": "Light.Link.link-neutral (same Figma variable the Link component itself independently sources for mood=\"neutral\" — coincidence, not a cross-component alias, per docs/TOKEN_MAPPING.md)"
+    },
+    "--fads-sys-breadcrumb-item-gap": {
+      "value": "4px",
+      "source": "Light.Spacing.Link/link-sm-gap (live-verified; same Figma variable the Link component's own size=\"sm\" gap independently sources)"
+    },
+    "--fads-sys-checkbox-size-md": {
+      "value": "24px",
+      "source": "Figma MCP get_metadata Size=Medium frame (live-verified)"
+    },
+    "--fads-sys-checkbox-size-sm": {
+      "value": "20px",
+      "source": "Figma MCP get_metadata Size=Small frame (live-verified)"
+    },
+    "--fads-sys-checkbox-size-xs": {
+      "value": "16px",
+      "source": "Figma MCP get_metadata Size=x Small frame (live-verified)"
+    },
+    "--fads-sys-checkbox-radius": {
+      "value": "2px",
+      "source": "Light.radius-xs (live-verified via get_variable_defs — no existing shared --fads-sys-radius-* token matches 2px)"
+    },
+    "--fads-sys-checkbox-border-default": {
+      "value": "#6c737f",
+      "source": "Light.Controls.control-border"
+    },
+    "--fads-sys-checkbox-border-readonly": {
+      "value": "#9da4ae",
+      "source": "Light.Global.border-disabled"
+    },
+    "--fads-sys-checkbox-bg-pressed-unchecked": {
+      "value": "#d2d6db",
+      "source": "Light.Controls.control-pressed"
+    },
+    "--fads-sys-checkbox-bg-disabled": {
+      "value": "#e5e7eb",
+      "source": "Light.Global.background-disabled"
+    },
+    "--fads-sys-checkbox-ripple": {
+      "value": "#f3f4f6",
+      "source": "Light.Controls.control-ripple-effect"
+    },
+    "--fads-sys-checkbox-icon-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Icon.icon-oncolor (same white used by Control-icon-hovered/-pressed on every filled state)"
+    },
+    "--fads-sys-checkbox-icon-readonly": {
+      "value": "#6c737f",
+      "source": "Light.Controls.control-border (closest defensible reading for the Read-only icon tone — not independently color-inspectable, see spec §3 Needs Confirmation)"
+    },
+    "--fads-sys-checkbox-focus-ring": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-checkbox-primary-checked": {
+      "value": "#1b8354",
+      "source": "Light.Controls.control-primary-checked"
+    },
+    "--fads-sys-checkbox-primary-hovered": {
+      "value": "#14573a",
+      "source": "Light.Controls.control-primary-hovered"
+    },
+    "--fads-sys-checkbox-primary-pressed": {
+      "value": "#104631",
+      "source": "Light.Controls.control-primary-pressed"
+    },
+    "--fads-sys-checkbox-primary-focused": {
+      "value": "#1b8354",
+      "source": "Light.Controls.control-primary-focused"
+    },
+    "--fads-sys-checkbox-neutral-checked": {
+      "value": "#0d121c",
+      "source": "Light.Controls.control-neutral-checked"
+    },
+    "--fads-sys-checkbox-neutral-hovered": {
+      "value": "#4d5761",
+      "source": "Light.Controls.control-neutral-hovered"
+    },
+    "--fads-sys-checkbox-neutral-pressed": {
+      "value": "#6c737f",
+      "source": "Light.Controls.control-neutral-pressed"
+    },
+    "--fads-sys-checkbox-neutral-focused": {
+      "value": "#0d121c",
+      "source": "Light.Controls.control-neutral-focused"
+    },
+    "--fads-sys-radio-hit-size": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context \"Radio elements\" hit-target frame (live-verified)"
+    },
+    "--fads-sys-radio-size": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context \"_RadioBase\" ring frame (live-verified)"
+    },
+    "--fads-sys-radio-border-default": {
+      "value": "#6c737f",
+      "source": "Light.Controls.control-border"
+    },
+    "--fads-sys-radio-border-readonly": {
+      "value": "#9da4ae",
+      "source": "Light.Global.border-disabled (shared by Read-only and Disabled unchecked rings, live-verified identical)"
+    },
+    "--fads-sys-radio-bg-pressed-unchecked": {
+      "value": "#d2d6db",
+      "source": "Light.Controls.control-pressed"
+    },
+    "--fads-sys-radio-bg-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.control-disabled (Disabled-checked dot — live-verified identical across Primary and Neutral)"
+    },
+    "--fads-sys-radio-ripple": {
+      "value": "#f3f4f6",
+      "source": "Light.Controls.control-ripple-effect"
+    },
+    "--fads-sys-radio-focus-ring": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-radio-primary-checked": {
+      "value": "#1b8354",
+      "source": "Light.Controls.control-primary-checked"
+    },
+    "--fads-sys-radio-primary-hovered": {
+      "value": "#14573a",
+      "source": "Light.Controls.control-primary-hovered"
+    },
+    "--fads-sys-radio-primary-pressed": {
+      "value": "#104631",
+      "source": "Light.Controls.control-primary-pressed"
+    },
+    "--fads-sys-radio-primary-focused": {
+      "value": "#1b8354",
+      "source": "Light.Controls.control-primary-focused (live-verified identical to checked — focus never recolors)"
+    },
+    "--fads-sys-radio-neutral-checked": {
+      "value": "#0d121c",
+      "source": "Light.Controls.control-neutral-checked"
+    },
+    "--fads-sys-radio-neutral-hovered": {
+      "value": "#4d5761",
+      "source": "Light.Controls.control-neutral-hovered"
+    },
+    "--fads-sys-radio-neutral-pressed": {
+      "value": "#6c737f",
+      "source": "Light.Controls.control-neutral-pressed"
+    },
+    "--fads-sys-radio-neutral-focused": {
+      "value": "#0d121c",
+      "source": "Light.Controls.control-neutral-focused (live-verified identical to checked — focus never recolors)"
+    },
+    "--fads-sys-radio-label-text": {
+      "value": "#1f2a37",
+      "source": "Light.Text.text-display (Radio Label node 30195:23490 — distinct from the generic fads-sys-color-text-default #161616 used elsewhere; a real, live-verified difference)"
+    },
+    "--fads-sys-radio-description-text": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph (Radio Label helper-text row)"
+    },
+    "--fads-sys-radio-error-text": {
+      "value": "#b42318",
+      "source": "Light.Text.text-error (Radio Label alert-message row — distinct from the generic fads-sys-color-status-error #f04438; matches TextInput's own scoped error-text token choice)"
+    },
+    "--fads-sys-radio-error-gap": {
+      "value": "16px",
+      "source": "Light.Control.control-title-error-gap (Radio Label alert-message row icon↔text gap)"
+    },
+    "--fads-sys-switch-track-inline": {
+      "value": "48px",
+      "source": "Figma MCP get_design_context track frame (live-verified)"
+    },
+    "--fads-sys-switch-track-block": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context track frame (live-verified)"
+    },
+    "--fads-sys-switch-thumb-size": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context Thumb inset geometry (16.67%/8.33% of the 24×48px track — live-verified)"
+    },
+    "--fads-sys-switch-thumb-inset": {
+      "value": "4px",
+      "source": "Figma MCP get_design_context Thumb inset geometry (live-verified, same value both axes)"
+    },
+    "--fads-sys-switch-border-default": {
+      "value": "#6c737f",
+      "source": "Light.Controls.control-border (Default state is a raster asset — extended by disclosed analogy with Checkbox/Radio, not independently sampled for Switch)"
+    },
+    "--fads-sys-switch-border-hovered": {
+      "value": "#4d5761",
+      "source": "Light.Controls.control-neutral-hovered"
+    },
+    "--fads-sys-switch-border-pressed": {
+      "value": "#6c737f",
+      "source": "Light.Controls.control-neutral-pressed"
+    },
+    "--fads-sys-switch-focus-ring-off": {
+      "value": "#0d121c",
+      "source": "Light.Controls.control-neutral-focused (also reused for the unchecked track border under focus)"
+    },
+    "--fads-sys-switch-focus-ring-on": {
+      "value": "#161616",
+      "source": "Light.Border.border-black (checked focus ring uses this universal color, not the mood color — live-verified)"
+    },
+    "--fads-sys-switch-focus-ring-radius": {
+      "value": "2px",
+      "source": "Light.Radius.radius-xs (the focus ring is a distinct rectangular overlay, not the pill shape — live-verified)"
+    },
+    "--fads-sys-switch-border-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Controls.Control-boarder-disabled (sic — literal Figma variable name, includes the typo)"
+    },
+    "--fads-sys-switch-bg-checked": {
+      "value": "#1b8354",
+      "source": "Light.Controls.control-primary-checked"
+    },
+    "--fads-sys-switch-bg-checked-hovered": {
+      "value": "#14573a",
+      "source": "Light.Controls.control-primary-hovered"
+    },
+    "--fads-sys-switch-bg-checked-pressed": {
+      "value": "#104631",
+      "source": "Light.Controls.control-primary-pressed"
+    },
+    "--fads-sys-switch-bg-checked-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.control-disabled"
+    },
+    "--fads-sys-switch-ripple": {
+      "value": "#f3f4f6",
+      "source": "Light.Controls.control-ripple-effect"
+    },
+    "--fads-sys-switch-thumb-bg": {
+      "value": "#ffffff",
+      "source": "Light.Background.background-white"
+    },
+    "--fads-sys-switch-thumb-shadow": {
+      "value": "0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.05)",
+      "source": "Figma MCP get_design_context Shadows/shadow-sm (live-verified)"
+    },
+    "--fads-sys-switch-label-text": {
+      "value": "#1f2a37",
+      "source": "Light.Text.text-display (Switch Label node 30150:69998 — same token as Radio Label, independently sourced here per this codebase's per-component-token convention)"
+    },
+    "--fads-sys-switch-description-text": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph (Switch Label helper-text row)"
+    },
+    "--fads-sys-switch-error-text": {
+      "value": "#b42318",
+      "source": "Light.Text.text-error (Switch Label alert-message row)"
+    },
+    "--fads-sys-switch-error-gap": {
+      "value": "16px",
+      "source": "Light.Control.control-title-error-gap (Switch Label alert-message row icon↔text gap, the non-trailing-switch layout value — the trailSwitch variant sampled an 8px gap instead; 16px chosen for consistency with Radio's own identical row)"
+    },
+    "--fads-sys-inputaffix-icon-default": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default"
+    },
+    "--fads-sys-inputaffix-icon-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Icon.icon-oncolor (Selected state icon color)"
+    },
+    "--fads-sys-inputaffix-icon-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.icon-default-disabled"
+    },
+    "--fads-sys-inputaffix-bg-solid-default": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-default"
+    },
+    "--fads-sys-inputaffix-bg-solid-hovered": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-hovered (live-verified identical to the default value)"
+    },
+    "--fads-sys-inputaffix-bg-solid-pressed": {
+      "value": "#e5e7eb",
+      "source": "Light.Button.button-background-neutral-pressed"
+    },
+    "--fads-sys-inputaffix-bg-selected": {
+      "value": "#384250",
+      "source": "Light.Button.button-background-black-selected (applies regardless of the Solid/Subtle style, live-verified)"
+    },
+    "--fads-sys-inputaffix-bg-disabled": {
+      "value": "#e5e7eb",
+      "source": "Light.Global.background-disabled (Solid style only — Subtle stays backgroundless when disabled)"
+    },
+    "--fads-sys-inputaffix-focus-ring": {
+      "value": "#161616",
+      "source": "Light.Border.border-black (a real 4px solid border, not an outline — live-verified)"
+    },
+    "--fads-sys-datepicker-selected-bg": {
+      "value": "#1b8354",
+      "source": "Light.Form.datecell-background-default"
+    },
+    "--fads-sys-datepicker-selected-text": {
+      "value": "#ffffff",
+      "source": "Light.Text.text-oncolor-primary"
+    },
+    "--fads-sys-datepicker-range-bg": {
+      "value": "#dff6e7",
+      "source": "Light.Form.datecell-background-100 (the in-range highlight band color)"
+    },
+    "--fads-sys-datepicker-popover-radius": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Radius/radius-md (live-verified)"
+    },
+    "--fads-sys-datepicker-popover-shadow": {
+      "value": "0 24px 48px -12px rgba(16, 24, 40, 0.18)",
+      "source": "Figma MCP get_variable_defs Shadows/shadow-2xl (live-verified)"
+    },
+    "--fads-sys-buttonclose-icon-default": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default"
+    },
+    "--fads-sys-buttonclose-icon-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Icon.icon-oncolor (onColor=true icon color)"
+    },
+    "--fads-sys-buttonclose-bg-hovered": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-hovered"
+    },
+    "--fads-sys-buttonclose-bg-pressed": {
+      "value": "#e5e7eb",
+      "source": "Light.Button.button-background-neutral-pressed"
+    },
+    "--fads-sys-buttonclose-bg-oncolor-hovered": {
+      "value": "rgba(255, 255, 255, 0.2)",
+      "source": "Figma MCP get_variable_defs Button/button-background-transparent-hovered (live-verified #ffffff33)"
+    },
+    "--fads-sys-buttonclose-bg-oncolor-pressed": {
+      "value": "rgba(255, 255, 255, 0.4)",
+      "source": "Figma MCP get_variable_defs Button/button-background-transparent-pressed (live-verified #ffffff66)"
+    },
+    "--fads-sys-buttonclose-focus-ring": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-buttonclose-focus-ring-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Border.border-white (onColor=true focus ring)"
+    },
+    "--fads-sys-buttonclose-size-xs": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context size=\"x Small\" (live-verified box dimension)"
+    },
+    "--fads-sys-buttonclose-size-sm": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context size=\"Small\" (live-verified box dimension)"
+    },
+    "--fads-sys-buttonclose-size-md": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context size=\"Medium\" (live-verified box dimension)"
+    },
+    "--fads-sys-buttonclose-size-lg": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context size=\"Large\" (live-verified box dimension)"
+    },
+    "--fads-sys-buttonclose-icon-size-xs": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context size=\"x Small\" (live-verified icon dimension)"
+    },
+    "--fads-sys-buttonclose-icon-size-sm": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context size=\"Small\"/\"Medium\" (live-verified icon dimension, shared)"
+    },
+    "--fads-sys-buttonclose-icon-size-lg": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context size=\"Large\" (live-verified icon dimension)"
+    },
+    "--fads-sys-floatingbutton-padding-sm": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Global/spacing-xl (live-verified, Small size)"
+    },
+    "--fads-sys-floatingbutton-padding-lg": {
+      "value": "20px",
+      "source": "Figma MCP get_variable_defs Global/spacing-2xl (live-verified, Large size)"
+    },
+    "--fads-sys-floatingbutton-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Global/spacing-md (live-verified icon↔label gap)"
+    },
+    "--fads-sys-trailingicon-hit-padding": {
+      "value": "4px",
+      "source": "Figma MCP get_design_context p-[4px] on the Icon wrapper (live-verified)"
+    },
+    "--fads-sys-trailingicon-icon-size": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context size-[20px] (live-verified)"
+    },
+    "--fads-sys-trailingicon-icon-color": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default"
+    },
+    "--fads-sys-trailingicon-tooltip-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Tooltip/tooltip-gap (live-verified)"
+    },
+    "--fads-sys-trailingicon-tooltip-min-width": {
+      "value": "160px",
+      "source": "Figma MCP get_design_context min-w-[160px] (live-verified)"
+    },
+    "--fads-sys-trailingicon-tooltip-max-width": {
+      "value": "240px",
+      "source": "Figma MCP get_design_context max-w-[240px] (live-verified)"
+    },
+    "--fads-sys-trailingicon-tooltip-bg": {
+      "value": "#ffffff",
+      "source": "Figma MCP get_variable_defs Tooltip/tooltip-background-light (live-verified)"
+    },
+    "--fads-sys-trailingicon-tooltip-shadow": {
+      "value": "0 4px 6px -2px rgba(16, 24, 40, 0.03), 0 12px 16px -4px rgba(16, 24, 40, 0.08)",
+      "source": "Figma MCP get_variable_defs Shadows/shadow-lg (live-verified)"
+    },
+    "--fads-sys-trailingicon-tooltip-padding": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Tooltip/tooltip-padding (live-verified)"
+    },
+    "--fads-sys-trailingicon-tooltip-text": {
+      "value": "#1f2a37",
+      "source": "Figma MCP get_variable_defs Tooltip/tooltip-text-heading-light (live-verified)"
+    },
+    "--fads-sys-trailingicon-tooltip-font-size": {
+      "value": "12px",
+      "source": "Figma MCP get_variable_defs Text xs/Semibold size (live-verified)"
+    },
+    "--fads-sys-trailingicon-tooltip-line-height": {
+      "value": "18px",
+      "source": "Figma MCP get_variable_defs Text xs/Semibold lineHeight (live-verified)"
+    },
+    "--fads-sys-dropdownlistitem-text": {
+      "value": "#161616",
+      "source": "Light.Text.text-default"
+    },
+    "--fads-sys-dropdownlistitem-text-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-dropdownlistitem-group-text": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph"
+    },
+    "--fads-sys-dropdownlistitem-icon-default": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default"
+    },
+    "--fads-sys-dropdownlistitem-bg-hover": {
+      "value": "#f3f4f6",
+      "source": "Light.Form.option-background-hover"
+    },
+    "--fads-sys-dropdownlistitem-bg-pressed": {
+      "value": "#e5e7eb",
+      "source": "Light.Form.option-background-pressed"
+    },
+    "--fads-sys-dropdownlistitem-focus-border": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-dropdownlistitem-checkbox-border": {
+      "value": "#6c737f",
+      "source": "Figma MCP get_design_context Controls/control-border (live-verified, unchecked Multi Select checkbox)"
+    },
+    "--fads-sys-dropdownlistitem-divider": {
+      "value": "#d2d6db",
+      "source": "Figma MCP get_design_context colors/neutral/300 (live-verified divider line color)"
+    },
+    "--fads-sys-dropdownlistitem-padding": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Global/spacing-md (live-verified row padding/gap)"
+    },
+    "--fads-sys-searchbox-helper-icon-size": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context Feedback Icon size-[16px] (live-verified, helper-text row icon)"
+    },
+    "--fads-sys-contentswitcher-height-sm": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context h-[32px], size=\"Small\" (live-verified)"
+    },
+    "--fads-sys-contentswitcher-height-md": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context h-[40px], size=\"Medium\" (live-verified)"
+    },
+    "--fads-sys-contentswitcher-height-lg": {
+      "value": "48px",
+      "source": "Figma MCP get_design_context h-[48px], size=\"Large\" (live-verified)"
+    },
+    "--fads-sys-contentswitcher-min-width": {
+      "value": "76px",
+      "source": "Figma MCP get_design_context min-w-[76px] (live-verified, every item)"
+    },
+    "--fads-sys-contentswitcher-bg-oncolor-default": {
+      "value": "rgba(255, 255, 255, 0.2)",
+      "source": "Figma MCP get_variable_defs Button/button-background-transparent-hovered (live-verified — the resting, not hover-only, background for a Normal item when onColor=true)"
+    },
+    "--fads-sys-contentswitcher-border-oncolor": {
+      "value": "rgba(255, 255, 255, 0.1)",
+      "source": "Figma MCP get_variable_defs Border/border-transparent-10 (live-verified)"
+    },
+    "--fads-sys-contentswitcher-text-size-lg": {
+      "value": "20px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-xl (live-verified, Large item text)"
+    },
+    "--fads-sys-contentswitcher-line-height-lg": {
+      "value": "30px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-xl (live-verified)"
+    },
+    "--fads-sys-menu-bg": {
+      "value": "#ffffff",
+      "source": "Light.Background.background-menu"
+    },
+    "--fads-sys-menu-shadow": {
+      "value": "0 24px 48px -12px rgba(16, 24, 40, 0.18)",
+      "source": "Figma MCP get_variable_defs Shadows/shadow-2xl (live-verified)"
+    },
+    "--fads-sys-menu-width": {
+      "value": "241px",
+      "source": "Figma MCP get_design_context w-[241px] (live-verified panel width)"
+    },
+    "--fads-sys-menu-section-border": {
+      "value": "#cbd5e1",
+      "source": "Figma MCP get_variable_defs border/border-default (live-verified, section divider — distinct from the panel's own outer Border/border-neutral-primary)"
+    },
+    "--fads-sys-menu-section-gap": {
+      "value": "12px",
+      "source": "Figma MCP get_variable_defs Global/spacing-lg (live-verified, group-label-to-items gap)"
+    },
+    "--fads-sys-menu-group-label-text": {
+      "value": "#1f2a37",
+      "source": "Light.Text.text-display"
+    },
+    "--fads-sys-menulistitem-bg-selected": {
+      "value": "#f3fcf6",
+      "source": "Light.Background.background-primary-50"
+    },
+    "--fads-sys-menulistitem-text": {
+      "value": "#161616",
+      "source": "Light.Text.text-default"
+    },
+    "--fads-sys-menulistitem-text-selected": {
+      "value": "#1b8354",
+      "source": "Light.Text.text-primary"
+    },
+    "--fads-sys-menulistitem-text-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-menulistitem-text-secondary": {
+      "value": "#6c737f",
+      "source": "Light.Text.text-secondary-paragraph (Text trailing-element muted content)"
+    },
+    "--fads-sys-menulistitem-icon-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.icon-default-disabled"
+    },
+    "--fads-sys-menulistitem-focus-border": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-rating-star-empty": {
+      "value": "#e5e7eb",
+      "source": "Light.Background.background-neutral-200"
+    },
+    "--fads-sys-rating-star-filled": {
+      "value": "#dba102",
+      "source": "Light.Background.background-secondary"
+    },
+    "--fads-sys-rating-star-filled-brand": {
+      "value": "#1b8354",
+      "source": "Light.Background.background-primary"
+    },
+    "--fads-sys-rating-hover-bg": {
+      "value": "#f3f4f6",
+      "source": "Light.Background.background-neutral-100 (interactive star hover/press highlight)"
+    },
+    "--fads-sys-rating-star-size-sm": {
+      "value": "24px",
+      "source": "Figma MCP get_metadata Size=Small (live-verified)"
+    },
+    "--fads-sys-rating-star-size-md": {
+      "value": "32px",
+      "source": "Figma MCP get_metadata Size=Medium (live-verified)"
+    },
+    "--fads-sys-rating-star-size-lg": {
+      "value": "48px",
+      "source": "Figma MCP get_metadata Size=Large (live-verified)"
+    },
+    "--fads-sys-textarea-bg-default": {
+      "value": "#ffffff",
+      "source": "Light.Form.field-background-default"
+    },
+    "--fads-sys-textarea-bg-darker": {
+      "value": "#f3f4f6",
+      "source": "Light.Form.field-background-darker"
+    },
+    "--fads-sys-textarea-bg-lighter": {
+      "value": "#fcfcfd",
+      "source": "Light.Form.field-background-lighter"
+    },
+    "--fads-sys-textarea-border-default": {
+      "value": "#9da4ae",
+      "source": "Light.Form.field-border-default"
+    },
+    "--fads-sys-textarea-border-hovered": {
+      "value": "#384250",
+      "source": "Light.Form.field-border-hovered (confirmed present via get_variable_defs on this component)"
+    },
+    "--fads-sys-textarea-border-pressed": {
+      "value": "#0d121c",
+      "source": "Light.Form.field-border-pressed"
+    },
+    "--fads-sys-textarea-border-error": {
+      "value": "#b42318",
+      "source": "Light.Form.field-border-error"
+    },
+    "--fads-sys-textarea-border-readonly": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-textarea-border-disabled": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary (live-verified distinct from TextInput's own Disabled border token — see spec §3)"
+    },
+    "--fads-sys-textarea-text-filled": {
+      "value": "#161616",
+      "source": "Light.Form.field-text-filled"
+    },
+    "--fads-sys-textarea-text-hovered": {
+      "value": "#161616",
+      "source": "Light.Form.field-text-hovered"
+    },
+    "--fads-sys-textarea-text-pressed": {
+      "value": "#384250",
+      "source": "Light.Form.field-text-pressed"
+    },
+    "--fads-sys-textarea-text-focused": {
+      "value": "#384250",
+      "source": "Light.Form.field-text-focused"
+    },
+    "--fads-sys-textarea-text-readonly": {
+      "value": "#161616",
+      "source": "Light.Form.field-text-readonly"
+    },
+    "--fads-sys-textarea-text-disabled": {
+      "value": "#9da4ae",
+      "source": "Figma MCP get_design_context Global/input-text-disabled on the Disabled Label sub-component (live-verified; no named Figma variable in the local JSON export) — the sampled Textarea Disabled node's own text layer was an untokenized stray hex instead, see spec §9 item 1"
+    },
+    "--fads-sys-textarea-text-placeholder": {
+      "value": "#6c737f",
+      "source": "Light.Form.field-text-placeholder"
+    },
+    "--fads-sys-textarea-helper-text": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph"
+    },
+    "--fads-sys-textarea-helper-error": {
+      "value": "#b42318",
+      "source": "Light.Text.text-error"
+    },
+    "--fads-sys-textarea-scrollbar-track": {
+      "value": "#f3f4f6",
+      "source": "Light.Background.background-neutral-100 (used via CSS scrollbar-color, spec §5)"
+    },
+    "--fads-sys-textarea-scrollbar-thumb": {
+      "value": "#d2d6db",
+      "source": "Figma MCP get_variable_defs Form/Textarea-scrollbar-bar (live-verified; no named Figma variable in the local JSON export) — used via CSS scrollbar-color, spec §5"
+    },
+    "--fads-sys-textarea-focus-shadow": {
+      "value": "0 2px 4px rgba(16, 24, 40, 0.06), 0 4px 8px rgba(16, 24, 40, 0.1)",
+      "source": "Figma MCP get_design_context Shadows/shadow-md on Focused state (live-verified, same effect already independently confirmed for TextInput's own focus shadow)"
+    },
+    "--fads-sys-textarea-underline-height": {
+      "value": "2px",
+      "source": "Figma MCP get_design_context Focused-state full-width thin underline (live-verified)"
+    },
+    "--fads-sys-textarea-min-height": {
+      "value": "96px",
+      "source": "Figma MCP get_metadata Textarea frame height (live-verified demo-instance height, extended as the sane default)"
+    },
+    "--fads-sys-textarea-padding-inline": {
+      "value": "16px",
+      "source": "Light.Spacing.Form/textarea-container-padding-left&right (live-verified)"
+    },
+    "--fads-sys-textarea-padding-block": {
+      "value": "12px",
+      "source": "Light.Spacing.Form/textarea-container-padding-top&bottom (live-verified)"
+    },
+    "--fads-sys-textarea-label-gap": {
+      "value": "8px",
+      "source": "Light.Spacing.Form/iable-container (live-verified — label-row-to-box gap)"
+    },
+    "--fads-sys-select-height-lg": {
+      "value": "40px",
+      "source": "Figma MCP get_metadata Size=Large frame (live-verified)"
+    },
+    "--fads-sys-select-height-md": {
+      "value": "32px",
+      "source": "Figma MCP get_metadata Size=Medium frame (live-verified)"
+    },
+    "--fads-sys-select-bg-default": {
+      "value": "#ffffff",
+      "source": "Light.Form.field-background-default"
+    },
+    "--fads-sys-select-bg-darker": {
+      "value": "#f3f4f6",
+      "source": "Light.Form.field-background-darker"
+    },
+    "--fads-sys-select-bg-lighter": {
+      "value": "#fcfcfd",
+      "source": "Light.Form.field-background-lighter"
+    },
+    "--fads-sys-select-bg-pressed": {
+      "value": "#f3f4f6",
+      "source": "Light.Form.field-background-pressed"
+    },
+    "--fads-sys-select-border-default": {
+      "value": "#9da4ae",
+      "source": "Light.Form.field-border-default"
+    },
+    "--fads-sys-select-border-hovered": {
+      "value": "#384250",
+      "source": "Light.Form.field-border-hovered"
+    },
+    "--fads-sys-select-border-error": {
+      "value": "#b42318",
+      "source": "Light.Form.field-border-error"
+    },
+    "--fads-sys-select-border-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.border-disabled (shared by Read-only and Disabled — live-verified uniform)"
+    },
+    "--fads-sys-select-text-filled": {
+      "value": "#161616",
+      "source": "Light.Form.field-text-filled"
+    },
+    "--fads-sys-select-text-placeholder": {
+      "value": "#6c737f",
+      "source": "Light.Form.field-text-placeholder"
+    },
+    "--fads-sys-select-text-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-select-icon-default": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default"
+    },
+    "--fads-sys-select-icon-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Icon.icon-default-400"
+    },
+    "--fads-sys-select-panel-border": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-select-panel-shadow": {
+      "value": "0 8px 8px -4px rgba(16, 24, 40, 0.03), 0 20px 24px -4px rgba(16, 24, 40, 0.08)",
+      "source": "Figma MCP get_design_context Shadows/shadow-xl on the open listbox panel (live-verified)"
+    },
+    "--fads-sys-select-helper-text": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph"
+    },
+    "--fads-sys-select-helper-error": {
+      "value": "#b42318",
+      "source": "Light.Text.text-error"
+    },
+    "--fads-sys-select-content-gap": {
+      "value": "4px",
+      "source": "Light.Spacing.Form/dropdown-icon-content (live-verified — distinct from TextInput's own 8px icon gap)"
+    },
+    "--fads-sys-select-padding-inline": {
+      "value": "16px",
+      "source": "Light.Spacing.Form/dropdown-container-padding-left&right (live-verified)"
+    },
+    "--fads-sys-select-label-gap": {
+      "value": "8px",
+      "source": "Light.Spacing.Form/iable-container (live-verified)"
+    },
+    "--fads-sys-select-panel-padding": {
+      "value": "8px",
+      "source": "Light.Spacing.Global/spacing-md (live-verified — listbox panel inner padding)"
+    },
+    "--fads-sys-fileupload-dropzone-bg": {
+      "value": "#f3f4f6",
+      "source": "Light.Background.background-neutral-100"
+    },
+    "--fads-sys-fileupload-border": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-fileupload-border-error": {
+      "value": "#b42318",
+      "source": "Light.Border.border-error"
+    },
+    "--fads-sys-fileupload-heading-text": {
+      "value": "#1f2a37",
+      "source": "Light.Text.text-display (drop-zone heading, Multiple)"
+    },
+    "--fads-sys-fileupload-caption-text": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph (drop-zone caption, Multiple)"
+    },
+    "--fads-sys-fileupload-helper-text": {
+      "value": "#64748b",
+      "source": "Figma MCP get_design_context Text/text-tertiary on the Single-variant helper text (live-verified; no named Figma variable in the local JSON export)"
+    },
+    "--fads-sys-fileupload-file-text": {
+      "value": "#161616",
+      "source": "Light.Text.text-default (file name)"
+    },
+    "--fads-sys-fileupload-error-text": {
+      "value": "#ce281c",
+      "source": "Figma MCP get_design_context Text/text-error-primary on the File-3 error-message row (live-verified; distinct from this design system's usual #b42318 error red — spec §4 item 2, flagged not silently unified)"
+    },
+    "--fads-sys-fileupload-success-icon": {
+      "value": "#067647",
+      "source": "Light.Icon.icon-success"
+    },
+    "--fads-sys-fileupload-icon-default": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default (drop-zone icon, Multiple)"
+    },
+    "--fads-sys-fileupload-text-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-fileupload-bg-disabled": {
+      "value": "#e5e7eb",
+      "source": "Light.Global.background-disabled (Browse button fill, Disabled)"
+    },
+    "--fads-sys-fileupload-content-gap": {
+      "value": "8px",
+      "source": "Light.Spacing.Text/text-content-gap (live-verified — label-to-helper and heading-to-caption gap)"
+    },
+    "--fads-sys-fileupload-dropzone-padding": {
+      "value": "24px",
+      "source": "Light.Spacing.Global/spacing-3xl (live-verified — Multiple drop-zone inner padding)"
+    },
+    "--fads-sys-fileupload-dropzone-gap": {
+      "value": "16px",
+      "source": "Light.Spacing.Global/spacing-xl (live-verified — Header-to-button stack gap, both variants)"
+    },
+    "--fads-sys-fileupload-file-padding": {
+      "value": "8px",
+      "source": "Light.Spacing.size/8 (live-verified — file-row inner padding)"
+    },
+    "--fads-sys-fileupload-file-gap": {
+      "value": "8px",
+      "source": "Light.Spacing.Global/spacing-md (live-verified — file-list stack gap, and status-icon-to-name gap)"
+    },
+    "--fads-sys-table-cell-border": {
+      "value": "#d2d6db",
+      "source": "Light.Table.table-cell-border"
+    },
+    "--fads-sys-table-text-head": {
+      "value": "#384250",
+      "source": "Light.Table.table-text-head"
+    },
+    "--fads-sys-table-text-body": {
+      "value": "#161616",
+      "source": "Light.Table.table-text-body -> Light.Text.text-default (alias)"
+    },
+    "--fads-sys-table-bg-header": {
+      "value": "#f3f4f6",
+      "source": "Light.Table.table-background-header"
+    },
+    "--fads-sys-table-bg-row-alt": {
+      "value": "#f9fafb",
+      "source": "Light.Table.table-background-row-alt"
+    },
+    "--fads-sys-table-bg-row-hovered": {
+      "value": "#f3f4f6",
+      "source": "Light.Table.table-background-row-hovered"
+    },
+    "--fads-sys-table-bg-row-selected": {
+      "value": "#f3fcf6",
+      "source": "Light.Table.table-background-row-select (fill is identical whether or not the row is also hovered — Light.Table.table-background-row-selected-hovered shares the same #F3FCF6 hex; see spec §3 Needs Confirmation re: the separate table-boarder-row-selected-hovered stroke token)"
+    },
+    "--fads-sys-table-header-height": {
+      "value": "48px",
+      "source": "Figma MCP get_design_context min-h-[48px] on the Table Header Cell wrapper (live-verified, identical across Standard and Compact density)"
+    },
+    "--fads-sys-table-row-height-standard": {
+      "value": "64px",
+      "source": "Figma MCP get_design_context min-h-[64px] on the Table Row Cell wrapper, Compact=False (live-verified)"
+    },
+    "--fads-sys-table-row-height-compact": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context min-h-[32px] on the Table Row Cell wrapper, Compact=True (live-verified)"
+    },
+    "--fads-sys-table-cell-padding-h": {
+      "value": "16px",
+      "source": "Light.Table (via get_variable_defs) Table/table-cell-h-padding"
+    },
+    "--fads-sys-table-cell-padding-v": {
+      "value": "8px",
+      "source": "Light.Table (via get_variable_defs) Table/table-cell-v-padding"
+    },
+    "--fads-sys-table-head-font-size": {
+      "value": "12px",
+      "source": "Light.Table (via get_variable_defs) Size/Text/typo-size-text-xs (header cell text)"
+    },
+    "--fads-sys-table-head-line-height": {
+      "value": "18px",
+      "source": "Light.Table (via get_variable_defs) Line Height/Text/line-heights-text-xs (header cell text)"
+    },
+    "--fads-sys-table-select-cell-width": {
+      "value": "52px",
+      "source": "Figma MCP get_design_context w-[52px] on the leading checkbox Table Row Cell (live-verified)"
+    },
+    "--fads-sys-table-radius-contained": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context rounded-[var(--radius/radius-md,8px)] on the Contained=True outer wrapper (live-verified; Radius is a dimension group with no .hex in the local JSON export, so sourced directly from the extracted code rather than getLightToken)"
+    },
+    "--fads-sys-pagination-text": {
+      "value": "#161616",
+      "source": "Light.Text.text-default"
+    },
+    "--fads-sys-pagination-selector-bg": {
+      "value": "#1b8354",
+      "source": "Light.Background.background-primary (current-page underline indicator)"
+    },
+    "--fads-sys-pagination-ellipsis-border": {
+      "value": "#161616",
+      "source": "Light.Border.border-black (overflow \"…\" item border)"
+    },
+    "--fads-sys-pagination-radius": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Radius/radius-sm (live-verified)"
+    },
+    "--fads-sys-pagination-items-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Pagination/pagination-Items-padding (live-verified)"
+    },
+    "--fads-sys-pagination-item-size-lg": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context size-[40px], Size=Large (live-verified)"
+    },
+    "--fads-sys-pagination-item-size-md": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context size-[32px], Size=Medium (live-verified)"
+    },
+    "--fads-sys-pagination-item-size-sm": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context h-[24px]/min-w-[24px], Size=Small (live-verified)"
+    },
+    "--fads-sys-pagination-item-padding-lg": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Pagination/pagination-Item-lg-padding (live-verified)"
+    },
+    "--fads-sys-pagination-item-padding-md": {
+      "value": "6px",
+      "source": "Figma MCP get_variable_defs Pagination/pagination-Item-md-padding (live-verified)"
+    },
+    "--fads-sys-pagination-item-padding-sm": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Pagination/pagination-Item-sm-padding (live-verified)"
+    },
+    "--fads-sys-pagination-icon-size-lg": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context Leading Icon size-[24px], Size=Large (live-verified)"
+    },
+    "--fads-sys-pagination-icon-size-md": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context Leading Icon size-[20px], Size=Medium (live-verified)"
+    },
+    "--fads-sys-pagination-icon-size-sm": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context Leading Icon size-[16px], Size=Small (live-verified)"
+    },
+    "--fads-sys-pagination-selector-width-lg": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context Selector w-[24px], Size=Large (live-verified)"
+    },
+    "--fads-sys-pagination-selector-width-md": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context Selector w-[24px], Size=Medium (live-verified)"
+    },
+    "--fads-sys-pagination-selector-width-sm": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context Selector w-[16px], Size=Small (live-verified)"
+    },
+    "--fads-sys-pagination-selector-height": {
+      "value": "3px",
+      "source": "Figma MCP get_design_context Selector h-[3px] (live-verified, all sizes)"
+    },
+    "--fads-sys-pagination-text-size-lg": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-md (live-verified — Large page-number text)"
+    },
+    "--fads-sys-pagination-text-size-md": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-md (live-verified — Medium uses the same text-md size as Large)"
+    },
+    "--fads-sys-pagination-text-size-sm": {
+      "value": "14px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-sm (live-verified)"
+    },
+    "--fads-sys-pagination-line-height-lg": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-md (live-verified)"
+    },
+    "--fads-sys-pagination-line-height-md": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-md (live-verified — Medium shares Large's line-height)"
+    },
+    "--fads-sys-pagination-line-height-sm": {
+      "value": "20px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-sm (live-verified)"
+    },
+    "--fads-sys-alert-bg-white": {
+      "value": "#ffffff",
+      "source": "Light.Background.background-notification-white"
+    },
+    "--fads-sys-alert-border-white": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary (constant across all tones on the White surface — only the featured icon and accent stripe change color per tone)"
+    },
+    "--fads-sys-alert-bg-tinted-neutral": {
+      "value": "#fcfcfd",
+      "source": "Light.Background.background-neutral-25 (Color/tinted surface, Neutral tone)"
+    },
+    "--fads-sys-alert-border-tinted-neutral": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary (Neutral has no distinct tinted-border color — live-verified identical to the White surface border)"
+    },
+    "--fads-sys-alert-bg-tinted-info": {
+      "value": "#f5faff",
+      "source": "Light.Background.background-info-25"
+    },
+    "--fads-sys-alert-border-tinted-info": {
+      "value": "#b2ddff",
+      "source": "Light.Border.border-info-light"
+    },
+    "--fads-sys-alert-bg-tinted-success": {
+      "value": "#f6fef9",
+      "source": "Light.Background.background-success-25"
+    },
+    "--fads-sys-alert-border-tinted-success": {
+      "value": "#abefc6",
+      "source": "Light.Border.border-success-light"
+    },
+    "--fads-sys-alert-bg-tinted-warning": {
+      "value": "#fffcf5",
+      "source": "Light.Background.background-warning-25"
+    },
+    "--fads-sys-alert-border-tinted-warning": {
+      "value": "#fedf89",
+      "source": "Light.Border.border-warning-light"
+    },
+    "--fads-sys-alert-bg-tinted-error": {
+      "value": "#fffbfa",
+      "source": "Light.Background.background-error-25"
+    },
+    "--fads-sys-alert-border-tinted-error": {
+      "value": "#fecdca",
+      "source": "Light.Border.border-error-light"
+    },
+    "--fads-sys-alert-title-default": {
+      "value": "#1f2a37",
+      "source": "Light.Text.text-display (title color on the White surface and the tinted-Neutral surface)"
+    },
+    "--fads-sys-alert-title-info": {
+      "value": "#175cd3",
+      "source": "Light.Text.text-info (title color on the tinted-Info surface only)"
+    },
+    "--fads-sys-alert-title-success": {
+      "value": "#067647",
+      "source": "Light.Text.text-success (title color on the tinted-Success surface only)"
+    },
+    "--fads-sys-alert-title-warning": {
+      "value": "#b54708",
+      "source": "Light.Text.text-warning (title color on the tinted-Warning surface only)"
+    },
+    "--fads-sys-alert-title-error": {
+      "value": "#b42318",
+      "source": "Light.Text.text-error (title color on the tinted-Error surface only)"
+    },
+    "--fads-sys-alert-description": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph (description color — constant across every tone/surface combination, live-verified)"
+    },
+    "--fads-sys-alert-icon-bg-neutral": {
+      "value": "#f9fafb",
+      "source": "Light.Background.background-neutral-50 (featured-icon circle fill, Neutral)"
+    },
+    "--fads-sys-alert-icon-bg-info": {
+      "value": "#eff8ff",
+      "source": "Light.Background.background-info-50 (aka Icon.background-info-light — featured-icon circle fill, Info)"
+    },
+    "--fads-sys-alert-icon-bg-success": {
+      "value": "#ecfdf3",
+      "source": "Light.Background.background-success-50 (featured-icon circle fill, Success)"
+    },
+    "--fads-sys-alert-icon-bg-warning": {
+      "value": "#fffaeb",
+      "source": "Light.Background.background-warning-50 (featured-icon circle fill, Warning)"
+    },
+    "--fads-sys-alert-icon-bg-error": {
+      "value": "#fef3f2",
+      "source": "Light.Background.background-error-50 (featured-icon circle fill, Error/Destructive)"
+    },
+    "--fads-sys-alert-icon-neutral": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default (featured-icon glyph color, Neutral; also reused for the dismiss-button icon)"
+    },
+    "--fads-sys-alert-icon-info": {
+      "value": "#175cd3",
+      "source": "Light.Icon.icon-info"
+    },
+    "--fads-sys-alert-icon-success": {
+      "value": "#067647",
+      "source": "Light.Icon.icon-success"
+    },
+    "--fads-sys-alert-icon-warning": {
+      "value": "#b54708",
+      "source": "Light.Icon.icon-warning"
+    },
+    "--fads-sys-alert-icon-error": {
+      "value": "#b42318",
+      "source": "Light.Icon.icon-error"
+    },
+    "--fads-sys-alert-dismiss-icon": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default (dismiss button glyph — not independently color-annotated in the extracted markup, reasonably matches the default icon color; Needs Confirmation)"
+    },
+    "--fads-sys-alert-stripe-neutral": {
+      "value": "#e5e7eb",
+      "source": "Light.Background.background-neutral-200 (accent-stripe color, Neutral)"
+    },
+    "--fads-sys-alert-stripe-info": {
+      "value": "#1570ef",
+      "source": "Light.Background.background-info (accent-stripe color, Info)"
+    },
+    "--fads-sys-alert-stripe-success": {
+      "value": "#079455",
+      "source": "Light.Background.background-success (accent-stripe color, Success)"
+    },
+    "--fads-sys-alert-stripe-warning": {
+      "value": "#dc6803",
+      "source": "Light.Background.background-warning (accent-stripe color, Warning)"
+    },
+    "--fads-sys-alert-stripe-error": {
+      "value": "#d92d20",
+      "source": "Light.Background.background-error (accent-stripe color, Error/Destructive)"
+    },
+    "--fads-sys-alert-stripe-thickness": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context w-[8px]/h-[8px] on the \"Vertical line\" accent stripe (live-verified, both the vertical default-layout and horizontal Mobile-layout orientations)"
+    },
+    "--fads-sys-alert-radius": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Radius/radius-md (live-verified — outer box corners)"
+    },
+    "--fads-sys-alert-radius-sm": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Radius/radius-sm (live-verified — dismiss-button corners)"
+    },
+    "--fads-sys-alert-padding-block": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Notification/notification-padding (live-verified)"
+    },
+    "--fads-sys-alert-padding-inline": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Notification/notification-h-padding (live-verified — Mobile layout uses the block padding value on all sides instead, see Alert.module.css)"
+    },
+    "--fads-sys-alert-gap": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Notification/notification-gap (live-verified — the outer stack gap between the header row and the actions row, both layouts)"
+    },
+    "--fads-sys-alert-header-gap": {
+      "value": "12px",
+      "source": "Figma MCP get_variable_defs Global/spacing-lg (live-verified — gap between the featured icon and the text block, default layout only)"
+    },
+    "--fads-sys-alert-icon-circle-size": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context size-[40px] on the \"Featured icon\" circle (live-verified)"
+    },
+    "--fads-sys-alert-text-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Text/text-content-gap (live-verified — gap between title and description)"
+    },
+    "--fads-sys-alert-title-font-size": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-md"
+    },
+    "--fads-sys-alert-title-line-height": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-md"
+    },
+    "--fads-sys-alert-description-font-size": {
+      "value": "14px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-sm"
+    },
+    "--fads-sys-alert-description-line-height": {
+      "value": "20px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-sm"
+    },
+    "--fads-sys-alert-actions-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Button/buttons-group-gap (live-verified, both layouts)"
+    },
+    "--fads-sys-alert-actions-padding-start": {
+      "value": "40px",
+      "source": "Figma MCP get_variable_defs Global/spacing-5xl (live-verified — default-layout Actions row indent; 0 in the Mobile layout, see Alert.module.css)"
+    },
+    "--fads-sys-alert-dismiss-size": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context size-[32px] on Button-Close (live-verified)"
+    },
+    "--fads-sys-loading-track-neutral": {
+      "value": "#f3f4f6",
+      "source": "Light.Background.background-neutral-100"
+    },
+    "--fads-sys-loading-indicator-neutral": {
+      "value": "#161616",
+      "source": "Light.Background.background-black"
+    },
+    "--fads-sys-loading-track-primary": {
+      "value": "#f3f4f6",
+      "source": "Light.Background.background-neutral-100 (Primary style's track — same neutral track color as Neutral style, live-verified via get_variable_defs on the shared component-set root)"
+    },
+    "--fads-sys-loading-indicator-primary": {
+      "value": "#1b8354",
+      "source": "Light.Background.background-primary"
+    },
+    "--fads-sys-loading-track-oncolor": {
+      "value": "rgba(255, 255, 255, 0.3)",
+      "source": "Light.Alpha.alpha-white-30"
+    },
+    "--fads-sys-loading-indicator-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Background.surface-oncolor"
+    },
+    "--fads-sys-loading-stroke-width": {
+      "value": "3px",
+      "source": "Figma MCP get_design_context — approximated proportional ring thickness (raster image export has no extractable vector stroke-width; Needs Confirmation)"
+    },
+    "--fads-sys-loading-size-xxs": {
+      "value": "20px",
+      "source": "Figma MCP get_metadata size-[20px], Size=\"xx Small\" (live-verified)"
+    },
+    "--fads-sys-loading-size-xs": {
+      "value": "24px",
+      "source": "Figma MCP get_metadata size-[24px], Size=\"x Small\" (live-verified)"
+    },
+    "--fads-sys-loading-size-sm": {
+      "value": "28px",
+      "source": "Figma MCP get_metadata size-[28px], Size=\"Small\" (live-verified)"
+    },
+    "--fads-sys-loading-size-md": {
+      "value": "32px",
+      "source": "Figma MCP get_metadata size-[32px], Size=\"Medium\" (live-verified)"
+    },
+    "--fads-sys-loading-size-lg": {
+      "value": "36px",
+      "source": "Figma MCP get_metadata size-[36px], Size=\"Large\" (live-verified)"
+    },
+    "--fads-sys-loading-size-xl": {
+      "value": "40px",
+      "source": "Figma MCP get_metadata size-[40px], Size=\"x Large\" (live-verified)"
+    },
+    "--fads-sys-loading-size-xxl": {
+      "value": "44px",
+      "source": "Figma MCP get_metadata size-[44px], Size=\"xx Large\" (live-verified)"
+    },
+    "--fads-sys-avatar-background-fallback": {
+      "value": "#f3f4f6",
+      "source": "Light.Background.background-neutral-100 (live-verified via get_variable_defs as Button/button-background-neutral-default on the Avatar node)"
+    },
+    "--fads-sys-avatar-border-color": {
+      "value": "#ffffff",
+      "source": "Light.Background.background-white (live-verified via get_variable_defs as Border/border-white on the Avatar node)"
+    },
+    "--fads-sys-avatar-icon-color": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default (live-verified via get_variable_defs)"
+    },
+    "--fads-sys-avatar-text-color": {
+      "value": "#161616",
+      "source": "Light.Text.text-default (live-verified via get_variable_defs)"
+    },
+    "--fads-sys-avatar-size-2xl": {
+      "value": "80px",
+      "source": "Figma MCP get_design_context Size=\"80px\" (live-verified; no matching value on the existing space scale, which stops at 64px)"
+    },
+    "--fads-sys-avatar-size-3xl": {
+      "value": "120px",
+      "source": "Figma MCP get_design_context Size=\"120px\" (live-verified; no matching value on the existing space scale)"
+    },
+    "--fads-sys-avatar-border-width": {
+      "value": "2px",
+      "source": "Figma MCP get_screenshot — approximated proportional white framing thickness (raster image export has no extractable vector stroke-width; Needs Confirmation)"
+    },
+    "--fads-sys-avatar-font-size-xs": {
+      "value": "10px",
+      "source": "Light.Size/Text.typo-size-text-2xs (Size=24px)"
+    },
+    "--fads-sys-avatar-line-height-xs": {
+      "value": "14px",
+      "source": "Light.Line Height/Text.line-heights-text-2xs (Size=24px)"
+    },
+    "--fads-sys-avatar-font-weight-xs": {
+      "value": "700",
+      "source": "Light.Font Wieght/font-weight-bold (Size=24px)"
+    },
+    "--fads-sys-avatar-font-size-sm": {
+      "value": "12px",
+      "source": "Light.Size/Text.typo-size-text-xs (Size=32px)"
+    },
+    "--fads-sys-avatar-line-height-sm": {
+      "value": "18px",
+      "source": "Light.Line Height/Text.line-heights-text-xs (Size=32px)"
+    },
+    "--fads-sys-avatar-font-weight-sm": {
+      "value": "600",
+      "source": "Light.Font Wieght/font-weight-semibold (Size=32px)"
+    },
+    "--fads-sys-avatar-font-size-md": {
+      "value": "14px",
+      "source": "Light.Size/Text.typo-size-text-sm (Size=40px)"
+    },
+    "--fads-sys-avatar-line-height-md": {
+      "value": "20px",
+      "source": "Light.Line Height/Text.line-heights-text-sm (Size=40px)"
+    },
+    "--fads-sys-avatar-font-weight-md": {
+      "value": "600",
+      "source": "Light.Font Wieght/font-weight-semibold (Size=40px)"
+    },
+    "--fads-sys-avatar-font-size-lg": {
+      "value": "16px",
+      "source": "Light.Size/Text.typo-size-text-md (Size=48px)"
+    },
+    "--fads-sys-avatar-line-height-lg": {
+      "value": "24px",
+      "source": "Light.Line Height/Text.line-heights-text-md (Size=48px)"
+    },
+    "--fads-sys-avatar-font-weight-lg": {
+      "value": "500",
+      "source": "Light.Font Wieght/font-weight-medium (Size=48px)"
+    },
+    "--fads-sys-avatar-font-size-xl": {
+      "value": "20px",
+      "source": "Light.Size/Text.typo-size-text-xl (Size=64px)"
+    },
+    "--fads-sys-avatar-line-height-xl": {
+      "value": "30px",
+      "source": "Light.Line Height/Text.line-heights-text-xl (Size=64px)"
+    },
+    "--fads-sys-avatar-font-weight-xl": {
+      "value": "500",
+      "source": "Light.Font Wieght/font-weight-medium (Size=64px)"
+    },
+    "--fads-sys-avatar-font-size-2xl": {
+      "value": "30px",
+      "source": "Light.Size/Display.typo-size-display-sm (Size=80px)"
+    },
+    "--fads-sys-avatar-line-height-2xl": {
+      "value": "38px",
+      "source": "Light.Line Height/Display.line-heights-display-sm (Size=80px)"
+    },
+    "--fads-sys-avatar-font-weight-2xl": {
+      "value": "400",
+      "source": "Light.Font Wieght/font-weight-regular (Size=80px)"
+    },
+    "--fads-sys-avatar-font-size-3xl": {
+      "value": "36px",
+      "source": "Light.Size/Display.typo-size-display-md (Size=120px)"
+    },
+    "--fads-sys-avatar-line-height-3xl": {
+      "value": "44px",
+      "source": "Light.Line Height/Display.line-heights-display-md (Size=120px)"
+    },
+    "--fads-sys-avatar-font-weight-3xl": {
+      "value": "400",
+      "source": "Light.Font Wieght/font-weight-regular (Size=120px)"
+    },
+    "--fads-sys-tooltip-background-light": {
+      "value": "#ffffff",
+      "source": "Light.Tooltip.tooltip-background-light"
+    },
+    "--fads-sys-tooltip-background-dark": {
+      "value": "#1f2a37",
+      "source": "Light.Tooltip.tooltip-background-dark"
+    },
+    "--fads-sys-tooltip-text-heading-light": {
+      "value": "#1f2a37",
+      "source": "Light.Tooltip.tooltip-text-heading-light"
+    },
+    "--fads-sys-tooltip-text-heading-dark": {
+      "value": "#f9fafb",
+      "source": "Light.Tooltip.tooltip-text-heading-dark"
+    },
+    "--fads-sys-tooltip-text-paragraph-light": {
+      "value": "#384250",
+      "source": "Light.Tooltip.tooltip-text-paragraph-light"
+    },
+    "--fads-sys-tooltip-text-paragraph-dark": {
+      "value": "#f3f4f6",
+      "source": "Light.Tooltip.tooltip-text-paragraph-dark"
+    },
+    "--fads-sys-tooltip-icon-color-light": {
+      "value": "#384250",
+      "source": "Light.Icon.icon-neutral (live-verified as the Tooltip FeedbackIcon color in light mode)"
+    },
+    "--fads-sys-tooltip-icon-color-dark": {
+      "value": "#ffffff",
+      "source": "Light.Icon.icon-oncolor (live-verified as the Tooltip FeedbackIcon color in dark mode)"
+    },
+    "--fads-sys-tooltip-min-width": {
+      "value": "160px",
+      "source": "Figma MCP get_design_context min-w-[160px] (live-verified)"
+    },
+    "--fads-sys-tooltip-max-width": {
+      "value": "240px",
+      "source": "Figma MCP get_design_context max-w-[240px] (live-verified; was 16rem/256px in the pre-existing implementation)"
+    },
+    "--fads-sys-tooltip-beak-size": {
+      "value": "8px",
+      "source": "Figma MCP get_screenshot — a rotated-square diamond beak, same construction technique already established for TrailingIcon (docs/FIGMA_TRAILING_ICON_SPECIFICATION.md), independently sized here at the live-verified 28x6px beak asset's approximate visual weight"
+    },
+    "--fads-sys-tooltip-shadow": {
+      "value": "0 4px 6px -2px rgba(16, 24, 40, 0.03), 0 12px 16px -4px rgba(16, 24, 40, 0.08)",
+      "source": "Light.Shadows.shadow-lg (live-verified via get_variable_defs: two DROP_SHADOW effects, offset (0,4)/radius 6/spread -2/#10182808 and offset (0,12)/radius 16/spread -4/#10182814)"
+    },
+    "--fads-sys-steps-completed": {
+      "value": "#1b8354",
+      "source": "Light.Stepper.stepper-button-completed"
+    },
+    "--fads-sys-steps-completed-hovered": {
+      "value": "#166a45",
+      "source": "Light.Stepper.stepper-button-completed-hovered"
+    },
+    "--fads-sys-steps-completed-icon": {
+      "value": "#ffffff",
+      "source": "Light.Icon.icon-oncolor (checkmark on the filled Completed circle)"
+    },
+    "--fads-sys-steps-current": {
+      "value": "#1b8354",
+      "source": "Light.Stepper.stepper-button-current"
+    },
+    "--fads-sys-steps-upcoming": {
+      "value": "#d2d6db",
+      "source": "Light.Stepper.stepper-button-upcomming"
+    },
+    "--fads-sys-steps-text-primary": {
+      "value": "#1f2a37",
+      "source": "Light.Stepper.stepper-text-primary"
+    },
+    "--fads-sys-steps-text-secondary": {
+      "value": "#384250",
+      "source": "Light.Stepper.stepper-text-secondary"
+    },
+    "--fads-sys-steps-text-tertiary": {
+      "value": "#6c737f",
+      "source": "Light.Stepper.stepper-text-tertiary (used for the FADS-authored optional-label suffix)"
+    },
+    "--fads-sys-steps-disabled": {
+      "value": "#9da4ae",
+      "source": "Reused from the existing cross-cutting Light.Global.text-default-disabled — no official Figma Disabled state exists for this component (Needs Confirmation)"
+    },
+    "--fads-sys-steps-error": {
+      "value": "#b42318",
+      "source": "Reused from the existing cross-cutting Light.Border.border-error — no official Figma Error state exists for this component (Needs Confirmation)"
+    },
+    "--fads-sys-steps-marker-size": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context size-[32px] on the Circle (live-verified)"
+    },
+    "--fads-sys-steps-marker-border-width": {
+      "value": "2px",
+      "source": "Figma MCP get_design_context border-2 on the Current/Upcoming Circle outline (live-verified)"
+    },
+    "--fads-sys-steps-marker-font-size": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-md (step-number text)"
+    },
+    "--fads-sys-steps-connector-thickness": {
+      "value": "2px",
+      "source": "Figma MCP get_design_context h-[2px]/w-[2px] on the connector Line (live-verified, both orientations)"
+    },
+    "--fads-sys-steps-label-font-size": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-md"
+    },
+    "--fads-sys-steps-label-line-height": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-md"
+    },
+    "--fads-sys-steps-description-font-size": {
+      "value": "14px",
+      "source": "Figma MCP get_variable_defs Size/Text/typo-size-text-sm"
+    },
+    "--fads-sys-steps-description-line-height": {
+      "value": "20px",
+      "source": "Figma MCP get_variable_defs Line Height/Text/line-heights-text-sm"
+    },
+    "--fads-sys-steps-text-content-gap": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Spacing/Progress Indicator/progress-text-content-gap (live-verified — step-name to description gap)"
+    },
+    "--fads-sys-steps-text-side-padding": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Progress Indicator/progress-text-content-side-padding (live-verified)"
+    },
+    "--fads-sys-steps-gap": {
+      "value": "0px",
+      "source": "Figma MCP get_design_context — steps are laid out edge-to-edge with the connector filling all space between markers (no separate inter-step gap in the extracted structure); live-verified as zero, not assumed"
+    },
+    "--fads-sys-steps-text-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Progress Indicator/progress-indicator-gap (live-verified — marker-row to text-block gap)"
+    },
+    "--fads-sys-radius-full": {
+      "value": "9999px",
+      "source": "Figma MCP get_variable_defs radius-full (live-verified identically on both Table and Pagination component-set roots)"
+    },
+    "--fads-sys-tabs-gap": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Tab/tab-button-gap (live-verified, all sizes)"
+    },
+    "--fads-sys-tabs-md-padding-inline": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Tab/horizontal-tab-md-button-h-padding"
+    },
+    "--fads-sys-tabs-md-padding-block": {
+      "value": "12px",
+      "source": "Figma MCP get_variable_defs Tab/horizontal-tab-md-button-v-padding"
+    },
+    "--fads-sys-tabs-sm-padding-inline": {
+      "value": "12px",
+      "source": "Figma MCP get_variable_defs Tab/horizontal-tab-sm-button-h-padding"
+    },
+    "--fads-sys-tabs-sm-padding-block": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Tab/horizontal-tab-sm-button-v-padding"
+    },
+    "--fads-sys-tabs-lg-padding": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context p-[16px] uniform on the Large variant — reuses the same raw value as Tab/horizontal-tab-md-button-h-padding (live-verified, not a typo)"
+    },
+    "--fads-sys-tabs-indicator-height": {
+      "value": "3px",
+      "source": "Figma MCP get_design_context h-[3px] on the Selector (live-verified, every size)"
+    },
+    "--fads-sys-tabs-indicator-color": {
+      "value": "#1b8354",
+      "source": "Light.Border.border-primary (selected indicator — Default/Hovered/Pressed/Focused)"
+    },
+    "--fads-sys-tabs-indicator-color-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.border-disabled"
+    },
+    "--fads-sys-tabs-indicator-color-preview": {
+      "value": "#161616",
+      "source": "Light.Border.border-black (unselected-tab preview indicator shown on Hover/Pressed — live-verified, not the green selected color)"
+    },
+    "--fads-sys-tabs-text-color-selected": {
+      "value": "#161616",
+      "source": "Light.Text.text-default"
+    },
+    "--fads-sys-tabs-text-color-unselected": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph"
+    },
+    "--fads-sys-tabs-text-color-disabled": {
+      "value": "#9da4ae",
+      "source": "Light.Global.text-default-disabled"
+    },
+    "--fads-sys-tabs-background-hover": {
+      "value": "#f3f4f6",
+      "source": "Light.Button.button-background-neutral-hovered (unselected tab only)"
+    },
+    "--fads-sys-tabs-background-pressed": {
+      "value": "#e5e7eb",
+      "source": "Light.Button.button-background-neutral-pressed (unselected tab only)"
+    },
+    "--fads-sys-tabs-focus-ring-inner-width": {
+      "value": "3px",
+      "source": "Figma MCP get_design_context border-3 on the Focused variant (live-verified — same double-ring construction already Approved on Button)"
+    },
+    "--fads-sys-tabs-focus-ring-inner-color": {
+      "value": "#161616",
+      "source": "Light.Border.border-black"
+    },
+    "--fads-sys-tabs-focus-ring-inner-radius": {
+      "value": "2px",
+      "source": "Light.Radius.radius-xs (live-verified via get_variable_defs — no existing shared --fads-sys-radius-* token matches 2px, same precedent as Checkbox/Switch)"
+    },
+    "--fads-sys-tabs-focus-ring-outer-width": {
+      "value": "1px",
+      "source": "Figma MCP get_design_context border on the \"Focus outline\" overlay (live-verified)"
+    },
+    "--fads-sys-tabs-focus-ring-outer-color": {
+      "value": "#ffffff",
+      "source": "Light.Border.border-white"
+    },
+    "--fads-sys-tabs-focus-ring-outer-inset": {
+      "value": "-1px",
+      "source": "Figma MCP get_design_context inset-[-1px] on the \"Focus outline\" overlay (live-verified)"
+    },
+    "--fads-sys-tabs-more-trigger-size": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context size-[32px] on the moreTab \"Button\" sub-part (live-verified, Medium only — see spec §5 Needs Confirmation)"
+    },
+    "--fads-sys-tabs-list-divider-color": {
+      "value": "#d2d6db",
+      "source": "Light.Border.border-neutral-primary"
+    },
+    "--fads-sys-tabs-list-divider-height": {
+      "value": "3px",
+      "source": "Figma MCP get_design_context h-[3px] on the Tab List Divider (live-verified)"
+    },
+    "--fads-sys-modal-padding": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Model/modal-padding (live-verified, no exact match on the generic 4/8/16/32px space scale)"
+    },
+    "--fads-sys-modal-shadow": {
+      "value": "0 32px 64px -12px rgba(16, 24, 40, 0.14)",
+      "source": "Light.Shadows.shadow-3xl (live-verified via get_variable_defs: DROP_SHADOW offset (0,32)/radius 64/spread -12/#10182824)"
+    },
+    "--fads-sys-modal-width": {
+      "value": "600px",
+      "source": "Figma MCP get_design_context w-[600px] on the Mobile=False variant (live-verified; was 30rem/480px, unverified, in the pre-existing implementation)"
+    },
+    "--fads-sys-modal-background": {
+      "value": "#ffffff",
+      "source": "Light.Background.background-white (pure white — the pre-existing implementation used --fads-sys-color-surface-raised, which resolves to #fcfcfd/neutral-25, a subtly different off-white)"
+    },
+    "--fads-sys-modal-title-color": {
+      "value": "#1f2a37",
+      "source": "Light.Text.text-display"
+    },
+    "--fads-sys-modal-body-color": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph (was the generic --fads-sys-color-text-default in the pre-existing implementation)"
+    },
+    "--fads-sys-tabs-vertical-sm-padding-inline": {
+      "value": "6px",
+      "source": "Figma MCP get_variable_defs Tab/vertical-tab-sm-button-h-padding (live-verified)"
+    },
+    "--fads-sys-tabs-vertical-sm-padding-block": {
+      "value": "2px",
+      "source": "Figma MCP get_variable_defs Tab/vertical-tab-sm-button-v-padding (live-verified)"
+    },
+    "--fads-sys-tabs-vertical-md-padding-inline": {
+      "value": "12px",
+      "source": "Figma MCP get_variable_defs Tab/vertical-tab-md-button-h-padding (live-verified)"
+    },
+    "--fads-sys-tabs-vertical-md-padding-block": {
+      "value": "6px",
+      "source": "Figma MCP get_variable_defs Tab/vertical-tab-md-button-v-padding (live-verified)"
+    },
+    "--fads-sys-tabs-vertical-lg-padding-inline": {
+      "value": "12px",
+      "source": "Figma MCP get_design_context px-[12px] on the Large variant — reuses the same raw value as Tab/vertical-tab-md-button-h-padding (live-verified, not a typo)"
+    },
+    "--fads-sys-tabs-vertical-lg-padding-block": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context py-[8px] on the Large variant (live-verified)"
+    },
+    "--fads-sys-tabs-vertical-indicator-inset-sm": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs spacing-xs (Small size indicator vertical inset, live-verified)"
+    },
+    "--fads-sys-tabs-vertical-indicator-inset-md": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs spacing-md (Medium and Large size indicator vertical inset, live-verified identical for both)"
+    },
+    "--fads-sys-toast-gap": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Notification/notification-gap"
+    },
+    "--fads-sys-toast-padding-inline": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Notification/notification-toast-desktop-h-padding"
+    },
+    "--fads-sys-toast-padding-inline-mobile": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Notification/notification-toast-mobile-h-padding"
+    },
+    "--fads-sys-toast-padding-block": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Notification/notification-toast-v-padding"
+    },
+    "--fads-sys-toast-radius": {
+      "value": "8px",
+      "source": "Light.radius-md (live-verified on the Toast root)"
+    },
+    "--fads-sys-toast-background": {
+      "value": "#ffffff",
+      "source": "Light.Background.background-notification-white"
+    },
+    "--fads-sys-toast-shadow": {
+      "value": "0 32px 64px -12px rgba(16, 24, 40, 0.14)",
+      "source": "Light.Shadows.shadow-3xl (live-verified via get_variable_defs — same DROP_SHADOW effect independently sourced for Modal)"
+    },
+    "--fads-sys-toast-width": {
+      "value": "484px",
+      "source": "Figma MCP get_design_context w-[484px] on the Mobile=False variant (live-verified)"
+    },
+    "--fads-sys-toast-width-mobile": {
+      "value": "343px",
+      "source": "Figma MCP get_design_context w-[343px] on the Mobile=True variant (live-verified)"
+    },
+    "--fads-sys-toast-header-gap": {
+      "value": "12px",
+      "source": "Figma MCP get_variable_defs Global/spacing-lg (icon-to-text gap in the title row)"
+    },
+    "--fads-sys-toast-text-gap": {
+      "value": "4px",
+      "source": "Figma MCP get_variable_defs Global/spacing-xs (title-to-helper-text gap)"
+    },
+    "--fads-sys-toast-title-color": {
+      "value": "#1f2a37",
+      "source": "Light.Text.text-display"
+    },
+    "--fads-sys-toast-description-color": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph"
+    },
+    "--fads-sys-toast-icon-circle-size": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context size-[40px] on the Featured icon (live-verified, every tone)"
+    },
+    "--fads-sys-toast-icon-bg-neutral": {
+      "value": "#f9fafb",
+      "source": "Light.Background.background-neutral-50"
+    },
+    "--fads-sys-toast-icon-neutral": {
+      "value": "#161616",
+      "source": "Light.Icon.icon-default"
+    },
+    "--fads-sys-toast-icon-bg-info": {
+      "value": "#eff8ff",
+      "source": "Light.Icon.background-info-light"
+    },
+    "--fads-sys-toast-icon-info": {
+      "value": "#175cd3",
+      "source": "Light.Icon.icon-info"
+    },
+    "--fads-sys-toast-icon-bg-success": {
+      "value": "#ecfdf3",
+      "source": "Light.Icon.background-success-light"
+    },
+    "--fads-sys-toast-icon-success": {
+      "value": "#067647",
+      "source": "Light.Icon.icon-success"
+    },
+    "--fads-sys-toast-icon-bg-warning": {
+      "value": "#fffaeb",
+      "source": "Light.Icon.background-warning-light"
+    },
+    "--fads-sys-toast-icon-warning": {
+      "value": "#b54708",
+      "source": "Light.Icon.icon-warning"
+    },
+    "--fads-sys-toast-icon-bg-error": {
+      "value": "#fef3f2",
+      "source": "Light.Icon.background-error-light (live-sampled directly on the Critical/Error node)"
+    },
+    "--fads-sys-toast-actions-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Button/button-menu-gap"
+    },
+    "--fads-sys-toast-actions-padding-start": {
+      "value": "40px",
+      "source": "Figma MCP get_variable_defs Global/spacing-5xl (live-verified — does not exactly align under the icon+gap text block, reproduced as sampled, see spec §5)"
+    },
+    "--fads-sys-toast-stripe-thickness": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context w-[8px]/h-[8px] on the \"Vertical line\" (live-verified, both orientations)"
+    },
+    "--fads-sys-toast-stripe-neutral": {
+      "value": "#e5e7eb",
+      "source": "Light.Background.background-neutral-200"
+    },
+    "--fads-sys-toast-stripe-info": {
+      "value": "#1570ef",
+      "source": "Light.Background.background-info"
+    },
+    "--fads-sys-toast-stripe-success": {
+      "value": "#079455",
+      "source": "Light.Background.background-success (live-sampled directly on the Success node)"
+    },
+    "--fads-sys-toast-stripe-warning": {
+      "value": "#dc6803",
+      "source": "Light.Background.background-warning"
+    },
+    "--fads-sys-toast-stripe-error": {
+      "value": "#d92d20",
+      "source": "Light.Background.background-error (live-sampled directly on the Critical/Error node)"
+    },
+    "--fads-sys-notification-gap": {
+      "value": "16px",
+      "source": "Figma MCP get_variable_defs Notification/notification-gap"
+    },
+    "--fads-sys-notification-padding-inline": {
+      "value": "24px",
+      "source": "Figma MCP get_variable_defs Notification/notification-h-padding + Global/spacing-3xl (live-verified identical 24px value, applied twice — container and inner row — see spec §5)"
+    },
+    "--fads-sys-notification-padding-block": {
+      "value": "8px",
+      "source": "Figma MCP get_variable_defs Notification/notification-alert-v-padding"
+    },
+    "--fads-sys-notification-radius": {
+      "value": "2px",
+      "source": "Light.Radius.radius-xs (live-verified on the Notification root)"
+    },
+    "--fads-sys-notification-icon-size": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context size-[24px] on the FeedbackIcon (live-verified, every tone)"
+    },
+    "--fads-sys-notification-icon-oncolor": {
+      "value": "#ffffff",
+      "source": "Light.Icon.icon-oncolor (white glyph on the solid tone-colored icon circle)"
+    },
+    "--fads-sys-notification-tint-neutral": {
+      "value": "#f9fafb",
+      "source": "Light.Background.background-neutral-50 (live-sampled directly on the Neutral node)"
+    },
+    "--fads-sys-notification-text-neutral": {
+      "value": "#384250",
+      "source": "Light.Text.text-primary-paragraph (no dedicated text-neutral token exists for this component, live-sampled directly on the Neutral node)"
+    },
+    "--fads-sys-notification-solid-neutral": {
+      "value": "#161616",
+      "source": "Light.Background.background-black (live-sampled directly on the Neutral node — the only neutral solid-dark token available)"
+    },
+    "--fads-sys-notification-tint-info": {
+      "value": "#eff8ff",
+      "source": "Light.Background.background-info-50"
+    },
+    "--fads-sys-notification-text-info": {
+      "value": "#175cd3",
+      "source": "Light.Text.text-info"
+    },
+    "--fads-sys-notification-solid-info": {
+      "value": "#1570ef",
+      "source": "Light.Background.background-info"
+    },
+    "--fads-sys-notification-tint-success": {
+      "value": "#ecfdf3",
+      "source": "Light.Background.background-success-50"
+    },
+    "--fads-sys-notification-text-success": {
+      "value": "#067647",
+      "source": "Light.Text.text-success"
+    },
+    "--fads-sys-notification-solid-success": {
+      "value": "#079455",
+      "source": "Light.Background.background-success"
+    },
+    "--fads-sys-notification-tint-warning": {
+      "value": "#fffaeb",
+      "source": "Light.Background.background-warning-50"
+    },
+    "--fads-sys-notification-text-warning": {
+      "value": "#b54708",
+      "source": "Light.Text.text-warning"
+    },
+    "--fads-sys-notification-solid-warning": {
+      "value": "#dc6803",
+      "source": "Light.Background.background-warning"
+    },
+    "--fads-sys-notification-tint-error": {
+      "value": "#fef3f2",
+      "source": "Light.Background.background-error-50 (live-sampled directly on the Critical/Error node)"
+    },
+    "--fads-sys-notification-text-error": {
+      "value": "#b42318",
+      "source": "Light.Text.text-error (live-sampled directly on the Critical/Error node)"
+    },
+    "--fads-sys-notification-solid-error": {
+      "value": "#d92d20",
+      "source": "Light.Background.background-error (live-sampled directly on the Critical/Error node)"
+    },
+    "--fads-sys-tocitem-padding-inline-start": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context spacing-xl"
+    },
+    "--fads-sys-tocitem-padding-inline-end": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context spacing-md"
+    },
+    "--fads-sys-tocitem-padding-block": {
+      "value": "6px",
+      "source": "Figma MCP get_design_context spacing-sm"
+    },
+    "--fads-sys-tocitem-radius": {
+      "value": "2px",
+      "source": "Figma MCP get_design_context radius-xs"
+    },
+    "--fads-sys-tocitem-indicator-width": {
+      "value": "3px",
+      "source": "Figma MCP get_design_context Selector width"
+    },
+    "--fads-sys-tocitem-nesting-slot": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context Nesteing indicator width"
+    },
+    "--fads-sys-tocitem-nesting-bar-width": {
+      "value": "2px",
+      "source": "Figma MCP get_design_context Selector width"
+    },
+    "--fads-sys-tocitem-nesting-bar-color": {
+      "value": "var(--fads-ref-neutral-300)",
+      "source": "Figma MCP get_design_context background-neutral-300 #d2d6db"
+    },
+    "--fads-sys-tocitem-text-selected": {
+      "value": "#161616",
+      "source": "Figma MCP get_design_context text/text-default"
+    },
+    "--fads-sys-tocitem-text-unselected": {
+      "value": "var(--fads-ref-neutral-700)",
+      "source": "Figma MCP get_design_context text/text-primary-paragraph #384250"
+    },
+    "--fads-sys-tocitem-indicator-selected": {
+      "value": "var(--fads-ref-primary-600)",
+      "source": "Figma MCP get_design_context background/background-primary #1b8354"
+    },
+    "--fads-sys-tocitem-indicator-hover": {
+      "value": "var(--fads-ref-neutral-400)",
+      "source": "Figma MCP get_design_context background-neutral-400 #9da4ae"
+    },
+    "--fads-sys-tocitem-indicator-active": {
+      "value": "var(--fads-ref-neutral-800)",
+      "source": "Figma MCP get_design_context background-neutral-800 #1f2a37"
+    },
+    "--fads-sys-tocitem-bg-hover": {
+      "value": "var(--fads-ref-neutral-100)",
+      "source": "Figma MCP get_design_context button-background-neutral-hovered #f3f4f6"
+    },
+    "--fads-sys-tocitem-bg-active": {
+      "value": "var(--fads-ref-neutral-200)",
+      "source": "Figma MCP get_design_context button-background-neutral-pressed #e5e7eb"
+    },
+    "--fads-sys-tocitem-focus-ring": {
+      "value": "#161616",
+      "source": "Figma MCP get_design_context border/border-black"
+    },
+    "--fads-sys-toc-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context outer gap"
+    },
+    "--fads-sys-toc-heading-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context Page Name gap"
+    },
+    "--fads-sys-toc-eyebrow-color": {
+      "value": "var(--fads-ref-neutral-700)",
+      "source": "Figma MCP get_design_context text/text-primary-paragraph #384250"
+    },
+    "--fads-sys-toc-title-color": {
+      "value": "var(--fads-ref-neutral-800)",
+      "source": "Figma MCP get_design_context text/text-display #1f2a37"
+    },
+    "--fads-sys-toc-title-font-size": {
+      "value": "20px",
+      "source": "Figma MCP get_design_context typo-size-text-xl (no existing xl step on the shared typography scale)"
+    },
+    "--fads-sys-toc-title-line-height": {
+      "value": "30px",
+      "source": "Figma MCP get_design_context line-heights-text-xl"
+    },
+    "--fads-sys-headersubmenuitem-gap": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context outer gap"
+    },
+    "--fads-sys-headersubmenuitem-padding-inline": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context spacing-xl"
+    },
+    "--fads-sys-headersubmenuitem-padding-block": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context spacing-md"
+    },
+    "--fads-sys-headersubmenuitem-content-gap": {
+      "value": "12px",
+      "source": "Figma MCP get_design_context spacing-lg"
+    },
+    "--fads-sys-headersubmenuitem-row-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context spacing-md"
+    },
+    "--fads-sys-headersubmenuitem-text": {
+      "value": "var(--fads-ref-neutral-800)",
+      "source": "Figma MCP get_design_context text/text-display #1f2a37"
+    },
+    "--fads-sys-headersubmenuitem-text-oncolor": {
+      "value": "#ffffff",
+      "source": "Figma MCP get_design_context text/text-oncolor-primary"
+    },
+    "--fads-sys-headersubmenuitem-helper-text": {
+      "value": "var(--fads-ref-neutral-700)",
+      "source": "Figma MCP get_design_context text/text-primary-paragraph #384250"
+    },
+    "--fads-sys-headersubmenuitem-bg-hover": {
+      "value": "var(--fads-ref-neutral-100)",
+      "source": "Figma MCP get_design_context button-background-neutral-hovered #f3f4f6"
+    },
+    "--fads-sys-headersubmenuitem-bg-active": {
+      "value": "var(--fads-ref-neutral-200)",
+      "source": "Figma MCP get_design_context button-background-neutral-pressed #e5e7eb"
+    },
+    "--fads-sys-headersubmenuitem-bg-hover-oncolor": {
+      "value": "rgba(255, 255, 255, 0.2)",
+      "source": "Figma MCP get_design_context button-background-transparent-hovered"
+    },
+    "--fads-sys-headersubmenuitem-bg-active-oncolor": {
+      "value": "rgba(255, 255, 255, 0.4)",
+      "source": "Figma MCP get_design_context button-background-transparent-pressed"
+    },
+    "--fads-sys-headersubmenuitem-focus-ring": {
+      "value": "#161616",
+      "source": "Figma MCP get_design_context border/border-black"
+    },
+    "--fads-sys-headersubmenuitem-focus-ring-oncolor": {
+      "value": "#ffffff",
+      "source": "Figma MCP get_design_context border/border-white"
+    },
+    "--fads-sys-headersubmenuitem-border": {
+      "value": "var(--fads-ref-neutral-300)",
+      "source": "VISUALLY APPROXIMATED via get_screenshot on node 30150:148184 (Default state) — a real 1px card border is visible on every non-focused state (confirmed present in Default too, not just Hovered/Pressed) but neither get_design_context nor get_variable_defs surfaced its exact bound value on this node; matched to this codebase's own existing generic \"subtle card border\" token value (#d2d6db, already used identically by Card/Button). NEEDS CONFIRMATION."
+    },
+    "--fads-sys-headersubmenuitem-border-oncolor": {
+      "value": "rgba(255, 255, 255, 0.24)",
+      "source": "VISUALLY APPROXIMATED via get_screenshot on node 30150:148248 (Default+onColor) — same extraction gap as the light-mode border; matched to the same translucent-white family already live-verified for the hover (0.2)/press (0.4) on-color backgrounds. NEEDS CONFIRMATION."
+    },
+    "--fads-sys-navheadersubmenu-bg": {
+      "value": "#ffffff",
+      "source": "Figma MCP get_design_context background-menu"
+    },
+    "--fads-sys-navheadersubmenu-bg-oncolor": {
+      "value": "#074d31",
+      "source": "Figma MCP get_design_context background-sa-flag (distinct from button-primary #1b8354)"
+    },
+    "--fads-sys-navheadersubmenu-shadow": {
+      "value": "0px 12px 16px -4px rgba(16, 24, 40, 0.08), 0px 4px 6px -2px rgba(16, 24, 40, 0.03)",
+      "source": "Figma MCP get_design_context Shadows/shadow-lg"
+    },
+    "--fads-sys-navheadersubmenu-padding-inline": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context spacing-4xl"
+    },
+    "--fads-sys-navheadersubmenu-padding-block": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context spacing-4xl"
+    },
+    "--fads-sys-navheadersubmenu-content-max-width": {
+      "value": "1280px",
+      "source": "Figma MCP get_design_context Content max-width"
+    },
+    "--fads-sys-navheadersubmenu-column-gap": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context spacing-3xl"
+    },
+    "--fads-sys-navheadersubmenu-column-min-width": {
+      "value": "240px",
+      "source": "Figma MCP get_design_context Section col min-width"
+    },
+    "--fads-sys-navheadersubmenu-column-inner-gap": {
+      "value": "12px",
+      "source": "Figma MCP get_design_context spacing-lg"
+    },
+    "--fads-sys-navheadersubmenu-nav-gap": {
+      "value": "4px",
+      "source": "Figma MCP get_design_context spacing-xs"
+    },
+    "--fads-sys-navheadersubmenu-label-padding-inline": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context spacing-xl"
+    },
+    "--fads-sys-navheadersubmenu-label-color": {
+      "value": "var(--fads-ref-primary-600)",
+      "source": "Figma MCP get_design_context text/text-primary #1b8354"
+    },
+    "--fads-sys-navheadersubmenu-label-color-oncolor": {
+      "value": "#ffffff",
+      "source": "Figma MCP get_design_context text/text-oncolor-primary"
+    },
+    "--fads-sys-navheadersubmenu-label-font-size": {
+      "value": "18px",
+      "source": "Figma MCP get_design_context typo-size-text-lg (Figma's own \"Ig\" token name)"
+    },
+    "--fads-sys-navheadersubmenu-label-line-height": {
+      "value": "28px",
+      "source": "Figma MCP get_design_context line-heights-text-lg"
+    },
+    "--fads-sys-itemicon-size": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context icon size"
+    },
+    "--fads-sys-itemicon-contained-padding": {
+      "value": "12px",
+      "source": "Figma MCP get_design_context p-[12px]"
+    },
+    "--fads-sys-itemicon-color": {
+      "value": "#161616",
+      "source": "Figma MCP get_variable_defs Icon/icon-default (independently-sourced literal, matches many other components' own #161616 tokens)"
+    },
+    "--fads-sys-itemicon-color-oncolor": {
+      "value": "#ffffff",
+      "source": "Figma MCP get_design_context text-oncolor-primary convention (same white switch already verified for HeaderSubMenuItem)"
+    },
+    "--fads-sys-itemicon-contained-bg": {
+      "value": "var(--fads-ref-primary-50)",
+      "source": "Figma MCP get_design_context background-primary-50 #f3fcf6"
+    },
+    "--fads-sys-itemicon-contained-bg-oncolor": {
+      "value": "rgba(255, 255, 255, 0.1)",
+      "source": "Figma MCP get_design_context alpha-white-10"
+    },
+    "--fads-sys-secondnavheader-height": {
+      "value": "40px",
+      "source": "Figma MCP get_design_context bar height"
+    },
+    "--fads-sys-secondnavheader-padding-inline": {
+      "value": "32px",
+      "source": "Figma MCP get_design_context spacing-4xl"
+    },
+    "--fads-sys-secondnavheader-items-gap": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context spacing-xl"
+    },
+    "--fads-sys-secondnavheader-item-gap": {
+      "value": "4px",
+      "source": "Figma MCP get_design_context spacing-xs"
+    },
+    "--fads-sys-secondnavheader-actions-gap": {
+      "value": "6px",
+      "source": "Figma MCP get_design_context spacing-sm"
+    },
+    "--fads-sys-secondnavheader-icon-size": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context icon size"
+    },
+    "--fads-sys-secondnavheader-bg-gray": {
+      "value": "var(--fads-ref-neutral-100)",
+      "source": "Figma MCP get_design_context background-neutral-100 #f3f4f6"
+    },
+    "--fads-sys-secondnavheader-bg-primary": {
+      "value": "var(--fads-ref-primary-600)",
+      "source": "Figma MCP get_design_context background-primary #1b8354"
+    },
+    "--fads-sys-secondnavheader-text-gray": {
+      "value": "var(--fads-ref-neutral-700)",
+      "source": "Figma MCP get_design_context text/text-primary-paragraph #384250"
+    },
+    "--fads-sys-secondnavheader-text-primary": {
+      "value": "#ffffff",
+      "source": "Figma MCP get_design_context text/text-oncolor-primary"
+    },
+    "--fads-sys-secondnavheader-divider-gray": {
+      "value": "var(--fads-ref-neutral-300)",
+      "source": "Figma MCP get_design_context border/border-neutral-primary #d2d6db"
+    },
+    "--fads-sys-secondnavheader-divider-primary": {
+      "value": "rgba(255, 255, 255, 0.3)",
+      "source": "Figma MCP get_design_context alpha-white-30"
+    },
+    "--fads-sys-listitem-gap": {
+      "value": "8px",
+      "source": "Figma MCP get_design_context spacing-md"
+    },
+    "--fads-sys-listitem-indent-level2": {
+      "value": "24px",
+      "source": "Figma MCP get_design_context spacing-3xl"
+    },
+    "--fads-sys-listitem-icon-size": {
+      "value": "16px",
+      "source": "Figma MCP get_design_context Icon size"
+    },
+    "--fads-sys-listitem-text-primary": {
+      "value": "var(--fads-ref-primary-600)",
+      "source": "Figma MCP get_design_context text/text-primary #1b8354"
+    },
+    "--fads-sys-listitem-text-neutral": {
+      "value": "#161616",
+      "source": "Figma MCP get_design_context text/text-default"
+    },
+    "--fads-sys-listitem-text-oncolor": {
+      "value": "#ffffff",
+      "source": "Figma MCP get_design_context text/text-oncolor-primary"
+    },
+    "--fads-sys-list-gap": {
+      "value": "0px",
+      "source": "Figma MCP get_design_context inter-item gap (confirmed zero)"
+    },
+    "--fads-ref-space-0": {
+      "value": "0",
+      "source": "Spacing.0px"
+    },
+    "--fads-ref-space-1": {
+      "value": "0.25rem",
+      "source": "Spacing.4px"
+    },
+    "--fads-ref-space-2": {
+      "value": "0.5rem",
+      "source": "Spacing.8px"
+    },
+    "--fads-ref-space-3": {
+      "value": "0.75rem",
+      "source": "Spacing.12px"
+    },
+    "--fads-ref-space-4": {
+      "value": "1rem",
+      "source": "Spacing.16px"
+    },
+    "--fads-ref-space-5": {
+      "value": "1.5rem",
+      "source": "Spacing.24px"
+    },
+    "--fads-ref-space-6": {
+      "value": "2rem",
+      "source": "Spacing.32px"
+    },
+    "--fads-ref-space-7": {
+      "value": "2.5rem",
+      "source": "Spacing.40px"
+    },
+    "--fads-ref-space-8": {
+      "value": "3rem",
+      "source": "Spacing.48px"
+    },
+    "--fads-ref-space-9": {
+      "value": "4rem",
+      "source": "Spacing.64px"
+    },
+    "--fads-ref-radius-sm": {
+      "value": "4px",
+      "source": "Radius.4px"
+    },
+    "--fads-ref-radius-md": {
+      "value": "8px",
+      "source": "Radius.8px"
+    },
+    "--fads-ref-radius-lg": {
+      "value": "16px",
+      "source": "Radius.16px"
+    },
+    "--fads-ref-radius-pill": {
+      "value": "9999px",
+      "source": "Radius.9999px"
+    },
+    "--fads-ref-font-family-base": {
+      "value": "'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif",
+      "source": "Typography.Font Family.font-family-display"
+    },
+    "--fads-ref-font-weight-regular": {
+      "value": "400",
+      "source": "Typography.Font Weight.font-weight-regular"
+    },
+    "--fads-ref-font-weight-medium": {
+      "value": "500",
+      "source": "Typography.Font Weight.font-weight-medium"
+    },
+    "--fads-ref-font-weight-semibold": {
+      "value": "600",
+      "source": "Typography.Font Weight.font-weight-semibold"
+    },
+    "--fads-ref-font-weight-bold": {
+      "value": "700",
+      "source": "Typography.Font Weight.font-weight-bold"
+    },
+    "--fads-ref-font-size-2xs": {
+      "value": "0.625rem",
+      "source": "Typography.Size.text-size-10"
+    },
+    "--fads-ref-font-size-xs": {
+      "value": "0.75rem",
+      "source": "Typography.Size.text-size-12"
+    },
+    "--fads-ref-font-size-sm": {
+      "value": "0.875rem",
+      "source": "Typography.Size.text-size-14"
+    },
+    "--fads-ref-font-size-md": {
+      "value": "1rem",
+      "source": "Typography.Size.text-size-16"
+    },
+    "--fads-ref-font-size-lg": {
+      "value": "1.125rem",
+      "source": "Typography.Size.text-size-18"
+    },
+    "--fads-ref-font-size-xl": {
+      "value": "1.5rem",
+      "source": "Typography.Size.text-size-24"
+    },
+    "--fads-ref-font-size-2xl": {
+      "value": "2rem",
+      "source": "Typography.Size.text-size-32"
+    },
+    "--fads-ref-font-size-3xl": {
+      "value": "2.5rem",
+      "source": "Typography.Size.text-size-40"
+    },
+    "--fads-ref-line-height-tight": {
+      "value": "1.25",
+      "source": "Typography.Line Hight.line-hight-20"
+    },
+    "--fads-ref-line-height-normal": {
+      "value": "1.5",
+      "source": "Typography.Line Hight.line-hight-24"
+    },
+    "--fads-ref-line-height-relaxed": {
+      "value": "1.75",
+      "source": "Typography.Line Hight.line-hight-28"
+    },
+    "--fads-sys-color-background-default": {
+      "value": "var(--fads-ref-neutral-25)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-background-subtle": {
+      "value": "var(--fads-ref-neutral-50)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-background-raised": {
+      "value": "var(--fads-ref-neutral-25)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-background-inverse": {
+      "value": "var(--fads-ref-neutral-900)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-text-default": {
+      "value": "var(--fads-ref-neutral-900)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-text-muted": {
+      "value": "var(--fads-ref-neutral-600)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-text-inverse": {
+      "value": "var(--fads-ref-neutral-25)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-text-link": {
+      "value": "var(--fads-ref-primary-600)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-border-default": {
+      "value": "var(--fads-ref-neutral-200)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-border-strong": {
+      "value": "var(--fads-ref-neutral-400)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-border-focus": {
+      "value": "var(--fads-ref-primary-600)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-primary": {
+      "value": "var(--fads-ref-primary-500)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-primary-strong": {
+      "value": "var(--fads-ref-primary-600)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-status-success": {
+      "value": "var(--fads-ref-success-500)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-status-error": {
+      "value": "var(--fads-ref-error-500)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-status-warning": {
+      "value": "var(--fads-ref-warning-500)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-status-information": {
+      "value": "var(--fads-ref-information-500)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-on-color-text": {
+      "value": "var(--fads-ref-neutral-25)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-color-on-color-border": {
+      "value": "var(--fads-ref-neutral-25)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-inset-xs": {
+      "value": "var(--fads-ref-space-1)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-inset-sm": {
+      "value": "var(--fads-ref-space-2)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-inset-md": {
+      "value": "var(--fads-ref-space-4)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-inset-lg": {
+      "value": "var(--fads-ref-space-6)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-stack-xs": {
+      "value": "var(--fads-ref-space-1)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-stack-sm": {
+      "value": "var(--fads-ref-space-2)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-stack-md": {
+      "value": "var(--fads-ref-space-4)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-stack-lg": {
+      "value": "var(--fads-ref-space-6)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-inline-sm": {
+      "value": "var(--fads-ref-space-2)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-inline-md": {
+      "value": "var(--fads-ref-space-4)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-inline-lg": {
+      "value": "var(--fads-ref-space-6)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-space-section-gap": {
+      "value": "var(--fads-ref-space-9)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-radius-sm": {
+      "value": "var(--fads-ref-radius-sm)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-radius-md": {
+      "value": "var(--fads-ref-radius-md)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-radius-lg": {
+      "value": "var(--fads-ref-radius-lg)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-radius-pill": {
+      "value": "var(--fads-ref-radius-pill)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-font-family-base": {
+      "value": "var(--fads-ref-font-family-base)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-typography-display-xl": {
+      "value": "var(--fads-ref-font-size-3xl)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-typography-display-lg": {
+      "value": "var(--fads-ref-font-size-2xl)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-typography-display-md": {
+      "value": "var(--fads-ref-font-size-xl)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-typography-text-lg": {
+      "value": "var(--fads-ref-font-size-lg)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-typography-text-md": {
+      "value": "var(--fads-ref-font-size-md)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-typography-text-sm": {
+      "value": "var(--fads-ref-font-size-sm)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-typography-text-xs": {
+      "value": "var(--fads-ref-font-size-xs)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-typography-text-2xs": {
+      "value": "var(--fads-ref-font-size-2xs)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-motion-duration-instant": {
+      "value": "75ms",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-motion-duration-fast": {
+      "value": "150ms",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-motion-duration-base": {
+      "value": "225ms",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-motion-duration-slow": {
+      "value": "325ms",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-motion-easing-standard": {
+      "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-motion-easing-entrance": {
+      "value": "cubic-bezier(0, 0, 0.2, 1)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-motion-easing-exit": {
+      "value": "cubic-bezier(0.4, 0, 1, 1)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-z-base": {
+      "value": "0",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-z-dropdown": {
+      "value": "1000",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-z-sticky-header": {
+      "value": "1100",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-z-drawer": {
+      "value": "1200",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-z-modal": {
+      "value": "1300",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-z-toast": {
+      "value": "1400",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-z-tooltip": {
+      "value": "1500",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-focus-ring-width": {
+      "value": "2px",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-focus-ring-offset": {
+      "value": "2px",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-focus-ring-color": {
+      "value": "var(--fads-sys-color-border-focus)",
+      "source": "semantic-layer"
+    },
+    "--fads-sys-control-gap": {
+      "value": "var(--fads-ref-space-2)",
+      "source": "semantic-layer"
+    }
+  }
+}

@@ -1,0 +1,103 @@
+/* DropdownListItem — token-only styling.
+   Every color and geometry value below is sourced from the official Platforms Code
+   Figma Dropdown List Item component set (file J0xq7JG3JKshRDzrgAM7E0, node
+   3262:27949), verified live via the Figma MCP read-only tools — see
+   docs/FIGMA_DROPDOWN_LIST_ITEM_SPECIFICATION.md and
+   reports/VISUAL_COMPLIANCE/DropdownListItem/VISUAL_COMPLIANCE_DROPDOWN_LIST_ITEM.md.
+   The decorative multi-select checkbox reuses Checkbox's own already-verified
+   --fads-sys-checkbox-* tokens directly (confirmed byte-identical), not duplicated. */
+
+.groupLabel {
+  display: block;
+  padding-block: var(--fads-sys-dropdownlistitem-padding) 0;
+  padding-inline: var(--fads-sys-dropdownlistitem-padding);
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  color: var(--fads-sys-dropdownlistitem-group-text);
+}
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-dropdownlistitem-padding);
+  box-sizing: border-box;
+  border: var(--fads-sys-border-width-thick) solid transparent;
+  border-radius: var(--fads-sys-radius-sm);
+  padding: var(--fads-sys-dropdownlistitem-padding);
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-sm);
+  line-height: var(--fads-sys-typography-line-height-sm);
+  color: var(--fads-sys-dropdownlistitem-text);
+  cursor: pointer;
+}
+.item:hover:not([data-disabled]) {
+  background-color: var(--fads-sys-dropdownlistitem-bg-hover);
+}
+.item:active:not([data-disabled]) {
+  background-color: var(--fads-sys-dropdownlistitem-bg-pressed);
+}
+.item[data-active] {
+  border-color: var(--fads-sys-dropdownlistitem-focus-border);
+}
+.item[data-disabled] {
+  color: var(--fads-sys-dropdownlistitem-text-disabled);
+  cursor: not-allowed;
+}
+
+.text {
+  flex: 1 0 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check {
+  flex: none;
+  color: var(--fads-sys-dropdownlistitem-icon-default);
+}
+
+/* Divider — a 1px line at the row's bottom edge; when the row is also
+   `active` (Focused), it extends 2px further out on every side to sit
+   outside the focus border, live-verified. */
+.item[data-divider]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 1px;
+  background-color: var(--fads-sys-dropdownlistitem-divider);
+  mix-blend-mode: multiply;
+}
+.item[data-active][data-divider]::after {
+  inset-inline: -2px;
+  inset-block-end: -2px;
+}
+
+/* Decorative multi-select checkbox — reuses Checkbox's own xs/neutral/checked
+   tokens directly (confirmed byte-identical), not a literal <Checkbox> composition
+   (see DropdownListItem.tsx's own module doc for why). */
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: var(--fads-sys-checkbox-size-xs);
+  block-size: var(--fads-sys-checkbox-size-xs);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-dropdownlistitem-checkbox-border);
+  border-radius: var(--fads-sys-checkbox-radius);
+}
+.checkbox[data-checked] {
+  border-color: transparent;
+  background-color: var(--fads-sys-checkbox-neutral-checked);
+  color: var(--fads-sys-checkbox-icon-oncolor);
+}
+
+.checkboxIcon {
+  inline-size: 100%;
+  block-size: 100%;
+}

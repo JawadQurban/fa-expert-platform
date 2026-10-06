@@ -1,0 +1,60 @@
+/* J-09/F6 bank data section — layout-only, token-only (DC-04/DC-23). */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.grid {
+  display: grid;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.summary {
+  margin: 0;
+  display: grid;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.summaryRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.summaryRow dt,
+.summaryRow dd {
+  margin: 0;
+}
+
+.errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding: var(--fads-sys-space-inset-md);
+  border: var(--fads-sys-border-width-thick) solid var(--fads-sys-color-status-error);
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.errorList {
+  margin: 0;
+  padding-inline-start: var(--fads-sys-space-inset-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  font: var(--fads-sys-typography-text-md);
+  color: var(--fads-sys-color-text-default);
+}
+
+@media (min-width: 48rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--fads-sys-space-inline-lg);
+  }
+
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--fads-sys-space-inline-lg);
+  }
+}

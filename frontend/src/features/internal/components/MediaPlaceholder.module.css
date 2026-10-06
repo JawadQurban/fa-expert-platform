@@ -1,0 +1,31 @@
+/* Section media / placeholder — layout-only, token-only (DC-04/DC-23). */
+
+.image {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  border-radius: var(--fads-sys-radius-lg);
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fads-sys-space-stack-sm);
+  min-block-size: 12rem;
+  block-size: 100%;
+  padding: var(--fads-sys-space-inset-lg);
+  border-radius: var(--fads-sys-radius-lg);
+  background-color: var(--fads-ref-primary-25);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  text-align: center;
+}
+
+.caption {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}

@@ -1,0 +1,834 @@
+# ============================================================================
+# Expert Hub - database entity-relationship diagram (D2)
+#
+# GENERATED FILE - regenerate it, never hand-edit it. Hand edits are lost the
+# next time the schema moves.
+#
+# Source of truth : backend/expert-hub/src/ExpertHub.Infrastructure/Migrations/
+#                   ExpertHubDbContextModelSnapshot.cs  (the applied schema),
+#                   cross-checked against
+#                   .../Persistence/Configurations/*.cs  (Fluent API, indexes,
+#                   delete behaviour) and .../Persistence/ExpertHubDbContext.cs
+#                   (DbSets and the CAP-xx capability grouping).
+# DbContext       : ExpertHubDbContext (the only one in the solution)
+# Generated       : 2026-10-01
+#
+# Render:
+#   d2 --layout=elk docs/schema.d2 docs/schema.svg
+#
+# Conventions
+# -----------
+# * Table and column names are the REAL database names (SCREAMING_SNAKE_CASE
+#   tables, snake_case columns), not the C# property names.
+# * Columns shown are key-only: every primary key, every foreign key, and one
+#   or two columns that identify the row (a code, a reference, a status).
+#   Payload columns, timestamps and bilingual label pairs are omitted.
+# * `NULL` in a column's type means the column is nullable; no marker means
+#   NOT NULL.
+# * Index rows: `UQ (...)` is a unique index or unique constraint, `IX (...)`
+#   a plain index. The single-column index EF creates for each foreign key is
+#   implied by `constraint: foreign_key` and is not repeated as a row.
+# * Edges run dependent -> principal and are labelled with the cardinality,
+#   the foreign-key COLUMN, and the delete behaviour. The snapshot carries no
+#   HasConstraintName anywhere in the model, so no database constraint name
+#   exists to quote; EF derives them (FK_<table>_<principal>_<column>).
+# * A dashed edge is an optional relationship (nullable foreign key).
+# * `1:1` is a relationship the snapshot pins down with WithOne, a shared
+#   primary key, or a unique index over the whole foreign key.
+# * Enums are not drawn (every status/code column is persisted as nvarchar);
+#   there are no owned types, no implicit many-to-many join tables and no
+#   HasPrincipalKey in this model. ROLE_PERMISSION and DASHBOARD_METRIC are
+#   explicit join tables with composite primary keys (dashed border).
+# * EXT_ERP_PURCHASE_ORDER and FAST_USER_PROFILE are replicas of data another
+#   system masters (dotted border): ERP and FAST respectively.
+# * Hidden on purpose (technical / append-only audit tables):
+#     - AUDIT_LOG - CAP-08 append-only audit trail
+#     - DOCUMENT_BLOB - attachment bytes (document store)
+#     - INTEGRATION_LOG - CAP-12 append-only crossing log
+#     - NOTIFICATION_LOG - CAP-07 append-only send log
+#     - OUTBOX_MESSAGE - CAP-12 transactional outbox
+#     - SESSION_TICKET - server-side auth ticket store
+#   __EFMigrationsHistory is EF's own bookkeeping and is not part of the model.
+# ============================================================================
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+classes: {
+  join_table: {
+    style.stroke-dash: 4
+  }
+  external: {
+    style.stroke-dash: 2
+  }
+}
+
+shared: "Shared foundation - attachments and reference data" {
+  ATTACHMENT: {
+    shape: sql_table
+    attachment_id: "uniqueidentifier" {constraint: primary_key}
+    uploaded_by: "uniqueidentifier" {constraint: foreign_key}
+    file_name: "nvarchar(255)"
+    scan_status: "nvarchar(30) NULL"
+  }
+  REFERENCE_LIST: {
+    shape: sql_table
+    list_code: "nvarchar(50)" {constraint: primary_key}
+    name_en: "nvarchar(200)"
+    is_editable: "bit"
+  }
+  REFERENCE_VALUE: {
+    shape: sql_table
+    value_id: "uniqueidentifier" {constraint: primary_key}
+    list_code: "nvarchar(50)" {constraint: foreign_key}
+    code: "nvarchar(64)"
+    is_active: "bit"
+    "UQ (list_code, code)": index
+  }
+}
+
+cap08: "CAP-08 - identity, access and the FAST profile replica" {
+  APP_USER: {
+    shape: sql_table
+    user_id: "uniqueidentifier" {constraint: primary_key}
+    external_identity_id: "nvarchar(200)" {constraint: unique}
+    is_active: "bit"
+  }
+  FAST_USER_PROFILE: {
+    shape: sql_table
+    class: external
+    user_id: "uniqueidentifier" {constraint: primary_key}
+    fast_user_id: "nvarchar(64) NULL"
+    last_synced_at: "datetime2"
+  }
+  PERMISSION: {
+    shape: sql_table
+    permission_id: "int" {constraint: primary_key}
+    feature_code: "nvarchar(20)" {constraint: unique}
+    capability_code: "nvarchar(10)"
+  }
+  ROLE: {
+    shape: sql_table
+    role_id: "int" {constraint: primary_key}
+    code: "nvarchar(30)" {constraint: unique}
+    is_system: "bit"
+  }
+  ROLE_PERMISSION: {
+    shape: sql_table
+    class: join_table
+    role_id: "int" {constraint: primary_key}
+    permission_id: "int" {constraint: primary_key}
+    data_scope: "nvarchar(10)"
+  }
+  USER_ROLE: {
+    shape: sql_table
+    user_role_id: "uniqueidentifier" {constraint: primary_key}
+    assigned_by: "uniqueidentifier" {constraint: foreign_key}
+    role_id: "int" {constraint: foreign_key}
+    user_id: "uniqueidentifier" {constraint: foreign_key}
+    scope_ref: "uniqueidentifier NULL"
+    "UQ (user_id, role_id, scope_ref)": index
+  }
+}
+
+cap01: "CAP-01 - applications and the form schema" {
+  APPLICATION: {
+    shape: sql_table
+    application_id: "uniqueidentifier" {constraint: primary_key}
+    applicant_user_id: "uniqueidentifier" {constraint: foreign_key}
+    schema_version: "nvarchar(50)" {constraint: foreign_key}
+    reference: "nvarchar(20) NULL" {constraint: unique}
+    status: "nvarchar(30)"
+  }
+  APPLICATION_ATTACHMENT: {
+    shape: sql_table
+    application_attachment_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    attachment_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    rule_code: "nvarchar(80)"
+    file_name: "nvarchar(255)"
+  }
+  APPLICATION_FIELD_VALUE: {
+    shape: sql_table
+    value_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    field_code: "nvarchar(80)"
+    entry_index: "int"
+    "UQ (application_id, field_code, entry_index)": index
+  }
+  APPLICATION_SERVICE: {
+    shape: sql_table
+    application_service_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    service: "nvarchar(30)"
+    outcome: "nvarchar(20)"
+    "UQ (application_id, service)": index
+  }
+  ATTACHMENT_RULE: {
+    shape: sql_table
+    rule_id: "uniqueidentifier" {constraint: primary_key}
+    schema_version: "nvarchar(50)" {constraint: foreign_key}
+    rule_code: "nvarchar(80)"
+    required_for_services: "nvarchar(200)"
+    "UQ (schema_version, rule_code)": index
+  }
+  FORM_FIELD: {
+    shape: sql_table
+    field_id: "uniqueidentifier" {constraint: primary_key}
+    schema_version: "nvarchar(50)" {constraint: foreign_key}
+    field_code: "nvarchar(80)"
+    input_type: "nvarchar(20)"
+    "UQ (schema_version, field_code)": index
+  }
+  FORM_SCHEMA: {
+    shape: sql_table
+    schema_version: "nvarchar(50)" {constraint: primary_key}
+    status: "nvarchar(20)"
+    published_at: "datetime2 NULL"
+  }
+  FORM_SECTION: {
+    shape: sql_table
+    section_id: "uniqueidentifier" {constraint: primary_key}
+    schema_version: "nvarchar(50)" {constraint: foreign_key}
+    section_code: "nvarchar(50)"
+    order_index: "int"
+    "UQ (schema_version, section_code)": index
+  }
+  SERVICE_REQUEST: {
+    shape: sql_table
+    service_request_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    decided_by: "uniqueidentifier NULL" {constraint: foreign_key}
+    trainer_user_id: "uniqueidentifier" {constraint: foreign_key}
+    reference: "nvarchar(24)" {constraint: unique}
+    status: "nvarchar(20)"
+  }
+}
+
+cap02: "CAP-02 - screening, interview and committee" {
+  ACCREDITATION_DECISION: {
+    shape: sql_table
+    decision_id: "uniqueidentifier" {constraint: primary_key}
+    application_service_id: "uniqueidentifier" {constraint: foreign_key}
+    decided_by: "uniqueidentifier" {constraint: foreign_key}
+    outcome: "nvarchar(20)"
+    classification: "nvarchar(30) NULL"
+    "UQ (application_service_id)": index
+  }
+  AI_ANALYSIS: {
+    shape: sql_table
+    analysis_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    status: "nvarchar(20)"
+    model_version: "nvarchar(100)"
+    "UQ (application_id)": index
+  }
+  COMMITTEE_SEQUENCE: {
+    shape: sql_table
+    sequence_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    created_by: "uniqueidentifier" {constraint: foreign_key}
+    status: "nvarchar(30)"
+    current_step_index: "int"
+    "UQ (application_id)": index
+  }
+  COMMITTEE_STEP: {
+    shape: sql_table
+    step_id: "uniqueidentifier" {constraint: primary_key}
+    member_user_id: "uniqueidentifier" {constraint: foreign_key}
+    sequence_id: "uniqueidentifier" {constraint: foreign_key}
+    order_index: "int"
+    decision: "nvarchar(30) NULL"
+    "UQ (sequence_id, order_index)": index
+  }
+  COMMITTEE_TEMPLATE: {
+    shape: sql_table
+    template_id: "uniqueidentifier" {constraint: primary_key}
+    created_by: "uniqueidentifier" {constraint: foreign_key}
+    kind: "nvarchar(20)"
+    name: "nvarchar(200)"
+  }
+  EVALUATION_CRITERION: {
+    shape: sql_table
+    criterion_id: "uniqueidentifier" {constraint: primary_key}
+    model_id: "uniqueidentifier" {constraint: foreign_key}
+    source_section_code: "nvarchar(50)"
+    weight: "decimal(5,1)"
+  }
+  EVALUATION_MODEL: {
+    shape: sql_table
+    model_id: "uniqueidentifier" {constraint: primary_key}
+    service: "nvarchar(30)"
+    version: "nvarchar(50)"
+    "UQ (service, version)": index
+  }
+  INTERVIEW: {
+    shape: sql_table
+    interview_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    ticket_number: "nvarchar(20) NULL" {constraint: unique}
+    status: "nvarchar(30)"
+    "UQ (application_id)": index
+  }
+  INTERVIEW_AXIS: {
+    shape: sql_table
+    axis_id: "uniqueidentifier" {constraint: primary_key}
+    interview_model_id: "uniqueidentifier" {constraint: foreign_key}
+    axis_code: "nvarchar(50)"
+    weight: "decimal(5,1)"
+  }
+  INTERVIEW_AXIS_SCORE: {
+    shape: sql_table
+    axis_score_id: "uniqueidentifier" {constraint: primary_key}
+    axis_id: "uniqueidentifier" {constraint: foreign_key}
+    interview_evaluation_id: "uniqueidentifier" {constraint: foreign_key}
+    service: "nvarchar(30)"
+    score: "decimal(4,1)"
+    "UQ (interview_evaluation_id, axis_id, service)": index
+  }
+  INTERVIEW_EVALUATION: {
+    shape: sql_table
+    interview_evaluation_id: "uniqueidentifier" {constraint: primary_key}
+    evaluator_user_id: "uniqueidentifier" {constraint: foreign_key}
+    interview_id: "uniqueidentifier" {constraint: foreign_key}
+    submitted_at: "datetime2 NULL"
+    did_not_attend: "bit"
+    "UQ (interview_id, evaluator_user_id)": index
+  }
+  INTERVIEW_MODEL: {
+    shape: sql_table
+    interview_model_id: "uniqueidentifier" {constraint: primary_key}
+    service: "nvarchar(30)"
+    version: "nvarchar(50)"
+    "UQ (service, version)": index
+  }
+  INTERVIEW_SLOT: {
+    shape: sql_table
+    slot_id: "uniqueidentifier" {constraint: primary_key}
+    interview_id: "uniqueidentifier" {constraint: foreign_key}
+    starts_at: "datetime2"
+    is_superseded: "bit"
+  }
+  SCREENING_CRITERION_SCORE: {
+    shape: sql_table
+    score_id: "uniqueidentifier" {constraint: primary_key}
+    criterion_id: "uniqueidentifier" {constraint: foreign_key}
+    screening_result_id: "uniqueidentifier" {constraint: foreign_key}
+    weighted_score: "decimal(6,2)"
+  }
+  SCREENING_RESULT: {
+    shape: sql_table
+    screening_result_id: "uniqueidentifier" {constraint: primary_key}
+    application_service_id: "uniqueidentifier" {constraint: foreign_key}
+    decided_by: "uniqueidentifier" {constraint: foreign_key}
+    model_id: "uniqueidentifier" {constraint: foreign_key}
+    decision: "nvarchar(30)"
+    objective_score: "decimal(6,2)"
+    "UQ (application_service_id)": index
+  }
+}
+
+cap03: "CAP-03 - agreements and signing" {
+  ADDENDUM: {
+    shape: sql_table
+    addendum_id: "uniqueidentifier" {constraint: primary_key}
+    agreement_id: "uniqueidentifier" {constraint: foreign_key}
+    service_request_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    service: "nvarchar(30)"
+    document_file_name: "nvarchar(255)"
+  }
+  AGREEMENT: {
+    shape: sql_table
+    agreement_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    template_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    trainer_user_id: "uniqueidentifier" {constraint: foreign_key}
+    reference: "nvarchar(20)" {constraint: unique}
+    status: "nvarchar(30)"
+    "UQ (application_id)": index
+  }
+  AGREEMENT_DOCUMENT_VERSION: {
+    shape: sql_table
+    document_version_id: "uniqueidentifier" {constraint: primary_key}
+    agreement_id: "uniqueidentifier" {constraint: foreign_key}
+    version_number: "int"
+    content_hash: "nvarchar(64)"
+    "UQ (agreement_id, version_number)": index
+  }
+  AGREEMENT_EVENT: {
+    shape: sql_table
+    event_id: "uniqueidentifier" {constraint: primary_key}
+    actor_user_id: "uniqueidentifier" {constraint: foreign_key}
+    agreement_id: "uniqueidentifier" {constraint: foreign_key}
+    kind: "nvarchar(30)"
+    occurred_at: "datetime2"
+    "IX (agreement_id, occurred_at)": index
+  }
+  AGREEMENT_SERVICE: {
+    shape: sql_table
+    agreement_service_id: "uniqueidentifier" {constraint: primary_key}
+    agreement_id: "uniqueidentifier" {constraint: foreign_key}
+    service: "nvarchar(30)"
+    "UQ (agreement_id, service)": index
+  }
+  AGREEMENT_TEMPLATE: {
+    shape: sql_table
+    template_id: "uniqueidentifier" {constraint: primary_key}
+    version: "nvarchar(50)"
+    is_active: "bit"
+  }
+  AGREEMENT_TEMPLATE_VERSION: {
+    shape: sql_table
+    template_version_id: "uniqueidentifier" {constraint: primary_key}
+    template_id: "uniqueidentifier" {constraint: foreign_key}
+    version: "nvarchar(100)"
+    recorded_at: "datetime2"
+    "IX (template_id, recorded_at)": index
+  }
+  BANK_DATA: {
+    shape: sql_table
+    user_id: "uniqueidentifier" {constraint: primary_key}
+    completed_at: "datetime2 NULL"
+  }
+  E_SIGNATURE: {
+    shape: sql_table
+    signature_id: "uniqueidentifier" {constraint: primary_key}
+    signatory_id: "uniqueidentifier" {constraint: foreign_key}
+    method: "nvarchar(30)"
+    signed_at: "datetime2"
+    "UQ (signatory_id)": index
+  }
+  SIGNATORY: {
+    shape: sql_table
+    signatory_id: "uniqueidentifier" {constraint: primary_key}
+    sequence_id: "uniqueidentifier" {constraint: foreign_key}
+    user_id: "uniqueidentifier" {constraint: foreign_key}
+    order_index: "int"
+    decision: "nvarchar(30) NULL"
+    "UQ (sequence_id, order_index)": index
+  }
+  SIGNING_SEQUENCE: {
+    shape: sql_table
+    sequence_id: "uniqueidentifier" {constraint: primary_key}
+    agreement_id: "uniqueidentifier" {constraint: foreign_key}
+    status: "nvarchar(30)"
+    current_step_index: "int"
+  }
+}
+
+cap04: "CAP-04 - the trainer profile" {
+  PROFILE_CHANGE_REQUEST: {
+    shape: sql_table
+    change_request_id: "uniqueidentifier" {constraint: primary_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    field_code: "nvarchar(80)"
+    status: "nvarchar(20)"
+    "IX (trainer_id, field_code, status)": index
+  }
+  RATING_SOURCE_RECORD: {
+    shape: sql_table
+    record_id: "uniqueidentifier" {constraint: primary_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    mtm_record_id: "nvarchar(100)"
+    raw_value: "decimal(5,2)"
+    "UQ (trainer_id, mtm_record_id)": index
+  }
+  TRAINER_FIELD_VALUE: {
+    shape: sql_table
+    value_id: "uniqueidentifier" {constraint: primary_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    field_code: "nvarchar(80)"
+    entry_index: "int"
+    "UQ (trainer_id, field_code, entry_index)": index
+  }
+  TRAINER_PROFILE: {
+    shape: sql_table
+    trainer_id: "uniqueidentifier" {constraint: primary_key}
+    application_id: "uniqueidentifier" {constraint: foreign_key}
+    user_id: "uniqueidentifier" {constraint: foreign_key}
+    file_status: "nvarchar(20)"
+    visibility_consent: "bit"
+    "UQ (application_id)": index
+    "UQ (user_id)": index
+  }
+  TRAINER_RATING: {
+    shape: sql_table
+    rating_id: "uniqueidentifier" {constraint: primary_key}
+    record_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    scope: "nvarchar(20)"
+    calculated_value: "decimal(4,2)"
+    "IX (trainer_id, scope)": index
+  }
+  TRAINER_RECORD: {
+    shape: sql_table
+    record_id: "uniqueidentifier" {constraint: primary_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    program_name_en: "nvarchar(300)"
+    role: "nvarchar(100)"
+  }
+  TRAINER_SERVICE: {
+    shape: sql_table
+    trainer_service_id: "uniqueidentifier" {constraint: primary_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    service: "nvarchar(30)"
+    status: "nvarchar(20)"
+    "UQ (trainer_id, service)": index
+  }
+}
+
+cap05: "CAP-05 - assignment through engagement" {
+  ASSIGNMENT_OFFER: {
+    shape: sql_table
+    offer_id: "uniqueidentifier" {constraint: primary_key}
+    slot_id: "uniqueidentifier" {constraint: foreign_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    status: "nvarchar(30)"
+    response_due_at: "datetime2 NULL"
+    "IX (slot_id, sent_at)": index
+    "IX (status, response_due_at)": index
+  }
+  ASSIGNMENT_REQUEST: {
+    shape: sql_table
+    request_id: "uniqueidentifier" {constraint: primary_key}
+    created_by: "uniqueidentifier" {constraint: foreign_key}
+    reference: "nvarchar(24)" {constraint: unique}
+    status: "nvarchar(20)"
+  }
+  ASSIGNMENT_SLOT: {
+    shape: sql_table
+    slot_id: "uniqueidentifier" {constraint: primary_key}
+    request_id: "uniqueidentifier" {constraint: foreign_key}
+    slot_number: "int"
+    fast_sync_state: "nvarchar(20)"
+    "UQ (request_id, slot_number)": index
+  }
+  CANDIDATE_POOL: {
+    shape: sql_table
+    pool_id: "uniqueidentifier" {constraint: primary_key}
+    request_id: "uniqueidentifier" {constraint: foreign_key}
+    slot_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    path: "nvarchar(20)"
+    status: "nvarchar(20)"
+  }
+  ENGAGEMENT: {
+    shape: sql_table
+    engagement_id: "uniqueidentifier" {constraint: primary_key}
+    offer_id: "uniqueidentifier" {constraint: foreign_key}
+    slot_id: "uniqueidentifier" {constraint: foreign_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    status: "nvarchar(20)"
+    confirmed_at: "datetime2"
+    "UQ (offer_id)": index
+  }
+  ENGAGEMENT_TERMINATION: {
+    shape: sql_table
+    termination_id: "uniqueidentifier" {constraint: primary_key}
+    acted_by: "uniqueidentifier NULL" {constraint: foreign_key}
+    engagement_id: "uniqueidentifier" {constraint: foreign_key}
+    kind: "nvarchar(20)"
+    reason: "nvarchar(60)"
+    "UQ (engagement_id)": index
+  }
+  MATCH_CANDIDATE: {
+    shape: sql_table
+    match_candidate_id: "uniqueidentifier" {constraint: primary_key}
+    run_id: "uniqueidentifier" {constraint: foreign_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    rank: "int"
+    total_score: "decimal(6,3)"
+    "UQ (run_id, trainer_id)": index
+  }
+  MATCH_EXCLUSION: {
+    shape: sql_table
+    exclusion_id: "uniqueidentifier" {constraint: primary_key}
+    run_id: "uniqueidentifier" {constraint: foreign_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    reasons: "nvarchar(300)"
+    "UQ (run_id, trainer_id)": index
+  }
+  MATCHING_MODEL: {
+    shape: sql_table
+    matching_model_id: "uniqueidentifier" {constraint: primary_key}
+    version: "nvarchar(50)" {constraint: unique}
+    is_active: "bit"
+  }
+  MATCHING_RUN: {
+    shape: sql_table
+    run_id: "uniqueidentifier" {constraint: primary_key}
+    matching_model_id: "uniqueidentifier" {constraint: foreign_key}
+    request_id: "uniqueidentifier" {constraint: foreign_key}
+    run_by: "uniqueidentifier" {constraint: foreign_key}
+    slot_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    run_at: "datetime2"
+    required_pool_size: "int"
+    "IX (request_id, run_at)": index
+  }
+  MATERIAL_SUBMISSION: {
+    shape: sql_table
+    submission_id: "uniqueidentifier" {constraint: primary_key}
+    engagement_id: "uniqueidentifier" {constraint: foreign_key}
+    kind: "nvarchar(30)"
+    status: "nvarchar(30)"
+  }
+  POOL_MEMBER: {
+    shape: sql_table
+    pool_member_id: "uniqueidentifier" {constraint: primary_key}
+    pool_id: "uniqueidentifier" {constraint: foreign_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    decision: "nvarchar(20)"
+    preference_rank: "int NULL"
+    "UQ (pool_id, trainer_id)": index
+  }
+  SLOT_CYCLE: {
+    shape: sql_table
+    cycle_id: "uniqueidentifier" {constraint: primary_key}
+    pool_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    slot_id: "uniqueidentifier" {constraint: foreign_key}
+    cycle_number: "int"
+    status: "nvarchar(30)"
+    "UQ (slot_id, cycle_number)": index
+  }
+  SUBMISSION_ROUND: {
+    shape: sql_table
+    round_id: "uniqueidentifier" {constraint: primary_key}
+    decided_by: "uniqueidentifier NULL" {constraint: foreign_key}
+    submission_id: "uniqueidentifier" {constraint: foreign_key}
+    round_number: "int"
+    decision: "nvarchar(30) NULL"
+    "UQ (submission_id, round_number)": index
+  }
+}
+
+cap06: "CAP-06 - entitlements (ERP mirror)" {
+  ENTITLEMENT: {
+    shape: sql_table
+    entitlement_id: "uniqueidentifier" {constraint: primary_key}
+    agreement_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    engagement_id: "uniqueidentifier NULL" {constraint: foreign_key}
+    purchase_order_number: "nvarchar(64)" {constraint: foreign_key}
+    trainer_id: "uniqueidentifier" {constraint: foreign_key}
+    disbursement_status_code: "nvarchar(64)"
+    sync_status: "nvarchar(20)"
+    "UQ (purchase_order_number)": index
+  }
+  EXT_ERP_PURCHASE_ORDER: {
+    shape: sql_table
+    class: external
+    po_number: "nvarchar(64)" {constraint: primary_key}
+    disbursement_status: "nvarchar(64)"
+    trainer_ref: "nvarchar(128)"
+    "IX (trainer_ref)": index
+  }
+}
+
+cap07: "CAP-07 - notifications and deadlines" {
+  NOTIFICATION_EVENT: {
+    shape: sql_table
+    event_code: "nvarchar(20)" {constraint: primary_key}
+    capability_code: "nvarchar(20)"
+    name_en: "nvarchar(300)"
+  }
+  NOTIFICATION_MATRIX_ROW: {
+    shape: sql_table
+    row_id: "uniqueidentifier" {constraint: primary_key}
+    event_code: "nvarchar(20)" {constraint: foreign_key}
+    template_id: "uniqueidentifier" {constraint: foreign_key}
+    is_active: "bit"
+    audience: "nvarchar(500)"
+    "UQ (event_code)": index
+  }
+  NOTIFICATION_OCCURRENCE: {
+    shape: sql_table
+    occurrence_id: "uniqueidentifier" {constraint: primary_key}
+    event_code: "nvarchar(20)" {constraint: foreign_key}
+    dedupe_key: "nvarchar(200) NULL" {constraint: unique}
+    routing_status: "nvarchar(20)"
+    "IX (raised_at)": index
+    "IX (event_code, source_entity_id)": index
+  }
+  NOTIFICATION_TEMPLATE: {
+    shape: sql_table
+    template_id: "uniqueidentifier" {constraint: primary_key}
+    updated_by: "uniqueidentifier" {constraint: foreign_key}
+    code: "nvarchar(100)"
+    status: "nvarchar(20)"
+  }
+  SLA_INSTANCE: {
+    shape: sql_table
+    instance_id: "uniqueidentifier" {constraint: primary_key}
+    sla_id: "nvarchar(20)" {constraint: foreign_key}
+    entity_type: "nvarchar(100)"
+    state: "nvarchar(20)"
+    "IX (entity_type, entity_id)": index
+  }
+  SLA_MATRIX_ROW: {
+    shape: sql_table
+    sla_id: "nvarchar(20)" {constraint: primary_key}
+    action_code: "nvarchar(100)"
+    duration: "int NULL"
+  }
+}
+
+cap09: "CAP-09 - analytics definitions" {
+  DASHBOARD: {
+    shape: sql_table
+    dashboard_id: "uniqueidentifier" {constraint: primary_key}
+    role_id: "int" {constraint: foreign_key}
+    feature_code: "nvarchar(16)"
+    name_en: "nvarchar(200)"
+    "UQ (role_id)": index
+  }
+  DASHBOARD_METRIC: {
+    shape: sql_table
+    class: join_table
+    dashboard_id: "uniqueidentifier" {constraint: primary_key}
+    metric_id: "uniqueidentifier" {constraint: primary_key}
+    order_index: "int"
+  }
+  METRIC_DEFINITION: {
+    shape: sql_table
+    metric_id: "uniqueidentifier" {constraint: primary_key}
+    code: "nvarchar(64)" {constraint: unique}
+    source_capability: "nvarchar(10)"
+  }
+}
+
+cap12: "CAP-12 - integration governance" {
+  DATA_ELEMENT: {
+    shape: sql_table
+    element_id: "uniqueidentifier" {constraint: primary_key}
+    system_code: "nvarchar(20)" {constraint: foreign_key}
+    element_name: "nvarchar(100)"
+    owning_system: "nvarchar(40)"
+    "UQ (system_code, element_name)": index
+  }
+  INTEGRATED_SYSTEM: {
+    shape: sql_table
+    system_code: "nvarchar(20)" {constraint: primary_key}
+    name_en: "nvarchar(200)"
+    is_active: "bit"
+  }
+  REPLICATION_STATE: {
+    shape: sql_table
+    state_id: "uniqueidentifier" {constraint: primary_key}
+    system_code: "nvarchar(20)" {constraint: foreign_key}
+    entity_type: "nvarchar(100)"
+    drift_status: "nvarchar(20)"
+    "UQ (entity_type, local_entity_id, system_code)": index
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Relationships: dependent -> principal
+# ---------------------------------------------------------------------------
+
+cap01.APPLICATION.applicant_user_id -> cap08.APP_USER.user_id: "N:1 | applicant_user_id | restrict"
+cap01.APPLICATION.schema_version -> cap01.FORM_SCHEMA.schema_version: "N:1 | schema_version | restrict"
+cap01.APPLICATION_ATTACHMENT.application_id -> cap01.APPLICATION.application_id: "N:1 | application_id | cascade"
+cap01.APPLICATION_ATTACHMENT.attachment_id -> shared.ATTACHMENT.attachment_id: "N:1 | attachment_id | restrict" { style.stroke-dash: 3 }
+cap01.APPLICATION_FIELD_VALUE.application_id -> cap01.APPLICATION.application_id: "N:1 | application_id | cascade"
+cap01.APPLICATION_SERVICE.application_id -> cap01.APPLICATION.application_id: "N:1 | application_id | cascade"
+cap01.ATTACHMENT_RULE.schema_version -> cap01.FORM_SCHEMA.schema_version: "N:1 | schema_version | restrict"
+cap01.FORM_FIELD.schema_version -> cap01.FORM_SCHEMA.schema_version: "N:1 | schema_version | restrict"
+cap01.FORM_SECTION.schema_version -> cap01.FORM_SCHEMA.schema_version: "N:1 | schema_version | restrict"
+cap01.SERVICE_REQUEST.application_id -> cap01.APPLICATION.application_id: "N:1 | application_id | restrict"
+cap01.SERVICE_REQUEST.decided_by -> cap08.APP_USER.user_id: "N:1 | decided_by | restrict" { style.stroke-dash: 3 }
+cap01.SERVICE_REQUEST.trainer_user_id -> cap08.APP_USER.user_id: "N:1 | trainer_user_id | restrict"
+cap02.ACCREDITATION_DECISION.application_service_id -> cap01.APPLICATION_SERVICE.application_service_id: "1:1 | application_service_id | cascade"
+cap02.ACCREDITATION_DECISION.decided_by -> cap08.APP_USER.user_id: "N:1 | decided_by | restrict"
+cap02.AI_ANALYSIS.application_id -> cap01.APPLICATION.application_id: "1:1 | application_id | cascade"
+cap02.COMMITTEE_SEQUENCE.application_id -> cap01.APPLICATION.application_id: "1:1 | application_id | cascade"
+cap02.COMMITTEE_SEQUENCE.created_by -> cap08.APP_USER.user_id: "N:1 | created_by | restrict"
+cap02.COMMITTEE_STEP.member_user_id -> cap08.APP_USER.user_id: "N:1 | member_user_id | restrict"
+cap02.COMMITTEE_STEP.sequence_id -> cap02.COMMITTEE_SEQUENCE.sequence_id: "N:1 | sequence_id | cascade"
+cap02.COMMITTEE_TEMPLATE.created_by -> cap08.APP_USER.user_id: "N:1 | created_by | restrict"
+cap02.EVALUATION_CRITERION.model_id -> cap02.EVALUATION_MODEL.model_id: "N:1 | model_id | cascade"
+cap02.INTERVIEW.application_id -> cap01.APPLICATION.application_id: "1:1 | application_id | cascade"
+cap02.INTERVIEW_AXIS.interview_model_id -> cap02.INTERVIEW_MODEL.interview_model_id: "N:1 | interview_model_id | cascade"
+cap02.INTERVIEW_AXIS_SCORE.axis_id -> cap02.INTERVIEW_AXIS.axis_id: "N:1 | axis_id | restrict"
+cap02.INTERVIEW_AXIS_SCORE.interview_evaluation_id -> cap02.INTERVIEW_EVALUATION.interview_evaluation_id: "N:1 | interview_evaluation_id | cascade"
+cap02.INTERVIEW_EVALUATION.evaluator_user_id -> cap08.APP_USER.user_id: "N:1 | evaluator_user_id | restrict"
+cap02.INTERVIEW_EVALUATION.interview_id -> cap02.INTERVIEW.interview_id: "N:1 | interview_id | cascade"
+cap02.INTERVIEW_SLOT.interview_id -> cap02.INTERVIEW.interview_id: "N:1 | interview_id | cascade"
+cap02.SCREENING_CRITERION_SCORE.criterion_id -> cap02.EVALUATION_CRITERION.criterion_id: "N:1 | criterion_id | restrict"
+cap02.SCREENING_CRITERION_SCORE.screening_result_id -> cap02.SCREENING_RESULT.screening_result_id: "N:1 | screening_result_id | cascade"
+cap02.SCREENING_RESULT.application_service_id -> cap01.APPLICATION_SERVICE.application_service_id: "1:1 | application_service_id | cascade"
+cap02.SCREENING_RESULT.decided_by -> cap08.APP_USER.user_id: "N:1 | decided_by | restrict"
+cap02.SCREENING_RESULT.model_id -> cap02.EVALUATION_MODEL.model_id: "N:1 | model_id | restrict"
+cap03.ADDENDUM.agreement_id -> cap03.AGREEMENT.agreement_id: "N:1 | agreement_id | cascade"
+cap03.ADDENDUM.service_request_id -> cap01.SERVICE_REQUEST.service_request_id: "N:1 | service_request_id | restrict" { style.stroke-dash: 3 }
+cap03.AGREEMENT.application_id -> cap01.APPLICATION.application_id: "1:1 | application_id | restrict"
+cap03.AGREEMENT.template_id -> cap03.AGREEMENT_TEMPLATE.template_id: "N:1 | template_id | restrict" { style.stroke-dash: 3 }
+cap03.AGREEMENT.trainer_user_id -> cap08.APP_USER.user_id: "N:1 | trainer_user_id | restrict"
+cap03.AGREEMENT_DOCUMENT_VERSION.agreement_id -> cap03.AGREEMENT.agreement_id: "N:1 | agreement_id | restrict"
+cap03.AGREEMENT_EVENT.actor_user_id -> cap08.APP_USER.user_id: "N:1 | actor_user_id | restrict"
+cap03.AGREEMENT_EVENT.agreement_id -> cap03.AGREEMENT.agreement_id: "N:1 | agreement_id | cascade"
+cap03.AGREEMENT_SERVICE.agreement_id -> cap03.AGREEMENT.agreement_id: "N:1 | agreement_id | cascade"
+cap03.AGREEMENT_TEMPLATE_VERSION.template_id -> cap03.AGREEMENT_TEMPLATE.template_id: "N:1 | template_id | restrict"
+cap03.BANK_DATA.user_id -> cap08.APP_USER.user_id: "1:1 | user_id | cascade"
+cap03.E_SIGNATURE.signatory_id -> cap03.SIGNATORY.signatory_id: "1:1 | signatory_id | cascade"
+cap03.SIGNATORY.sequence_id -> cap03.SIGNING_SEQUENCE.sequence_id: "N:1 | sequence_id | cascade"
+cap03.SIGNATORY.user_id -> cap08.APP_USER.user_id: "N:1 | user_id | restrict"
+cap03.SIGNING_SEQUENCE.agreement_id -> cap03.AGREEMENT.agreement_id: "N:1 | agreement_id | cascade"
+cap04.PROFILE_CHANGE_REQUEST.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | cascade"
+cap04.RATING_SOURCE_RECORD.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | cascade"
+cap04.TRAINER_FIELD_VALUE.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | cascade"
+cap04.TRAINER_PROFILE.application_id -> cap01.APPLICATION.application_id: "1:1 | application_id | restrict"
+cap04.TRAINER_PROFILE.user_id -> cap08.APP_USER.user_id: "1:1 | user_id | restrict"
+cap04.TRAINER_RATING.record_id -> cap04.TRAINER_RECORD.record_id: "N:1 | record_id | restrict" { style.stroke-dash: 3 }
+cap04.TRAINER_RATING.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | cascade"
+cap04.TRAINER_RECORD.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | cascade"
+cap04.TRAINER_SERVICE.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | cascade"
+cap05.ASSIGNMENT_OFFER.slot_id -> cap05.ASSIGNMENT_SLOT.slot_id: "N:1 | slot_id | cascade"
+cap05.ASSIGNMENT_OFFER.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | restrict"
+cap05.ASSIGNMENT_REQUEST.created_by -> cap08.APP_USER.user_id: "N:1 | created_by | restrict"
+cap05.ASSIGNMENT_SLOT.request_id -> cap05.ASSIGNMENT_REQUEST.request_id: "N:1 | request_id | cascade"
+cap05.CANDIDATE_POOL.request_id -> cap05.ASSIGNMENT_REQUEST.request_id: "N:1 | request_id | cascade"
+cap05.CANDIDATE_POOL.slot_id -> cap05.ASSIGNMENT_SLOT.slot_id: "N:1 | slot_id | restrict" { style.stroke-dash: 3 }
+cap05.ENGAGEMENT.offer_id -> cap05.ASSIGNMENT_OFFER.offer_id: "1:1 | offer_id | restrict"
+cap05.ENGAGEMENT.slot_id -> cap05.ASSIGNMENT_SLOT.slot_id: "N:1 | slot_id | restrict"
+cap05.ENGAGEMENT.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | restrict"
+cap05.ENGAGEMENT_TERMINATION.acted_by -> cap08.APP_USER.user_id: "N:1 | acted_by | restrict" { style.stroke-dash: 3 }
+cap05.ENGAGEMENT_TERMINATION.engagement_id -> cap05.ENGAGEMENT.engagement_id: "1:1 | engagement_id | cascade"
+cap05.MATCH_CANDIDATE.run_id -> cap05.MATCHING_RUN.run_id: "N:1 | run_id | cascade"
+cap05.MATCH_CANDIDATE.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | restrict"
+cap05.MATCH_EXCLUSION.run_id -> cap05.MATCHING_RUN.run_id: "N:1 | run_id | cascade"
+cap05.MATCH_EXCLUSION.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | restrict"
+cap05.MATCHING_RUN.matching_model_id -> cap05.MATCHING_MODEL.matching_model_id: "N:1 | matching_model_id | restrict"
+cap05.MATCHING_RUN.request_id -> cap05.ASSIGNMENT_REQUEST.request_id: "N:1 | request_id | cascade"
+cap05.MATCHING_RUN.run_by -> cap08.APP_USER.user_id: "N:1 | run_by | restrict"
+cap05.MATCHING_RUN.slot_id -> cap05.ASSIGNMENT_SLOT.slot_id: "N:1 | slot_id | restrict" { style.stroke-dash: 3 }
+cap05.MATERIAL_SUBMISSION.engagement_id -> cap05.ENGAGEMENT.engagement_id: "N:1 | engagement_id | cascade"
+cap05.POOL_MEMBER.pool_id -> cap05.CANDIDATE_POOL.pool_id: "N:1 | pool_id | cascade"
+cap05.POOL_MEMBER.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | restrict"
+cap05.SLOT_CYCLE.pool_id -> cap05.CANDIDATE_POOL.pool_id: "N:1 | pool_id | restrict" { style.stroke-dash: 3 }
+cap05.SLOT_CYCLE.slot_id -> cap05.ASSIGNMENT_SLOT.slot_id: "N:1 | slot_id | cascade"
+cap05.SUBMISSION_ROUND.decided_by -> cap08.APP_USER.user_id: "N:1 | decided_by | restrict" { style.stroke-dash: 3 }
+cap05.SUBMISSION_ROUND.submission_id -> cap05.MATERIAL_SUBMISSION.submission_id: "N:1 | submission_id | cascade"
+cap06.ENTITLEMENT.agreement_id -> cap03.AGREEMENT.agreement_id: "N:1 | agreement_id | restrict" { style.stroke-dash: 3 }
+cap06.ENTITLEMENT.engagement_id -> cap05.ENGAGEMENT.engagement_id: "N:1 | engagement_id | restrict" { style.stroke-dash: 3 }
+cap06.ENTITLEMENT.purchase_order_number -> cap06.EXT_ERP_PURCHASE_ORDER.po_number: "1:1 | purchase_order_number | restrict"
+cap06.ENTITLEMENT.trainer_id -> cap04.TRAINER_PROFILE.trainer_id: "N:1 | trainer_id | restrict"
+cap07.NOTIFICATION_MATRIX_ROW.event_code -> cap07.NOTIFICATION_EVENT.event_code: "1:1 | event_code | restrict"
+cap07.NOTIFICATION_MATRIX_ROW.template_id -> cap07.NOTIFICATION_TEMPLATE.template_id: "N:1 | template_id | restrict"
+cap07.NOTIFICATION_OCCURRENCE.event_code -> cap07.NOTIFICATION_EVENT.event_code: "N:1 | event_code | restrict"
+cap07.NOTIFICATION_TEMPLATE.updated_by -> cap08.APP_USER.user_id: "N:1 | updated_by | restrict"
+cap07.SLA_INSTANCE.sla_id -> cap07.SLA_MATRIX_ROW.sla_id: "N:1 | sla_id | restrict"
+cap08.FAST_USER_PROFILE.user_id -> cap08.APP_USER.user_id: "1:1 | user_id | cascade"
+cap08.ROLE_PERMISSION.permission_id -> cap08.PERMISSION.permission_id: "N:1 | permission_id | restrict"
+cap08.ROLE_PERMISSION.role_id -> cap08.ROLE.role_id: "N:1 | role_id | restrict"
+cap08.USER_ROLE.assigned_by -> cap08.APP_USER.user_id: "N:1 | assigned_by | restrict"
+cap08.USER_ROLE.role_id -> cap08.ROLE.role_id: "N:1 | role_id | restrict"
+cap08.USER_ROLE.user_id -> cap08.APP_USER.user_id: "N:1 | user_id | restrict"
+cap09.DASHBOARD.role_id -> cap08.ROLE.role_id: "1:1 | role_id | restrict"
+cap09.DASHBOARD_METRIC.dashboard_id -> cap09.DASHBOARD.dashboard_id: "N:1 | dashboard_id | cascade"
+cap09.DASHBOARD_METRIC.metric_id -> cap09.METRIC_DEFINITION.metric_id: "N:1 | metric_id | cascade"
+cap12.DATA_ELEMENT.system_code -> cap12.INTEGRATED_SYSTEM.system_code: "N:1 | system_code | restrict"
+cap12.REPLICATION_STATE.system_code -> cap12.INTEGRATED_SYSTEM.system_code: "N:1 | system_code | restrict"
+shared.ATTACHMENT.uploaded_by -> cap08.APP_USER.user_id: "N:1 | uploaded_by | restrict"
+shared.REFERENCE_VALUE.list_code -> shared.REFERENCE_LIST.list_code: "N:1 | list_code | restrict"
+

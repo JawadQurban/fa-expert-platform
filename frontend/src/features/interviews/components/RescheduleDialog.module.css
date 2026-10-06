@@ -1,0 +1,9 @@
+/* EH-INT-04 staff reschedule dialog (J-06/F4) — layout-only, token-only (DC-04/DC-23). */
+
+.field {
+  margin-block-start: var(--fads-sys-space-stack-sm);
+}
+
+.note {
+  margin-block-start: var(--fads-sys-space-stack-sm);
+}

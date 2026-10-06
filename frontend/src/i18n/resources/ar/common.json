@@ -1,0 +1,25 @@
+{
+  "app": {
+    "name": "الأكاديمية المالية",
+    "shortName": "الأكاديمية"
+  },
+  "a11y": {
+    "skipToContent": "تخطَّ إلى المحتوى",
+    "mainLandmark": "المحتوى الرئيسي"
+  },
+  "language": {
+    "toggleLabel": "اللغة",
+    "arabic": "العربية",
+    "english": "English"
+  },
+  "error": {
+    "boundaryTitle": "حدث خطأ غير متوقع",
+    "boundaryDescription": "نعتذر عن ذلك. الرجاء إعادة تحميل الصفحة أو المحاولة لاحقًا.",
+    "retry": "إعادة المحاولة"
+  },
+  "notFound": {
+    "title": "الصفحة غير موجودة",
+    "description": "تعذّر العثور على الصفحة المطلوبة.",
+    "backHome": "العودة للرئيسية"
+  }
+}

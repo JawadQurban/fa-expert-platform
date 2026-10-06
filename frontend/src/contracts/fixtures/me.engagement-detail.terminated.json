@@ -1,0 +1,44 @@
+{
+  "engagementId": "4e74f607-c3d8-4de8-9feb-0823cb07a978",
+  "requestId": "8307378d-44ec-448c-82fe-be8a2f0c95df",
+  "slotNumber": 1,
+  "status": "withdrawn",
+  "confirmedAt": "2026-09-16T20:57:11Z",
+  "details": {
+    "reference": "ASR-2026-0001",
+    "serviceType": "trainer",
+    "programName": "برنامج القيادة",
+    "days": 3,
+    "dateFrom": "2026-09-18T00:00:00Z",
+    "dateTo": "2026-09-19T00:00:00Z",
+    "language": "ar",
+    "deliveryMechanism": "onsite",
+    "city": "الرياض",
+    "specializationDomain": "dom-003",
+    "meetingUrl": null
+  },
+  "enrolment": {
+    "available": false,
+    "reason": "Q20",
+    "takers": []
+  },
+  "attendance": {
+    "available": false,
+    "reason": "Q20",
+    "days": []
+  },
+  "scheduleChangedAt": null,
+  "evaluations": {
+    "available": false,
+    "reason": "Q29",
+    "items": []
+  },
+  "termination": {
+    "kind": "withdrawn",
+    "actor": "staff",
+    "reason": "operational-need-change",
+    "note": null,
+    "fastCancelReasonCode": null,
+    "occurredAt": "2026-09-16T20:57:11Z"
+  }
+}

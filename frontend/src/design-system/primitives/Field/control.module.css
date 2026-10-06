@@ -1,0 +1,42 @@
+/* Shared form-control base — composed by TextInput/Textarea (and future inputs).
+   Token-only. ⚠ Pending final DGA token values (Q3). States: Default, Hovered,
+   Focused, Read-only, Disabled, Invalid. */
+
+.control {
+  inline-size: 100%;
+  box-sizing: border-box;
+  font-family: var(--fads-sys-font-family-base);
+  font-size: var(--fads-sys-typography-text-md);
+  color: var(--fads-sys-color-text-default);
+  background-color: var(--fads-sys-color-field-background);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-field-border);
+  border-radius: var(--fads-sys-control-radius);
+  padding-inline: var(--fads-sys-control-padding-inline-md);
+  transition: border-color var(--fads-sys-motion-duration-fast)
+    var(--fads-sys-motion-easing-standard);
+}
+
+.control::placeholder {
+  color: var(--fads-sys-color-field-placeholder);
+}
+
+.control:hover:not(:disabled):not([readonly]) {
+  border-color: var(--fads-sys-color-border-strong);
+}
+
+.control:focus-visible {
+  border-color: var(--fads-sys-color-border-focus);
+}
+
+.control:disabled {
+  opacity: var(--fads-sys-opacity-disabled);
+  cursor: not-allowed;
+}
+
+.control[readonly] {
+  background-color: var(--fads-sys-color-background-subtle);
+}
+
+.control[aria-invalid='true'] {
+  border-color: var(--fads-sys-color-field-border-error);
+}

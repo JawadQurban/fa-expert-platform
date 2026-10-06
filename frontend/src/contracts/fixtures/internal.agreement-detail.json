@@ -1,0 +1,303 @@
+{
+  "applicationId": "79cde61b-357e-4989-a3ba-b55eae9e84a3",
+  "reference": "EH-2026-00001",
+  "applicantName": "سارة العتيبي",
+  "approvedServices": ["trainer"],
+  "gate": {
+    "committeeApproved": true,
+    "bankDataComplete": true
+  },
+  "stage": "in-progress",
+  "fieldSchema": [
+    {
+      "id": "startDate",
+      "label": {
+        "ar": "تاريخ بداية الاتفاقية",
+        "en": "Agreement start date"
+      },
+      "type": "date",
+      "required": true,
+      "help": {
+        "ar": "محدَّد ومعتمد في الرحلة.",
+        "en": "Confirmed by the journey."
+      }
+    },
+    {
+      "id": "endDate",
+      "label": {
+        "ar": "تاريخ نهاية الاتفاقية",
+        "en": "Agreement end date"
+      },
+      "type": "date",
+      "required": true,
+      "help": {
+        "ar": "سنة للاعتماد الأول، وثلاث سنوات لكل تجديد (BR-0302).",
+        "en": "One year on first accreditation, three years on each renewal (BR-0302)."
+      }
+    },
+    {
+      "id": "referenceNote",
+      "label": {
+        "ar": "ملاحظة مرجعية",
+        "en": "Reference note"
+      },
+      "type": "text",
+      "required": false,
+      "help": {
+        "ar": "حقل تجريبي — بانتظار مصفوفة الحقول المعتمدة (DM-GAP-16).",
+        "en": "Placeholder field — pending the approved field matrix (DM-GAP-16)."
+      }
+    }
+  ],
+  "fieldValues": {
+    "startDate": "2026-09-01",
+    "endDate": "2027-09-01"
+  },
+  "mergedData": [
+    {
+      "id": "services",
+      "title": {
+        "ar": "الخدمات المشمولة",
+        "en": "Covered services"
+      },
+      "entries": [
+        {
+          "label": {
+            "ar": "الخدمة",
+            "en": "Service"
+          },
+          "value": "trainer"
+        }
+      ]
+    },
+    {
+      "id": "trainer",
+      "title": {
+        "ar": "بيانات المدرب",
+        "en": "Trainer data"
+      },
+      "entries": [
+        {
+          "label": {
+            "ar": "الاسم",
+            "en": "Name"
+          },
+          "value": "سارة العتيبي"
+        },
+        {
+          "label": {
+            "ar": "البريد الإلكتروني",
+            "en": "Email"
+          },
+          "value": "agr-safe-2-applicant@test.fa.gov.sa"
+        }
+      ]
+    },
+    {
+      "id": "bank",
+      "title": {
+        "ar": "البيانات المصرفية",
+        "en": "Bank data"
+      },
+      "entries": [
+        {
+          "label": {
+            "ar": "اسم البنك",
+            "en": "Bank name"
+          },
+          "value": "البنك الأهلي"
+        },
+        {
+          "label": {
+            "ar": "رقم الآيبان",
+            "en": "IBAN"
+          },
+          "value": "SA0380000000608010167519"
+        },
+        {
+          "label": {
+            "ar": "اسم صاحب الحساب",
+            "en": "Account holder"
+          },
+          "value": "سارة العتيبي"
+        }
+      ]
+    }
+  ],
+  "sequence": [
+    {
+      "approverId": "573083c3-8985-4f1a-8216-b290ec77061a",
+      "name": "المراجع",
+      "roleTitle": {
+        "ar": "موظف إدارة المدربين",
+        "en": "Trainer Management staff"
+      },
+      "obligation": "mandatory",
+      "isSigner": false,
+      "position": 1,
+      "state": "current",
+      "decidedAt": null,
+      "note": null
+    },
+    {
+      "approverId": "1f9c2230-dc74-4c9b-bcdb-ddfd827caa06",
+      "name": "الموقّع",
+      "roleTitle": {
+        "ar": "موظف إدارة المدربين",
+        "en": "Trainer Management staff"
+      },
+      "obligation": "mandatory",
+      "isSigner": true,
+      "position": 2,
+      "state": "waiting",
+      "decidedAt": null,
+      "note": null
+    }
+  ],
+  "approverPool": [
+    {
+      "id": "573083c3-8985-4f1a-8216-b290ec77061a",
+      "name": "المراجع",
+      "roleTitle": {
+        "ar": "موظف إدارة المدربين",
+        "en": "Trainer Management staff"
+      }
+    },
+    {
+      "id": "1f9c2230-dc74-4c9b-bcdb-ddfd827caa06",
+      "name": "الموقّع",
+      "roleTitle": {
+        "ar": "موظف إدارة المدربين",
+        "en": "Trainer Management staff"
+      }
+    },
+    {
+      "id": "e98b5d56-f756-4e54-814c-867c326ef819",
+      "name": "معدّ الاتفاقية",
+      "roleTitle": {
+        "ar": "مدير إدارة المدربين",
+        "en": "Trainer Management manager"
+      }
+    }
+  ],
+  "templates": [],
+  "documentUrl": null,
+  "sequenceComplete": false,
+  "signaturesAttached": false,
+  "sentToApplicantAt": null,
+  "viewer": {
+    "isCreator": false,
+    "approverId": "573083c3-8985-4f1a-8216-b290ec77061a",
+    "canDecide": true,
+    "isSigner": false,
+    "canResubmit": false
+  },
+  "document": {
+    "documentVersionId": "869a955b-e1b1-4fd3-8329-b674c6512d9f",
+    "versionNumber": 1,
+    "templateName": "الاتفاقية الموحدة",
+    "templateVersion": "mock-dm-gap-16-draft.1",
+    "bodyText": "⚠️ نص تجريبي — بانتظار النص القانوني المعتمد (DM-GAP-16). تُبرم هذه الاتفاقية بين الأكاديمية المالية والخبير المعتمد لتقديم الخدمات الموضحة في ملحق الخدمات، وفق الشروط والأحكام المعتمدة.",
+    "fields": [
+      {
+        "id": "startDate",
+        "label": {
+          "ar": "تاريخ بداية الاتفاقية",
+          "en": "Agreement start date"
+        },
+        "value": "2026-09-01"
+      },
+      {
+        "id": "endDate",
+        "label": {
+          "ar": "تاريخ نهاية الاتفاقية",
+          "en": "Agreement end date"
+        },
+        "value": "2027-09-01"
+      },
+      {
+        "id": "referenceNote",
+        "label": {
+          "ar": "ملاحظة مرجعية",
+          "en": "Reference note"
+        },
+        "value": ""
+      }
+    ],
+    "mergedData": [
+      {
+        "id": "services",
+        "title": {
+          "ar": "الخدمات المشمولة",
+          "en": "Covered services"
+        },
+        "entries": [
+          {
+            "label": {
+              "ar": "الخدمة",
+              "en": "Service"
+            },
+            "value": "trainer"
+          }
+        ]
+      },
+      {
+        "id": "trainer",
+        "title": {
+          "ar": "بيانات المدرب",
+          "en": "Trainer data"
+        },
+        "entries": [
+          {
+            "label": {
+              "ar": "الاسم",
+              "en": "Name"
+            },
+            "value": "سارة العتيبي"
+          },
+          {
+            "label": {
+              "ar": "البريد الإلكتروني",
+              "en": "Email"
+            },
+            "value": "agr-safe-2-applicant@test.fa.gov.sa"
+          }
+        ]
+      },
+      {
+        "id": "bank",
+        "title": {
+          "ar": "البيانات المصرفية",
+          "en": "Bank data"
+        },
+        "entries": [
+          {
+            "label": {
+              "ar": "اسم البنك",
+              "en": "Bank name"
+            },
+            "value": "البنك الأهلي"
+          },
+          {
+            "label": {
+              "ar": "رقم الآيبان",
+              "en": "IBAN"
+            },
+            "value": "SA0380000000608010167519"
+          },
+          {
+            "label": {
+              "ar": "اسم صاحب الحساب",
+              "en": "Account holder"
+            },
+            "value": "سارة العتيبي"
+          }
+        ]
+      }
+    ],
+    "contentHash": "2C3312A9FBA6B6F3950C5687C67D3C8E36F485DD3A845BD65910371E1BA2F20D",
+    "createdAt": "2026-09-16T21:24:32Z",
+    "snapshot": true,
+    "signatureMethod": "internal-acceptance"
+  }
+}

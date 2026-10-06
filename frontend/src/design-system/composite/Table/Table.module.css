@@ -1,0 +1,114 @@
+/* Live-verified against the official Platforms Code Figma Table component set
+   (node 5698:40875) — see docs/FIGMA_TABLE_SPECIFICATION.md. */
+
+.scrollContainer {
+  /* Responsive overflow (behavioral — Figma renders a fixed-width frame, this
+     is the standard "wide table on narrow viewport" pattern, not a new visual design). */
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+
+.scrollContainer.contained {
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-table-cell-border);
+  border-radius: var(--fads-sys-table-radius-contained);
+}
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  text-align: start;
+}
+
+.contained .table {
+  border: none;
+}
+
+.caption {
+  text-align: start;
+  padding-block-end: var(--fads-sys-space-stack-sm);
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+
+.table th,
+.table td {
+  padding: var(--fads-sys-table-cell-padding-v) var(--fads-sys-table-cell-padding-h);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-table-cell-border);
+  text-align: start;
+}
+
+.table th[data-align='center'],
+.table td[data-align='center'] {
+  text-align: center;
+}
+
+.table th[data-align='end'],
+.table td[data-align='end'] {
+  text-align: end;
+}
+
+.table thead th {
+  background-color: var(--fads-sys-table-bg-header);
+  border-block-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-table-cell-border);
+  color: var(--fads-sys-table-text-head);
+  font-weight: var(--fads-ref-font-weight-medium);
+  font-size: var(--fads-sys-table-head-font-size);
+  line-height: var(--fads-sys-table-head-line-height);
+  block-size: var(--fads-sys-table-header-height);
+}
+
+.table[data-density='standard'] td {
+  block-size: var(--fads-sys-table-row-height-standard);
+}
+
+.table[data-density='compact'] td {
+  block-size: var(--fads-sys-table-row-height-compact);
+}
+
+.table tbody td {
+  color: var(--fads-sys-table-text-body);
+}
+
+.table[data-alternating] tbody tr:nth-child(even) td {
+  background-color: var(--fads-sys-table-bg-row-alt);
+}
+
+.table tbody tr:hover td {
+  background-color: var(--fads-sys-table-bg-row-hovered);
+}
+
+.table tbody tr[data-selected] td {
+  background-color: var(--fads-sys-table-bg-row-selected);
+}
+
+.stickyHeader th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+}
+
+.selectCell {
+  inline-size: var(--fads-sys-table-select-cell-width);
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.stateCell {
+  text-align: center;
+  padding: var(--fads-sys-space-inset-lg);
+}
+
+.footerCell {
+  background-color: var(--fads-sys-table-bg-header);
+  padding: var(--fads-sys-table-cell-padding-v) var(--fads-sys-table-cell-padding-h);
+}

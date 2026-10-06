@@ -1,0 +1,17 @@
+/* Staff workspace page frame (Option B prototype `.pg`) — token-only. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  inline-size: 100%;
+  max-inline-size: var(--fads-sys-container-page);
+  margin-inline: auto;
+  padding-block: var(--fads-sys-space-stack-md) var(--fads-sys-space-stack-lg);
+  padding-inline: var(--fads-sys-space-inset-md);
+}
+
+/* Blocks are spaced by the column gap alone. */
+.page > * {
+  margin-block: 0;
+}

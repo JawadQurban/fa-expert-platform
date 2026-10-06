@@ -1,0 +1,16 @@
+/* Expert Hub header — Level 1 (government utility bar). Layout-only, token-only,
+   logical properties (DC-04 / DC-23). No color, spacing, or radius is hardcoded. */
+
+.bar {
+  background-color: var(--fads-sys-color-background-subtle);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fads-sys-space-inline-sm);
+  padding-block: var(--fads-ref-space-2);
+}

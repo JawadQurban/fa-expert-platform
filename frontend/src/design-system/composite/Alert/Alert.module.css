@@ -1,0 +1,176 @@
+/* Live-verified against the official Platforms Code Figma Inline Alert component set
+   (node 1730:46048) — see docs/FIGMA_ALERT_SPECIFICATION.md. */
+
+.alert {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-alert-gap);
+  padding-block: var(--fads-sys-alert-padding-block);
+  padding-inline: var(--fads-sys-alert-padding-inline);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-alert-border-white);
+  border-radius: var(--fads-sys-alert-radius);
+  background-color: var(--fads-sys-alert-bg-white);
+  overflow: clip;
+}
+
+.alert[data-surface='tinted'] {
+  background-color: var(--fads-sys-alert-bg-tinted-neutral);
+  border-color: var(--fads-sys-alert-border-tinted-neutral);
+}
+.alert[data-surface='tinted'][data-tone='info'] {
+  background-color: var(--fads-sys-alert-bg-tinted-info);
+  border-color: var(--fads-sys-alert-border-tinted-info);
+}
+.alert[data-surface='tinted'][data-tone='success'] {
+  background-color: var(--fads-sys-alert-bg-tinted-success);
+  border-color: var(--fads-sys-alert-border-tinted-success);
+}
+.alert[data-surface='tinted'][data-tone='warning'] {
+  background-color: var(--fads-sys-alert-bg-tinted-warning);
+  border-color: var(--fads-sys-alert-border-tinted-warning);
+}
+.alert[data-surface='tinted'][data-tone='error'] {
+  background-color: var(--fads-sys-alert-bg-tinted-error);
+  border-color: var(--fads-sys-alert-border-tinted-error);
+}
+
+/* Accent stripe — always present (not optional), leading edge for the default
+   layout, top edge for Mobile. 1px negative inset matches the live-verified
+   overhang beyond the box border. */
+.stripe {
+  position: absolute;
+  opacity: 0.7;
+  background-color: var(--fads-sys-alert-stripe-neutral);
+  inset-block: -1px;
+  inset-inline-start: -1px;
+  inline-size: var(--fads-sys-alert-stripe-thickness);
+}
+.alert[data-tone='info'] .stripe {
+  background-color: var(--fads-sys-alert-stripe-info);
+}
+.alert[data-tone='success'] .stripe {
+  background-color: var(--fads-sys-alert-stripe-success);
+}
+.alert[data-tone='warning'] .stripe {
+  background-color: var(--fads-sys-alert-stripe-warning);
+}
+.alert[data-tone='error'] .stripe {
+  background-color: var(--fads-sys-alert-stripe-error);
+}
+
+.alert[data-mobile] .stripe {
+  inset-inline: -1px;
+  inset-block-start: -1px;
+  inline-size: auto;
+  block-size: var(--fads-sys-alert-stripe-thickness);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-alert-header-gap);
+  inline-size: 100%;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  inline-size: 100%;
+}
+
+.iconCircle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-alert-icon-circle-size);
+  block-size: var(--fads-sys-alert-icon-circle-size);
+  border-radius: var(--fads-sys-radius-full, 9999px);
+  background-color: var(--fads-sys-alert-icon-bg-neutral);
+}
+.iconCircle[data-tone='info'] {
+  background-color: var(--fads-sys-alert-icon-bg-info);
+  color: var(--fads-sys-alert-icon-info);
+}
+.iconCircle[data-tone='success'] {
+  background-color: var(--fads-sys-alert-icon-bg-success);
+  color: var(--fads-sys-alert-icon-success);
+}
+.iconCircle[data-tone='warning'] {
+  background-color: var(--fads-sys-alert-icon-bg-warning);
+  color: var(--fads-sys-alert-icon-warning);
+}
+.iconCircle[data-tone='error'] {
+  background-color: var(--fads-sys-alert-icon-bg-error);
+  color: var(--fads-sys-alert-icon-error);
+}
+.iconCircle[data-tone='neutral'] {
+  color: var(--fads-sys-alert-icon-neutral);
+}
+.iconCircle svg {
+  inline-size: 60%;
+  block-size: 60%;
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-alert-text-gap);
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--fads-sys-alert-title-default);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  font-size: var(--fads-sys-alert-title-font-size);
+  line-height: var(--fads-sys-alert-title-line-height);
+}
+.alert[data-surface='tinted'][data-tone='info'] .title {
+  color: var(--fads-sys-alert-title-info);
+}
+.alert[data-surface='tinted'][data-tone='success'] .title {
+  color: var(--fads-sys-alert-title-success);
+}
+.alert[data-surface='tinted'][data-tone='warning'] .title {
+  color: var(--fads-sys-alert-title-warning);
+}
+.alert[data-surface='tinted'][data-tone='error'] .title {
+  color: var(--fads-sys-alert-title-error);
+}
+
+.description {
+  margin: 0;
+  color: var(--fads-sys-alert-description);
+  font-size: var(--fads-sys-alert-description-font-size);
+  line-height: var(--fads-sys-alert-description-line-height);
+}
+
+.actions {
+  display: flex;
+  gap: var(--fads-sys-alert-actions-gap);
+  padding-inline-start: var(--fads-sys-alert-actions-padding-start);
+  inline-size: 100%;
+}
+
+.alert[data-mobile] .actions {
+  flex-direction: column;
+  padding-inline-start: 0;
+}
+
+.dismiss {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-sys-alert-dismiss-size);
+  block-size: var(--fads-sys-alert-dismiss-size);
+  border: 0;
+  border-radius: var(--fads-sys-alert-radius-sm);
+  background: transparent;
+  color: var(--fads-sys-alert-dismiss-icon);
+  cursor: pointer;
+}

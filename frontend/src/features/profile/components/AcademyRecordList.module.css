@@ -1,0 +1,39 @@
+/* The Academy's further records — layout-only, token-only (DC-04/DC-23). */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  padding-block-start: var(--fads-sys-space-stack-md);
+  border-block-start: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The same file-row shape used elsewhere in the product: a tinted badge, then
+   the text, so a record looks like a record wherever it appears. */
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  min-inline-size: 0;
+}
+
+.meta {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+  font-variant-numeric: tabular-nums;
+}

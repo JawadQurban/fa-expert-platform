@@ -1,0 +1,57 @@
+/* J-09/F3 combined results — layout-only, token-only (DC-04/DC-23). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.grid {
+  display: grid;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.service {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  padding: var(--fads-sys-space-inset-md);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.serviceHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+.figures {
+  margin: 0;
+  display: grid;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.figure dt,
+.figure dd {
+  margin: 0;
+}
+
+@media (min-width: 48rem) {
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  }
+
+  .figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--fads-sys-space-inline-md);
+  }
+}

@@ -1,0 +1,41 @@
+/* Token-based accordion styles. */
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+.item {
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+  overflow: hidden;
+  background-color: var(--fads-sys-color-background-default);
+}
+
+.trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--fads-sys-space-inset-md);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: start;
+  color: var(--fads-sys-color-text-default);
+  cursor: pointer;
+}
+
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: var(--fads-sys-opacity-disabled);
+}
+
+.title {
+  font-weight: var(--fads-ref-font-weight-semibold);
+}
+
+.panel {
+  padding: 0 var(--fads-sys-space-inset-md) var(--fads-sys-space-inset-md);
+  color: var(--fads-sys-color-text-muted);
+}

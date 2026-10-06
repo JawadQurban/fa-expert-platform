@@ -1,0 +1,86 @@
+{
+  "name": "fa-expert-hub-frontend",
+  "private": true,
+  "version": "1.4.0",
+  "type": "module",
+  "description": "Expert Hub — the Financial Academy expert and independent trainer management platform (web client). Arabic-first, RTL-default, DGA Platforms Code aligned.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --config vite.config.ts",
+    "typecheck": "tsc -b --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint . --fix",
+    "lint:css": "node scripts/verify-css-rules.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "coverage": "vitest run --coverage",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "validate": "npm run typecheck && npm run lint && npm run format:check && npm run test",
+    "docker:build": "docker build -f ../deploy/Dockerfile -t expert-hub-frontend:local ..",
+    "prepare": "cd .. && husky frontend/.husky || true",
+    "tokens:generate": "node scripts/generate-tokens.mjs",
+    "tokens:check-coverage": "node scripts/verify-tokens.mjs",
+    "tokens:validate": "npm run tokens:generate && npm test -- src/design-system/tokens/tokens.test.ts && npm run tokens:check-coverage",
+    "docker:run": "docker run --rm -p 127.0.0.1:8085:8080 --name expert-hub-frontend expert-hub-frontend:local"
+  },
+  "dependencies": {
+    "i18next": "^24.2.1",
+    "i18next-browser-languagedetector": "^8.0.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^15.4.0",
+    "react-router-dom": "^7.1.1"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "8.6.18",
+    "@storybook/addon-essentials": "8.6.18",
+    "@storybook/addon-interactions": "8.6.18",
+    "@storybook/blocks": "8.6.18",
+    "@storybook/react": "8.6.18",
+    "@storybook/react-vite": "8.6.18",
+    "@storybook/test": "8.6.18",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.6",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^3.0.5",
+    "axe-core": "^4.10.2",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "eslint-plugin-storybook": "^0.11.2",
+    "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "jsdom": "^25.0.1",
+    "lint-staged": "^15.3.0",
+    "prettier": "^3.4.2",
+    "storybook": "8.6.18",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.19.1",
+    "vite": "^6.0.7",
+    "vitest": "^3.0.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx,json,css,md}": [
+      "prettier --write"
+    ]
+  }
+}

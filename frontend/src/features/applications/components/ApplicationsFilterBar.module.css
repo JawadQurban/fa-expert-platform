@@ -1,0 +1,22 @@
+/* P-11 Filter Bar — layout-only, token-only, logical properties (DC-04/DC-23). */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.search {
+  flex: 2 1 16rem;
+  min-inline-size: 0;
+}
+
+.select {
+  flex: 1 1 11rem;
+  min-inline-size: 0;
+}
+
+.clear {
+  padding-block-end: var(--fads-ref-space-1);
+}

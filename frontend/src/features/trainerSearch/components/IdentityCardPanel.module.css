@@ -1,0 +1,56 @@
+/* J-15/F2 identity card — layout-only, token-only (DC-04/DC-23). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.photoRow {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+  padding: var(--fads-sys-space-inset-sm);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-ref-primary-25);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding-block-end: var(--fads-sys-space-stack-sm);
+  border-block-end: 1px solid var(--fads-sys-color-border-default);
+}
+
+.term {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.value {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  margin: 0;
+  padding-inline-start: var(--fads-sys-space-inset-md);
+}
+
+/* A field with no source reads as an absence of *capability*, not of data. */
+.missing {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}

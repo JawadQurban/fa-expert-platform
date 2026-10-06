@@ -1,0 +1,317 @@
+/* Expert Hub landing (EH-PUB-01) — "منصة الخبراء" composition. Token-only,
+   logical properties (DC-04/DC-23): no hardcoded colors/spacing; every value is
+   a --fads token. Layout only — all components are approved Design System. */
+
+/* ── shared ─────────────────────────────────────────────────────────────── */
+
+.sectionIntro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin-block-end: var(--fads-sys-space-stack-lg);
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+.sectionIntroCenter {
+  margin-inline: auto;
+  align-items: center;
+  text-align: center;
+}
+
+/* Decorative image placeholder (TODO(image) — see LandingPage.tsx). */
+/* Real repo photographs — object-fit cover inside a rounded, token-radius frame.
+   Framed (hairline + card shadow) so a photograph reads as an intentional media
+   panel rather than a bitmap dropped on the page — visual only, no layout or
+   content change. */
+.sectionImage {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--fads-sys-radius-lg);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-card-border-stroke);
+  box-shadow: var(--fads-sys-card-shadow);
+}
+
+.bannerImage {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 16 / 6;
+  object-fit: cover;
+  border-radius: var(--fads-sys-radius-lg);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-card-border-stroke);
+  box-shadow: var(--fads-sys-card-shadow);
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+/* ── HERO ── branded pattern background over the token tint (marketing theme,
+   tokens only). */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--fads-ref-primary-25);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.heroContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-stack-md);
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+.heroLead {
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-md);
+  margin-block-start: var(--fads-sys-space-stack-sm);
+}
+
+/* ── ABOUT (segmented) ──────────────────────────────────────────────────── */
+
+.switcherRow {
+  display: flex;
+  justify-content: center;
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+.aboutCard {
+  display: block;
+}
+
+.aboutPanel {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: var(--fads-sys-space-stack-lg);
+  align-items: center;
+}
+
+.aboutText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.panelHeading {
+  margin-block-end: var(--fads-sys-space-stack-md);
+}
+
+.benefitGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.benefitGrid > li {
+  display: flex;
+}
+
+.benefitCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  inline-size: 100%;
+}
+
+.panelCta {
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}
+
+.goalGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.goalItem {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+/* ── ELIGIBILITY / JOIN GUIDELINES ──────────────────────────────────────── */
+
+.guidelines {
+  inline-size: 100%;
+}
+
+.guidelinePanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.eligibilityList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eligibilityItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.eligibilityNumber {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-ref-space-7);
+  block-size: var(--fads-ref-space-7);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: var(--fads-sys-color-primary);
+  color: var(--fads-sys-color-on-color-text);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-bold);
+  /* A soft tint ring lifts the marker off the page without a new colour. */
+  box-shadow: 0 0 0 var(--fads-ref-space-1) var(--fads-ref-primary-50);
+}
+
+.eligibilityCta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-lg);
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}
+
+.eligibilityCtaText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+/* ── COLLABORATION (timeline) ───────────────────────────────────────────── */
+
+.timeline {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--fads-sys-space-stack-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  inset-block-start: calc(var(--fads-ref-space-8) / 2);
+  inset-inline: 12%;
+  block-size: var(--fads-sys-border-width-thick);
+  background-color: var(--fads-sys-color-border-default);
+  z-index: 0;
+}
+
+.timelineItem {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fads-sys-space-stack-md);
+  text-align: center;
+}
+
+.timelineMarker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--fads-ref-space-8);
+  block-size: var(--fads-ref-space-8);
+  border-radius: var(--fads-sys-radius-full);
+  background-color: var(--fads-sys-color-primary);
+  color: var(--fads-sys-color-on-color-text);
+  /* Ring in the page background so the marker punches through the connector
+     line behind it instead of sitting on top of a visible seam. */
+  box-shadow: 0 0 0 var(--fads-ref-space-1) var(--fads-sys-color-background-default);
+}
+
+.timelineNumber {
+  font-size: var(--fads-sys-typography-text-md);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.timelineCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fads-sys-space-stack-sm);
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* ── FINAL CTA ──────────────────────────────────────────────────────────── */
+
+/* Final CTA — a flat primary tint, as the FADS kit composes it. The two
+   decorative "glow" circles that used to sit behind this were a page-local
+   invention: three overlapping opacities to say what one token says. */
+.finalCta {
+  background-color: var(--fads-ref-primary-25);
+}
+
+.finalCtaInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.finalCtaActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+/* ── responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 64rem) {
+  .aboutPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .timeline::before {
+    display: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .timeline {
+    grid-template-columns: 1fr;
+  }
+
+  .eligibilityCta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

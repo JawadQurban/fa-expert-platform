@@ -1,0 +1,188 @@
+{
+  "sentAt": "2026-09-16T21:24:37Z",
+  "dataGroups": [
+    {
+      "id": "services",
+      "title": {
+        "ar": "الخدمات المشمولة",
+        "en": "Covered services"
+      },
+      "entries": [
+        {
+          "label": {
+            "ar": "الخدمة",
+            "en": "Service"
+          },
+          "value": "trainer"
+        }
+      ]
+    },
+    {
+      "id": "trainer",
+      "title": {
+        "ar": "بيانات المدرب",
+        "en": "Trainer data"
+      },
+      "entries": [
+        {
+          "label": {
+            "ar": "الاسم",
+            "en": "Name"
+          },
+          "value": "سارة العتيبي"
+        },
+        {
+          "label": {
+            "ar": "البريد الإلكتروني",
+            "en": "Email"
+          },
+          "value": "agr-safe-1-applicant@test.fa.gov.sa"
+        }
+      ]
+    },
+    {
+      "id": "bank",
+      "title": {
+        "ar": "البيانات المصرفية",
+        "en": "Bank data"
+      },
+      "entries": [
+        {
+          "label": {
+            "ar": "اسم البنك",
+            "en": "Bank name"
+          },
+          "value": "البنك الأهلي"
+        },
+        {
+          "label": {
+            "ar": "رقم الآيبان",
+            "en": "IBAN"
+          },
+          "value": "SA0380000000608010167519"
+        },
+        {
+          "label": {
+            "ar": "اسم صاحب الحساب",
+            "en": "Account holder"
+          },
+          "value": "سارة العتيبي"
+        }
+      ]
+    }
+  ],
+  "documentUrl": null,
+  "document": {
+    "documentVersionId": "1991483c-821b-48c2-852e-8b520f28c644",
+    "versionNumber": 2,
+    "templateName": "الاتفاقية الموحدة",
+    "templateVersion": "mock-dm-gap-16-draft.1",
+    "bodyText": "⚠️ نص تجريبي — بانتظار النص القانوني المعتمد (DM-GAP-16). تُبرم هذه الاتفاقية بين الأكاديمية المالية والخبير المعتمد لتقديم الخدمات الموضحة في ملحق الخدمات، وفق الشروط والأحكام المعتمدة.",
+    "fields": [
+      {
+        "id": "startDate",
+        "label": {
+          "ar": "تاريخ بداية الاتفاقية",
+          "en": "Agreement start date"
+        },
+        "value": "2026-10-01"
+      },
+      {
+        "id": "endDate",
+        "label": {
+          "ar": "تاريخ نهاية الاتفاقية",
+          "en": "Agreement end date"
+        },
+        "value": "2027-10-01"
+      },
+      {
+        "id": "referenceNote",
+        "label": {
+          "ar": "ملاحظة مرجعية",
+          "en": "Reference note"
+        },
+        "value": ""
+      }
+    ],
+    "mergedData": [
+      {
+        "id": "services",
+        "title": {
+          "ar": "الخدمات المشمولة",
+          "en": "Covered services"
+        },
+        "entries": [
+          {
+            "label": {
+              "ar": "الخدمة",
+              "en": "Service"
+            },
+            "value": "trainer"
+          }
+        ]
+      },
+      {
+        "id": "trainer",
+        "title": {
+          "ar": "بيانات المدرب",
+          "en": "Trainer data"
+        },
+        "entries": [
+          {
+            "label": {
+              "ar": "الاسم",
+              "en": "Name"
+            },
+            "value": "سارة العتيبي"
+          },
+          {
+            "label": {
+              "ar": "البريد الإلكتروني",
+              "en": "Email"
+            },
+            "value": "agr-safe-1-applicant@test.fa.gov.sa"
+          }
+        ]
+      },
+      {
+        "id": "bank",
+        "title": {
+          "ar": "البيانات المصرفية",
+          "en": "Bank data"
+        },
+        "entries": [
+          {
+            "label": {
+              "ar": "اسم البنك",
+              "en": "Bank name"
+            },
+            "value": "البنك الأهلي"
+          },
+          {
+            "label": {
+              "ar": "رقم الآيبان",
+              "en": "IBAN"
+            },
+            "value": "SA0380000000608010167519"
+          },
+          {
+            "label": {
+              "ar": "اسم صاحب الحساب",
+              "en": "Account holder"
+            },
+            "value": "سارة العتيبي"
+          }
+        ]
+      }
+    ],
+    "contentHash": "E4904F264719062ECCAFDD9EB09BABD64B1C9F0841615DCDFACCBB0825BB5C71",
+    "createdAt": "2026-09-16T21:24:37Z",
+    "snapshot": true,
+    "signatureMethod": "internal-acceptance"
+  },
+  "decision": {
+    "kind": "request-modification",
+    "decidedAt": "2026-09-16T21:24:37Z",
+    "note": "الرجاء تعديل تاريخ البداية."
+  }
+}

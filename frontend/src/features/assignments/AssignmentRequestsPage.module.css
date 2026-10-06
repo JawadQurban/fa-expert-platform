@@ -1,0 +1,9 @@
+/* EH-INT-09 assignment requests list — layout-only, token-only (DC-04/DC-23). */
+
+/* The count and its multi-person marker read as one cell. */
+.headcount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fads-ref-space-1);
+}

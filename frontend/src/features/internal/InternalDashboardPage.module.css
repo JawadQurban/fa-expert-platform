@@ -1,0 +1,208 @@
+/* EH-INT-01 Internal Dashboard — "Operational" composition (Alternative B).
+   Layout-only, token-only (DC-04/DC-23). No new visual values: every colour,
+   space, radius and type size resolves to an existing --fads-* token. The shell
+   (three-level header) is provided by ExpertHubShell and is unchanged. */
+
+/* ── Compact page head: greeting + context ─────────────────────────────────── */
+.pagehead {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-lg);
+}
+
+/* Programmatic focus target only — see workspace/PageHead.module.css. */
+.title:focus {
+  outline: none;
+}
+
+.headMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  max-inline-size: var(--fads-sys-container-prose);
+  min-inline-size: 0;
+}
+
+.eyebrow {
+  color: var(--fads-sys-color-primary);
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.headLead {
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+.openSummary {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+/* ── Metric tiles — fixed responsive columns (never a 4 + 1 orphan) ───────── */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* Equal-height tiles, so a wrapped row never staggers. */
+  grid-auto-rows: 1fr;
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metricItem {
+  display: flex;
+}
+
+/* ── Working area: the queue leads, pipeline health beside it ─────────────── */
+.working {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: var(--fads-sys-space-stack-md);
+  align-items: start;
+}
+
+.primary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  min-inline-size: 0;
+}
+
+.secondary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-lg);
+  min-inline-size: 0;
+}
+
+.panelCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  block-size: 100%;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}
+
+/* ── Recent applications — the queue peek ─────────────────────────────────── */
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recentRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+  padding-block-end: var(--fads-sys-space-stack-sm);
+  border-block-end: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+}
+
+.recentRow:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+
+.recentMain {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  min-inline-size: 0;
+}
+
+.recentName {
+  font-weight: var(--fads-ref-font-weight-medium);
+}
+
+.recentMeta {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+.viewAll {
+  margin-block-start: var(--fads-sys-space-stack-xs);
+}
+
+/* ── Quick links — compact navigation convenience (deduped with the header) ─ */
+.quickLinks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.quickGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quickItem {
+  display: flex;
+}
+
+.quickCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  inline-size: 100%;
+  padding: var(--fads-sys-space-inset-lg);
+  border-radius: var(--fads-sys-radius-lg);
+  /* White surface + shadow on the subtle page ground, so the card is visible. */
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-card-border-stroke);
+  background-color: var(--fads-sys-card-bg);
+  box-shadow: var(--fads-sys-card-shadow);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard),
+    border-color var(--fads-sys-motion-duration-fast) var(--fads-sys-motion-easing-standard);
+}
+
+.quickCard:hover,
+.quickCard:focus-visible {
+  background-color: var(--fads-ref-primary-25);
+  border-color: var(--fads-sys-color-primary);
+}
+
+.quickTitle {
+  font-size: var(--fads-sys-typography-text-lg);
+  font-weight: var(--fads-ref-font-weight-bold);
+}
+
+.quickDesc {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-sm);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 70rem) {
+  .metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 64rem) {
+  .working {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 48rem) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

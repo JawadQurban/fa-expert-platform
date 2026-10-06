@@ -1,0 +1,57 @@
+/* EH-TP-02 My Applications — layout-only, token-only, logical properties
+   (DC-04/DC-23). All components are approved Design System components. */
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-md);
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  max-inline-size: var(--fads-sys-container-prose);
+}
+
+.blockedAlert {
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+  margin-block-end: var(--fads-sys-space-stack-lg);
+  padding: 0;
+  list-style: none;
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  block-size: 100%;
+}
+
+.summaryValue {
+  color: var(--fads-sys-color-primary);
+}
+
+.filters {
+  margin-block-end: var(--fads-sys-space-stack-lg);
+}
+
+.listRegion {
+  margin-block-end: var(--fads-sys-space-stack-md);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--fads-sys-space-stack-lg);
+}

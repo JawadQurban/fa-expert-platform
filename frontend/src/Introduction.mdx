@@ -1,0 +1,24 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Foundation/Introduction" />
+
+# Financial Academy Design System (FADS) — Foundation
+
+This Storybook is the workshop for FADS components. In the current phase **no UI
+components exist yet** — only the engineering foundation (tokens, providers,
+routing, i18n, testing).
+
+## What's ready
+
+- **Design tokens** — placeholder values in `src/design-system/tokens` (⚠ replace
+  with official DGA values, `docs/DESIGN_TOKENS.md`, Q3/Q20).
+- **Providers** — Theme, Direction (RTL default), Locale (Arabic-first).
+- **Toolbar** — switch العربية (RTL) ⇄ English (LTR) to preview both directions.
+- **Accessibility addon** — every future story is checked against WCAG rules.
+
+## What comes next
+
+Reusable components (primitives → composite → shell → patterns) will be added
+under `src/design-system`, each with stories showing every DGA state
+(`docs/COMPONENT_INVENTORY.md`). They must consume tokens only — no hard-coded
+values (`docs/DESIGN_CONSTRAINTS.md`).

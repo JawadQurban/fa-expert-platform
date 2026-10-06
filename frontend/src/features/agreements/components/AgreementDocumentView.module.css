@@ -1,0 +1,52 @@
+/* The frozen agreement document — layout-only, token-only (DC-04/DC-23). */
+
+.document {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+}
+
+/* The legal text is authored with line breaks; they carry meaning. */
+.body {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.entries {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--fads-sys-space-stack-xs);
+  margin: 0;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  padding: var(--fads-sys-space-inset-sm);
+  border-radius: var(--fads-sys-radius-md);
+  background-color: var(--fads-sys-color-background-subtle);
+  overflow-wrap: anywhere;
+}
+
+.entry dt,
+.entry dd {
+  margin: 0;
+}
+
+.hash {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
