@@ -684,8 +684,9 @@ export function createMockAssignmentProvider(
         requestId: `asg-${String(counter).padStart(3, '0')}`,
         reference: `EH-ASG-2026-${String(1000 + counter).slice(1)}`,
         // Notion «Assignment Matrix» routing (form 3's Speaker routing is not
-        // built — see `centreRequestForm.types.ts`).
-        serviceType: serviceTypeFor(input.requestType),
+        // built — see `centreRequestForm.types.ts`). Validated above, so a
+        // required pick is present.
+        serviceType: serviceTypeFor(input.requestType, input.serviceType) ?? 'trainer',
         programName: { ar: title, en: title },
         requiredHeadcount: headcountOf(input),
         // J-16/F5 — a named expert skips matching on their own slot. Only when

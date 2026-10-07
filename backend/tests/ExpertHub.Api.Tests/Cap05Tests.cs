@@ -923,13 +923,12 @@ public sealed class Cap05Tests
             ("general-program", "trainer"),
             ("private-program", "trainer"),
             // ⚠️ Notion routes these three to Speaker (J-04, not built) — the
-            // existing routing is kept pending that decision.
+            // owner kept them on trainer until it exists (`P-341`).
             ("training-workshop", "trainer"),
             ("meeting", "trainer"),
             ("seminar", "trainer"),
             ("content-development-request", "content-developer"),
             ("question-writing", "question-writer"),
-            ("technical-presentations", "content-developer"),
             ("consultations", "consultant"),
             ("other", "consultant"),
         })
@@ -945,6 +944,55 @@ public sealed class Cap05Tests
             var created = await PostAsync(centre, "/api/v1/internal/assignment-requests/", body);
             Assert.Equal(service, created.GetProperty("serviceType").GetString());
         }
+    }
+
+    [Fact]
+    public async Task Technical_presentations_are_matched_against_the_category_the_requester_picks()
+    {
+        // Notion «Assignment Matrix», 2026-09-29: «عروض فنية / محاور البرامج» →
+        // «مطوّر محتوى أو مدرب» (`P-341`).
+        using var centre = await SignInAsync("cap05-centre10", "منسق المركز", RoleCode.CentreCoordinator);
+        const string path = "/api/v1/internal/assignment-requests/";
+
+        foreach (var service in new[] { "content-developer", "trainer" })
+        {
+            var body = GeneralProgramRequest();
+            body["requestType"] = "technical-presentations";
+            body["serviceType"] = service;
+            var created = await PostAsync(centre, path, body);
+            Assert.Equal(service, created.GetProperty("serviceType").GetString());
+        }
+
+        async Task<(string Detail, string[] Fields)> RefusedAsync(Dictionary<string, object?> body)
+        {
+            var response = await centre.PostAsJsonAsync(path, body);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            return (problem.GetProperty("detail").GetString()!,
+                [.. problem.GetProperty("fields").EnumerateArray().Select(f => f.GetString()!)]);
+        }
+
+        // No choice made: the type allows two, so neither is assumed.
+        var unchosen = GeneralProgramRequest();
+        unchosen["requestType"] = "technical-presentations";
+        var (detail, fields) = await RefusedAsync(unchosen);
+        Assert.Equal("required-field-missing", detail);
+        Assert.Equal(["serviceType"], fields);
+
+        // A category the type does not route to.
+        var consultant = GeneralProgramRequest();
+        consultant["requestType"] = "technical-presentations";
+        consultant["serviceType"] = "consultant";
+        (detail, fields) = await RefusedAsync(consultant);
+        Assert.Equal("invalid-field-value", detail);
+        Assert.Equal(["serviceType"], fields);
+
+        // A single-category type cannot be steered to another category.
+        var steered = GeneralProgramRequest();
+        steered["serviceType"] = "content-developer";
+        (detail, fields) = await RefusedAsync(steered);
+        Assert.Equal("invalid-field-value", detail);
+        Assert.Equal(["serviceType"], fields);
     }
 
     [Fact]

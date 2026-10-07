@@ -19,6 +19,7 @@ import {
   CENTRE_REQUEST_TYPES,
   headcountOf,
   nomineesOf,
+  serviceChoicesFor,
   serviceTypeFor,
   validateCentreRequest,
 } from './centreRequestForm.types';
@@ -237,6 +238,28 @@ describe('EH-INT-09 — the centre request form (طلب تقديم البرنا�
 
     await pickOption(user, form.requestTypeLabel, form.requestTypes['question-writing']);
     expect(await screen.findByLabelText(new RegExp(form.fields.testName))).toBeInTheDocument();
+  });
+
+  it('«عروض فنية» asks for the required category; other types do not', async () => {
+    const { user } = await renderForm();
+    await pickOption(user, form.requestTypeLabel, form.requestTypes['technical-presentations']);
+    await user.click(await screen.findByRole('combobox', { name: form.serviceTypeLabel }));
+    const choices = await screen.findAllByRole('option');
+    expect(choices.map((option) => option.textContent)).toEqual([
+      form.services['content-developer'],
+      form.services.trainer,
+    ]);
+    await user.keyboard('{Escape}');
+
+    await pickOption(user, form.requestTypeLabel, form.requestTypes['content-development-request']);
+    expect(screen.queryByRole('combobox', { name: form.serviceTypeLabel })).not.toBeInTheDocument();
+  });
+
+  it('form 5 names its attachment «المادة»', async () => {
+    const { user } = await renderForm();
+    await pickOption(user, form.requestTypeLabel, form.requestTypes['question-writing']);
+    expect(await screen.findByText(form.fields.material)).toBeInTheDocument();
+    expect(screen.queryByText(form.fields.briefBrochure)).not.toBeInTheDocument();
   });
 
   it('form 6 shows its own field set: subject, optional hours and beneficiary, the approved consultation types', async () => {
@@ -658,19 +681,35 @@ describe('EH-INT-09 — the centre request form (طلب تقديم البرنا�
     ).toContain('mechanism-required');
   });
 
-  it('routes each request type to the matrix’s service (form 3 keeps trainer pending the Speaker decision)', () => {
-    expect(CENTRE_REQUEST_TYPES.map((type) => [type, serviceTypeFor(type)])).toEqual([
-      ['general-program', 'trainer'],
-      ['private-program', 'trainer'],
-      ['training-workshop', 'trainer'],
-      ['meeting', 'trainer'],
-      ['seminar', 'trainer'],
-      ['content-development-request', 'content-developer'],
-      ['question-writing', 'question-writer'],
-      ['technical-presentations', 'content-developer'],
-      ['consultations', 'consultant'],
-      ['other', 'consultant'],
+  it('routes each request type to the matrix’s categories (form 3 keeps trainer pending the Speaker decision)', () => {
+    expect(CENTRE_REQUEST_TYPES.map((type) => [type, serviceChoicesFor(type)])).toEqual([
+      ['general-program', ['trainer']],
+      ['private-program', ['trainer']],
+      ['training-workshop', ['trainer']],
+      ['meeting', ['trainer']],
+      ['seminar', ['trainer']],
+      ['content-development-request', ['content-developer']],
+      ['question-writing', ['question-writer']],
+      ['technical-presentations', ['content-developer', 'trainer']],
+      ['consultations', ['consultant']],
+      ['other', ['consultant']],
     ]);
+  });
+
+  it('P-341: «عروض فنية» is matched against the category the requester picks, and needs one', () => {
+    expect(serviceTypeFor('technical-presentations')).toBeNull();
+    expect(serviceTypeFor('technical-presentations', 'trainer')).toBe('trainer');
+    expect(serviceTypeFor('technical-presentations', 'consultant')).toBeNull();
+    expect(serviceTypeFor('general-program', 'consultant')).toBe('trainer');
+    expect(validateCentreRequest({ requestType: 'technical-presentations' })).toContain(
+      'service-type-required'
+    );
+    expect(
+      validateCentreRequest({ requestType: 'technical-presentations', serviceType: 'trainer' })
+    ).not.toContain('service-type-required');
+    expect(validateCentreRequest({ requestType: 'general-program' })).not.toContain(
+      'service-type-required'
+    );
   });
 
   /* ── the list ──────────────────────────────────────────────────────────── */

@@ -17,9 +17,14 @@ namespace ExpertHub.Api.Assignments;
 /// against these rules. Those keys are simply not selectable for a NEW request.
 /// </para>
 /// <para>
-/// ⚠️ REQUIRES REVIEW — Notion routes «ورشة عمل / لقاء / ندوة» to the Speaker
-/// talent category (J-04), which is not built. They keep the routing they had
-/// (trainer) until that decision is made.
+/// ⚠️ REQUIRES REVIEW — Notion (2026-09-29) routes «لقاء / ندوة» to the Speaker
+/// talent category and «ورشة عمل» to «متحدث، مدرب». Speaker (J-04) is not built,
+/// so all three keep routing to trainer — the owner's ruling, `P-341`.
+/// </para>
+/// <para>
+/// A type the matrix routes to more than one category («عروض فنية / محاور
+/// البرامج» → «مطوّر محتوى أو مدرب») makes the requester pick one
+/// (<c>serviceType</c>); the request is matched against that one only.
 /// </para>
 /// </remarks>
 internal static class CentreRequestMatrix
@@ -46,21 +51,26 @@ internal static class CentreRequestMatrix
         Consultation,
     }
 
-    internal sealed record RequestTypeRule(string Key, RequestForm Form, string ServiceType);
+    /// <param name="Key">The «نوع الطلب» value.</param>
+    /// <param name="Form">The form it opens.</param>
+    /// <param name="ServiceTypes">The categories it may be matched against; the
+    /// requester chooses when there is more than one.</param>
+    internal sealed record RequestTypeRule(string Key, RequestForm Form, string[] ServiceTypes);
 
     /// <summary>«نوع الطلب», in the matrix's dropdown order.</summary>
     internal static readonly RequestTypeRule[] RequestTypes =
     [
-        new("general-program", RequestForm.GeneralProgram, ApplicationServices.Trainer),
-        new("private-program", RequestForm.PrivateProgram, ApplicationServices.Trainer),
-        new("training-workshop", RequestForm.Event, ApplicationServices.Trainer),
-        new("meeting", RequestForm.Event, ApplicationServices.Trainer),
-        new("seminar", RequestForm.Event, ApplicationServices.Trainer),
-        new("content-development-request", RequestForm.ContentDevelopment, ApplicationServices.ContentDeveloper),
-        new("question-writing", RequestForm.QuestionWriting, ApplicationServices.QuestionWriter),
-        new("technical-presentations", RequestForm.ContentDevelopment, ApplicationServices.ContentDeveloper),
-        new("consultations", RequestForm.Consultation, ApplicationServices.Consultant),
-        new("other", RequestForm.Consultation, ApplicationServices.Consultant),
+        new("general-program", RequestForm.GeneralProgram, [ApplicationServices.Trainer]),
+        new("private-program", RequestForm.PrivateProgram, [ApplicationServices.Trainer]),
+        new("training-workshop", RequestForm.Event, [ApplicationServices.Trainer]),
+        new("meeting", RequestForm.Event, [ApplicationServices.Trainer]),
+        new("seminar", RequestForm.Event, [ApplicationServices.Trainer]),
+        new("content-development-request", RequestForm.ContentDevelopment, [ApplicationServices.ContentDeveloper]),
+        new("question-writing", RequestForm.QuestionWriting, [ApplicationServices.QuestionWriter]),
+        new("technical-presentations", RequestForm.ContentDevelopment,
+            [ApplicationServices.ContentDeveloper, ApplicationServices.Trainer]),
+        new("consultations", RequestForm.Consultation, [ApplicationServices.Consultant]),
+        new("other", RequestForm.Consultation, [ApplicationServices.Consultant]),
     ];
 
     /// <summary>«الفترة» — صباحية، مسائية.</summary>
@@ -95,6 +105,12 @@ internal static class CentreRequestMatrix
     internal static RequestTypeRule? RuleFor(string? requestType) =>
         RequestTypes.FirstOrDefault(r => r.Key == requestType);
 
+    /// <summary>The category the request is matched against — the requester's
+    /// choice where the type allows several, else the type's only one. Call
+    /// after <see cref="Check"/> has accepted the input.</summary>
+    internal static string ServiceFor(RequestTypeRule rule, CreateRequestInputWire input) =>
+        rule.ServiceTypes.Length > 1 ? input.ServiceType! : rule.ServiceTypes[0];
+
     /// <summary>
     /// The matrix's required fields and allowed values for the request's form.
     /// Returns the wire field names that are missing, and those whose value is
@@ -124,6 +140,17 @@ internal static class CentreRequestMatrix
             {
                 invalid.Add(field);
             }
+        }
+
+        // «الفئة المطلوبة» — chosen only where the type allows several; a value
+        // sent for a single-category type must be that category.
+        if (rule.ServiceTypes.Length > 1)
+        {
+            OneOf("serviceType", input.ServiceType, rule.ServiceTypes);
+        }
+        else if (!string.IsNullOrWhiteSpace(input.ServiceType) && input.ServiceType != rule.ServiceTypes[0])
+        {
+            invalid.Add("serviceType");
         }
 
         var consultation = rule.Form == RequestForm.Consultation;

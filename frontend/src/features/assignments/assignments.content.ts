@@ -59,6 +59,9 @@ export interface AssignmentsContent {
     readonly mainHeading: string;
     readonly centreLabel: string;
     readonly requestTypeLabel: string;
+    /** «الفئة المطلوبة» — shown only for a type routed to several categories. */
+    readonly serviceTypeLabel: string;
+    readonly serviceTypeHint: string;
     readonly responsibleLabel: string;
     readonly responsibleHint: string;
     /** Notion «Assignment Matrix» — «نوع الطلب». */
@@ -111,8 +114,10 @@ export interface AssignmentsContent {
       readonly requiredHeadcount: string;
       /** Forms 1–3 «النشرة التعريفية». */
       readonly brochure: string;
-      /** Forms 4–5 — same Arabic wording, "Brief / brochure" in English. */
+      /** Form 4 — same Arabic wording, "Brief / brochure" in English. */
       readonly briefBrochure: string;
+      /** Form 5 «المادة» (Notion, 2026-09-29). */
+      readonly material: string;
       /** Form 6 «المرفقات». */
       readonly attachments: string;
       readonly notes: string;
@@ -277,6 +282,8 @@ const ar: AssignmentsContent = {
     mainHeading: 'الخيارات الرئيسية',
     centreLabel: 'اسم المركز',
     requestTypeLabel: 'نوع الطلب',
+    serviceTypeLabel: 'الفئة المطلوبة',
+    serviceTypeHint: 'يُطابَق الطلب مع الخبراء المعتمدين في هذه الفئة.',
     responsibleLabel: 'اسم المسؤول',
     responsibleHint: 'الموظف المُدخل للطلب.',
     requestTypes: {
@@ -324,6 +331,7 @@ const ar: AssignmentsContent = {
       requiredHeadcount: 'العدد المطلوب من الخبراء',
       brochure: 'النشرة التعريفية',
       briefBrochure: 'النشرة التعريفية',
+      material: 'المادة',
       attachments: 'المرفقات',
       notes: 'ملاحظات',
     },
@@ -390,6 +398,7 @@ const ar: AssignmentsContent = {
       'consultation-type-required': 'اختر نوع الاستشارة.',
       'attachment-required': 'أرفق الملف المطلوب.',
       'domain-required': 'اختر مجال التخصص.',
+      'service-type-required': 'اختر الفئة المطلوبة.',
       'headcount-invalid': 'أدخل عددًا صحيحًا للخبراء (1 فأكثر).',
       'duplicate-nominee': 'لا يمكن اختيار الخبير نفسه أكثر من مرة.',
       'nominees-exceed-headcount': 'عدد الخبراء المحددين يتجاوز العدد المطلوب.',
@@ -510,6 +519,8 @@ const en: AssignmentsContent = {
     mainHeading: 'Main options',
     centreLabel: 'Center',
     requestTypeLabel: 'Request type',
+    serviceTypeLabel: 'Required category',
+    serviceTypeHint: 'The request is matched against the experts approved in this category.',
     responsibleLabel: 'Requester name',
     responsibleHint: 'The employee entering the request.',
     requestTypes: {
@@ -557,6 +568,7 @@ const en: AssignmentsContent = {
       requiredHeadcount: 'Required number of experts',
       brochure: 'Prospectus / brochure',
       briefBrochure: 'Brief / brochure',
+      material: 'Material',
       attachments: 'Attachments',
       notes: 'Notes',
     },
@@ -626,6 +638,7 @@ const en: AssignmentsContent = {
       'consultation-type-required': 'Choose the consultation type.',
       'attachment-required': 'Attach the required file.',
       'domain-required': 'Choose the specialization / domain.',
+      'service-type-required': 'Choose the required category.',
       'headcount-invalid': 'Enter a valid number of experts (1 or more).',
       'duplicate-nominee': 'The same expert cannot be named more than once.',
       'nominees-exceed-headcount': 'More experts are named than the request requires.',

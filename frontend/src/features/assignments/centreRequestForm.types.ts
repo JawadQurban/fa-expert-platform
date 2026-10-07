@@ -14,8 +14,9 @@ import type { AssignmentServiceType } from './assignment.types';
  *
  * ## Deliberately not implemented — REQUIRES REVIEW
  *
- * - «ورشة عمل / لقاء / ندوة» route to the Speaker category in Notion (J-04,
- *   not built). They keep the existing trainer routing until that is decided.
+ * - «لقاء / ندوة» route to the Speaker category in Notion, and «ورشة عمل» to
+ *   «متحدث، مدرب» (2026-09-29). Speaker (J-04) is not built, so all three keep
+ *   the trainer routing — the owner's ruling, `P-341`.
  * - Forms 1–5 are "FAST-driven" (plan/event/exam selection auto-fills them).
  *   No FAST read exists, so the centre still enters them by hand.
  * - «مجال التخصص» is Notion's Sector → Job Family cascade from FAST; the
@@ -94,10 +95,36 @@ export function clientRequired(type: CentreRequestType): boolean {
 }
 
 /**
- * The service each request type is matched against (Notion's routing table).
+ * The categories each request type may be matched against (Notion's routing
+ * table). Where there is more than one, the requester picks («الفئة المطلوبة»)
+ * and the request is matched against that one only (`P-341`).
  * ⚠️ Form 3's types route to Speaker in Notion — not built, so trainer is kept.
  */
-export function serviceTypeFor(type: CentreRequestType): AssignmentServiceType {
+export function serviceChoicesFor(type: CentreRequestType): readonly AssignmentServiceType[] {
+  // «عروض فنية / محاور البرامج» → «مطوّر محتوى أو مدرب» (2026-09-29).
+  if (type === 'technical-presentations') {
+    return ['content-developer', 'trainer'];
+  }
+  return [defaultServiceFor(type)];
+}
+
+/**
+ * The service a request is matched against: the requester's pick where the
+ * type allows several, else the type's only one. `null` while a required pick
+ * is still missing.
+ */
+export function serviceTypeFor(
+  type: CentreRequestType,
+  chosen?: string
+): AssignmentServiceType | null {
+  const choices = serviceChoicesFor(type);
+  if (choices.length === 1) {
+    return choices[0];
+  }
+  return choices.find((service) => service === chosen) ?? null;
+}
+
+function defaultServiceFor(type: CentreRequestType): AssignmentServiceType {
   switch (formFor(type)) {
     case 'content-development':
       return 'content-developer';
@@ -144,6 +171,8 @@ export interface CreateCentreRequestInput {
   /* — الخيارات الرئيسية — */
   readonly centreId: string;
   readonly requestType: CentreRequestType;
+  /** «الفئة المطلوبة» — only for a type routed to several categories. */
+  readonly serviceType?: AssignmentServiceType;
   /** «اسم المسؤول» — the entering employee. */
   readonly responsibleEmployee: string;
 
@@ -251,6 +280,7 @@ export function nomineesOf(
 export type CentreRequestValidationCode =
   | 'centre-required'
   | 'request-type-required'
+  | 'service-type-required'
   | 'responsible-required'
   | 'program-name-required'
   | 'days-invalid'
@@ -295,6 +325,9 @@ export function validateCentreRequest(
     issues.push('responsible-required');
   }
   const type = input.requestType;
+  if (serviceTypeFor(type, input.serviceType) == null) {
+    issues.push('service-type-required');
+  }
 
   if (isProgramLike(type)) {
     if (missing(input.programName)) {

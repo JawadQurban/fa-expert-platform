@@ -9,6 +9,18 @@ The history before this repository existed is in
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **Assignment routing follows Notion's 2026-09-29 update** (`P-341`). A
+  «عروض فنية / محاور البرامج» request now asks for «الفئة المطلوبة» — content
+  developer or trainer — and is matched against the category picked. The API
+  requires the choice for that type and refuses a category a type does not
+  route to. Workshop, meeting and seminar still route to trainer until the
+  Speaker record (J-04) exists.
+- The question-writing form (form 5) labels its attachment «المادة».
+
 ## [1.4.1] — 2026-10-06 — The business-review decisions (`P-333`–`P-340`)
 
 The owner answered the 13 open decisions from the 2026-10-01 review. This work

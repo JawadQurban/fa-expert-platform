@@ -23,6 +23,7 @@ import {
   hasClientField,
   isProgramLike,
   nomineesOf,
+  serviceChoicesFor,
   serviceTypeFor,
   validateCentreRequest,
   type CentreRequestType,
@@ -92,6 +93,8 @@ export default function NewAssignmentRequestPage() {
 
   const [centreId, setCentreId] = useState('');
   const [requestType, setRequestType] = useState<CentreRequestType | ''>('');
+  /** «الفئة المطلوبة» — only asked for a type routed to several categories. */
+  const [serviceType, setServiceType] = useState('');
   const [responsible, setResponsible] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   /** «العدد المطلوب» — 1 when the field is cleared (the model's default). */
@@ -163,7 +166,8 @@ export default function NewAssignmentRequestPage() {
     locale === 'en' ? option.labelEn : option.labelAr;
 
   const form = requestType === '' ? null : formFor(requestType);
-  const requestService = requestType === '' ? null : serviceTypeFor(requestType);
+  const serviceChoices = requestType === '' ? [] : serviceChoicesFor(requestType);
+  const requestService = requestType === '' ? null : serviceTypeFor(requestType, serviceType);
 
   // J-16/F5/AC-1 — the named-person list is the people approved for THIS
   // request's service, so it follows the request type.
@@ -244,13 +248,16 @@ export default function NewAssignmentRequestPage() {
       : copy.fields.specificNominee;
   const attachmentLabel = consultation
     ? copy.fields.attachments
-    : contentForm
-      ? copy.fields.briefBrochure
-      : copy.fields.brochure;
+    : form === 'question-writing'
+      ? copy.fields.material
+      : contentForm
+        ? copy.fields.briefBrochure
+        : copy.fields.brochure;
 
   const buildInput = (): Partial<CreateCentreRequestInput> => ({
     centreId,
     requestType: requestType === '' ? undefined : requestType,
+    serviceType: requestService ?? undefined,
     responsibleEmployee: responsible,
     programName: values.programName,
     daysCount:
@@ -457,6 +464,7 @@ export default function NewAssignmentRequestPage() {
                 setPhase('form');
                 setCentreId('');
                 setRequestType('');
+                setServiceType('');
                 setResponsible('');
                 setValues({});
                 setHeadcount(1);
@@ -507,11 +515,26 @@ export default function NewAssignmentRequestPage() {
             value={requestType === '' ? undefined : requestType}
             onValueChange={(next) => {
               setRequestType(next as CentreRequestType);
+              setServiceType('');
               setIssues([]);
             }}
             requiredField
             errorText={errorFor('request-type-required')}
           />
+          {serviceChoices.length > 1 && (
+            <Select
+              label={copy.serviceTypeLabel}
+              helperText={copy.serviceTypeHint}
+              options={serviceChoices.map((choice) => ({
+                value: choice,
+                label: copy.services[choice],
+              }))}
+              value={serviceType === '' ? undefined : serviceType}
+              onValueChange={setServiceType}
+              requiredField
+              errorText={errorFor('service-type-required')}
+            />
+          )}
           <Select
             label={copy.responsibleLabel}
             helperText={copy.responsibleHint}

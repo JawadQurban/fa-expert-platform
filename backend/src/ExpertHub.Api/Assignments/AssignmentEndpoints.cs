@@ -101,7 +101,10 @@ internal sealed record CreateRequestInputWire(
     // several specific experts, at most one per slot. `SpecificNominee` above
     // stays accepted so a caller written against the single-value shape keeps
     // working — it is read as a one-element list.
-    IReadOnlyList<string>? SpecificNominees = null);
+    IReadOnlyList<string>? SpecificNominees = null,
+    // Notion «Assignment Matrix» (2026-09-29): «عروض فنية / محاور البرامج» →
+    // «مطوّر محتوى أو مدرب». Required only where the type allows several.
+    string? ServiceType = null);
 
 internal sealed record SendPoolInputWire(IReadOnlyList<string>? TrainerIds);
 
@@ -256,7 +259,7 @@ public static class AssignmentEndpoints
             {
                 RequestId = Guid.NewGuid(),
                 Reference = await NextReferenceAsync(db, now, ct),
-                ServiceType = rule.ServiceType,
+                ServiceType = CentreRequestMatrix.ServiceFor(rule, input),
                 RequestType = input.RequestType,
                 CentreId = input.CentreId,
                 ResponsibleEmployee = input.ResponsibleEmployee,
