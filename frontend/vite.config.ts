@@ -32,7 +32,7 @@ export default defineConfig({
   base,
   resolve: { alias },
   // `public/` holds the runtime `config.js` (regenerated from env when the
-  // container starts) and the favicon.
+  // container starts). The favicon is bundled from `src/assets/branding/`.
   define: {
     'import.meta.env.VITE_EXPERT_HUB_BASE_PATH': JSON.stringify(rawBasePath),
   },
