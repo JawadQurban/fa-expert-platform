@@ -20,6 +20,22 @@ The history before this repository existed is in
   route to. Workshop, meeting and seminar still route to trainer until the
   Speaker record (J-04) exists.
 - The question-writing form (form 5) labels its attachment «المادة».
+- **New application form version `dm-gap-01.2026-10-07` and evaluation model
+  `dm-gap-02.2026-10-07`** (`P-342`, migration `M41`). «المجال» offers «أخرى»
+  with a mandatory «المجال (أخرى)» text field, and criterion #3 pays 0 for it.
+  «هل سبق لك التدريب أو التحدث في فعاليات؟» is mandatory for the Trainer.
+  A new mandatory «القطاع» field offers التمويل، التأمين، البنوك، الأوراق المالية.
+  Earlier drafts, applications and decided scores keep their own versions.
+
+### Fixed
+
+- Saving the profile no longer demands a field the trainer cannot see (a
+  conditional field whose condition is unmet).
+- **The favicon is the Academy logo, and a new one actually shows.** It is
+  bundled from `src/assets/branding/favicon.svg`, so the build fingerprints it
+  (`assets/favicon-<hash>.svg`, cached as immutable). In `public/` it kept one
+  URL, `/expert-hub/favicon.svg`, so browsers went on showing the old icon after
+  a redeploy.
 
 ## [1.4.1] — 2026-10-06 — The business-review decisions (`P-333`–`P-340`)
 

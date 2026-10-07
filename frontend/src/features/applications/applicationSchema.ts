@@ -65,7 +65,7 @@ import type { ApplicationService } from './application.types';
  * stay readable; this version simply stops offering them to new applicants.
  * No field was added, removed or re-labelled.
  *
- * `dm-gap-01.2026-09-29` (this version) corrects ONE declaration. Business
+ * `dm-gap-01.2026-09-29` corrects ONE declaration. Business
  * decision 2026-09-29: «نمط التقديم المفضل لديك» (`preferredDeliveryMode`)
  * applies to the Trainer only, so its `requiredFor` now matches its
  * `visibleFor` instead of naming all four services. The change is INERT —
@@ -73,6 +73,17 @@ import type { ApplicationService } from './application.types';
  * either way — but a schema that says a consultant must answer a question
  * they never see is a schema that cannot be read literally. Nothing else
  * changed: same fields, same options, same labels, same attachment rules.
+ *
+ * `dm-gap-01.2026-10-07` (this version) follows the Notion review of
+ * 2026-10-07 (`P-342`):
+ * - «المجال» offers «أخرى», with «المجال (أخرى)» to name it. The Evaluation
+ *   Matrix comment of 2026-09-29: «ذات صلة المعتمدة في اللستة، ليست ذو صلة اي
+ *   مجال يضاف كـ"أخرى"» — criterion #3 pays 0 for it.
+ * - Section 6 stays as it was, for all four services — the owner's ruling
+ *   of 2026-10-07, over the Notion matrix's «Training only» marks.
+ * - «هل سبق لك التدريب أو التحدث في فعاليات؟» is mandatory for the Trainer.
+ * - «القطاع» (Form 1 #15) arrives, mandatory for all four services, with the
+ *   four sectors the owner supplied: التمويل، التأمين، البنوك، الأوراق المالية.
  *
  * Mandatory flags: the matrix has no required column and J-01's «Application
  * Fields by Service» is still «?», so every existing flag is kept as it was
@@ -162,13 +173,20 @@ const EXPERIENCE_YEAR_OPTIONS: readonly ApplicationFieldOption[] = [
   { value: 'more-than-10', labelAr: 'أكثر من 10 سنوات', labelEn: 'More than 10 years' },
 ];
 
+/** «أخرى» in «المجال» — not one of the master list's `dom-###` codes. */
+export const OTHER_DOMAIN_OPTION: ApplicationFieldOption = {
+  value: 'other',
+  labelAr: 'أخرى',
+  labelEn: 'Other',
+};
+
 const YES_NO_OPTIONS: readonly ApplicationFieldOption[] = [
   { value: 'yes', labelAr: 'نعم', labelEn: 'Yes' },
   { value: 'no', labelAr: 'لا', labelEn: 'No' },
 ];
 
 export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
-  version: 'dm-gap-01.2026-09-29',
+  version: 'dm-gap-01.2026-10-07',
   // Speaker intentionally absent (`BR-0113`) — and the workbook's own `*`
   // legend confirms the form is for the four contractual services. The
   // workbook's «الخدمة | Service Type» row IS the service-selection step the
@@ -387,6 +405,26 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       order: 12,
     },
     {
+      // «القطاع» — Form 1 #15, mandatory for all four services (PM, 2026-09-18).
+      // The four sectors: owner's ruling, 2026-10-07 (`P-342`). Notion names
+      // FAST's `cmpt.Sector` and a Sector → «المجال» cascade; no sector-to-domain
+      // mapping exists yet, so «المجال» is not filtered by it — REQUIRES REVIEW.
+      id: 'sector',
+      type: 'select',
+      sectionId: 'personal',
+      labelAr: 'القطاع',
+      labelEn: 'Sector',
+      requiredFor: ALL_SERVICES,
+      options: [
+        { value: 'finance', labelAr: 'التمويل', labelEn: 'Finance' },
+        { value: 'insurance', labelAr: 'التأمين', labelEn: 'Insurance' },
+        { value: 'banking', labelAr: 'البنوك', labelEn: 'Banking' },
+        { value: 'capital-market', labelAr: 'الأوراق المالية', labelEn: 'Capital market' },
+      ],
+      ownership: 'expert-hub',
+      order: 12.5,
+    },
+    {
       /*
        * «المجال» — the applicant's general field, and the source of
        * Evaluation-Matrix criterion #3. Options: the owner-supplied
@@ -407,9 +445,24 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       helpAr: 'المجال العام للمتقدم (مالية، تدريب، تقنية...).',
       helpEn: 'The applicant’s general field (finance, training, technical…).',
       requiredFor: ALL_SERVICES,
-      options: activeDomains(SPECIALIZATION_DOMAIN_OPTIONS),
+      // «أخرى» (2026-10-07): a domain outside the approved list. Criterion #3
+      // scores it 0 — «ليست ذو صلة اي مجال يضاف كـ"أخرى"».
+      options: [...activeDomains(SPECIALIZATION_DOMAIN_OPTIONS), OTHER_DOMAIN_OPTION],
       ownership: 'expert-hub',
       order: 13,
+    },
+    {
+      id: 'domainOther',
+      type: 'text',
+      sectionId: 'personal',
+      labelAr: 'المجال (أخرى)',
+      labelEn: 'Field / domain (other)',
+      helpAr: 'اكتب مجالك إن لم يكن في القائمة.',
+      helpEn: 'Name your field if it is not in the list.',
+      requiredFor: ALL_SERVICES,
+      dependsOn: { fieldId: 'domain', equals: OTHER_DOMAIN_OPTION.value },
+      ownership: 'expert-hub',
+      order: 13.1,
     },
     {
       id: 'linkedin',
@@ -752,13 +805,14 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       order: 3,
     },
     {
-      // Business decision (2026-09-16): Yes / No. Optional.
+      // Business decision (2026-09-16): Yes / No. Mandatory for the Trainer
+      // since 2026-10-07 (Notion «Application Fields by Service»).
       id: 'hasTrainedBefore',
       type: 'select',
       sectionId: 'training-content',
       labelAr: 'هل سبق لك التدريب أو التحدث في فعاليات؟',
       labelEn: 'Have you previously trained or spoken at events?',
-      requiredFor: [],
+      requiredFor: ['trainer'],
       options: [
         { value: 'yes', labelAr: 'نعم', labelEn: 'Yes' },
         { value: 'no', labelAr: 'لا', labelEn: 'No' },

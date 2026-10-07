@@ -90,7 +90,7 @@ public sealed class Cap02Tests
         Assert.Equal(49.92m, score.GetProperty("score").GetDecimal());
         // Display-only (J-05/F2/AC-5) — below it, and the journey continues.
         Assert.Equal(50, score.GetProperty("threshold").GetDecimal());
-        Assert.Equal("dm-gap-02.2026-09-29", score.GetProperty("modelVersion").GetString());
+        Assert.Equal("dm-gap-02.2026-10-07", score.GetProperty("modelVersion").GetString());
         Assert.Equal(13, score.GetProperty("criteria").GetArrayLength());
         // The served total IS the served breakdown — no criterion is dropped
         // from the list the screening manager reads.

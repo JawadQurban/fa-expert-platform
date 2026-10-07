@@ -98,7 +98,7 @@ public sealed class Cap04Tests
         // BR-0404 / J-14/F1/AC-1 — the SAME application-form schema.
         Assert.Equal(FormSchemaVersions.Current,
             profile.GetProperty("formSchema").GetProperty("version").GetString());
-        Assert.Equal(55, profile.GetProperty("formSchema").GetProperty("fields").GetArrayLength());
+        Assert.Equal(57, profile.GetProperty("formSchema").GetProperty("fields").GetArrayLength());
         // The values came across from what they already answered.
         Assert.Equal("قيمة تجريبية",
             profile.GetProperty("fieldValues").GetProperty("responsibilities").GetString());

@@ -34,7 +34,11 @@ namespace ExpertHub.Api.Tests;
 /// </remarks>
 public sealed class EvaluationMatrixCalculationTests : IAsyncLifetime
 {
-    private const string ApprovedVersion = "dm-gap-02.2026-09-29";
+    private const string ApprovedVersion = "dm-gap-02.2026-10-07";
+
+    /// <summary>`EVAL-GAP-11`'s version — strict tables, no «أخرى». Superseded
+    /// on 2026-10-07 and kept INACTIVE.</summary>
+    private const string StrictTablesVersion = "dm-gap-02.2026-09-29";
 
     /// <summary>The version `EVAL-GAP-11` superseded on 2026-09-29. It stays
     /// seeded, INACTIVE, and carries the OPEN tables it was decided with.</summary>
@@ -87,6 +91,35 @@ public sealed class EvaluationMatrixCalculationTests : IAsyncLifetime
         // completeness path — the pin is the data, not a version check.
         var criteria = await CriteriaOfAsync(db, drafts[0].ModelId);
         Assert.All(criteria, c => Assert.Null(c.ScoreRule));
+    }
+
+    [Fact]
+    public async Task A_domain_added_as_other_pays_a_decided_zero_and_the_older_version_is_untouched()
+    {
+        // Evaluation Matrix comment, 2026-09-29: «ذات صلة المعتمدة في اللستة،
+        // ليست ذو صلة اي مجال يضاف كـ"أخرى"» (`P-342`).
+        await using var db = _database.CreateContext();
+
+        var current = await db.EvaluationModels.AsNoTracking()
+            .Where(m => m.Version == ApprovedVersion).ToListAsync();
+        Assert.Equal(4, current.Count);
+        foreach (var model in current)
+        {
+            var domain = (await CriteriaOfAsync(db, model.ModelId))
+                .Single(c => c.SourceFieldCode == "domain");
+            // A DECIDED zero, in the strict table — not omitted, so it is never
+            // reported unresolved.
+            Assert.Contains("\"strict\":true", domain.ScoreRule!);
+            Assert.Contains("\"other\":0,", domain.ScoreRule!);
+        }
+
+        var older = await db.EvaluationModels.AsNoTracking()
+            .Where(m => m.Version == StrictTablesVersion).ToListAsync();
+        Assert.Equal(4, older.Count);
+        Assert.All(older, m => Assert.False(m.IsActive));
+        var olderDomain = (await CriteriaOfAsync(db, older[0].ModelId))
+            .Single(c => c.SourceFieldCode == "domain");
+        Assert.DoesNotContain("\"other\"", olderDomain.ScoreRule!);
     }
 
     [Fact]
@@ -378,11 +411,12 @@ public sealed class EvaluationMatrixCalculationTests : IAsyncLifetime
         Assert.Contains("\"strict\":true", criterion.ScoreRule);
         using var rule = JsonDocument.Parse(criterion.ScoreRule!);
         var classified = rule.RootElement.GetProperty("points").EnumerateObject().ToList();
-        // Every key that IS there is one of the approved 147, and pays either
-        // the full 0.1 or nothing — no arbitrary score can reach the table.
+        // Every key that IS there is one of the approved 147 — or «أخرى»
+        // (2026-10-07, `P-342`) — and pays either the full 0.1 or nothing: no
+        // arbitrary score can reach the table.
         Assert.All(classified, entry =>
         {
-            Assert.Matches(@"^dom-\d{3}$", entry.Name);
+            Assert.Matches(@"^(dom-\d{3}|other)$", entry.Name);
             Assert.Contains(entry.Value.GetDecimal(), new[] { 0m, 0.1m });
         });
         Assert.Equal(classified.Count, classified.Select(e => e.Name).Distinct().Count());

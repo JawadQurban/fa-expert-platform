@@ -115,7 +115,10 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
         // `preferredDeliveryMode` declares the services it is actually for
         // (2026-09-29) — an inert correction, published as its own version
         // because a published version is history and is never edited.
-        Assert.Equal("published", schemas["dm-gap-01.2026-09-29"]);
+        Assert.Equal("superseded", schemas["dm-gap-01.2026-09-29"]);
+        // The Notion review of 2026-10-07 (`P-342`): «المجال» offers «أخرى»,
+        // and «هل سبق لك التدريب» is mandatory for the Trainer.
+        Assert.Equal("published", schemas["dm-gap-01.2026-10-07"]);
         Assert.Equal(47, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-14"));
         Assert.Equal(51, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-16"));
         Assert.Equal(55, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-21"));
@@ -124,15 +127,16 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
         Assert.Equal(
             ["education", "certifications", "experience"],
             await db.FormSections.AsNoTracking()
-                .Where(s => s.SchemaVersion == "dm-gap-01.2026-09-29" && s.Repeatable != null)
+                .Where(s => s.SchemaVersion == "dm-gap-01.2026-10-07" && s.Repeatable != null)
                 .OrderBy(s => s.OrderIndex)
                 .Select(s => s.SectionCode)
                 .ToListAsync());
-        // Only the three newest declare them; every earlier one is flat.
+        // Only the four newest declare them; every earlier one is flat.
         Assert.Equal(0, await db.FormSections.CountAsync(
             s => s.SchemaVersion != "dm-gap-01.2026-09-21"
                 && s.SchemaVersion != "dm-gap-01.2026-09-28"
                 && s.SchemaVersion != "dm-gap-01.2026-09-29"
+                && s.SchemaVersion != "dm-gap-01.2026-10-07"
                 && s.Repeatable != null));
     }
 

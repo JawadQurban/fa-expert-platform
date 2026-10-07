@@ -79,13 +79,21 @@ public static class FormSchemaVersions
 
     /// <summary>
     /// `preferredDeliveryMode` declares the service list it is actually for —
-    /// published. Business decision 2026-09-29: the field is Trainer-only, so
+    /// superseded. Business decision 2026-09-29: the field is Trainer-only, so
     /// `requiredFor` now matches `visibleFor` instead of naming all four
     /// services. The correction is INERT — both validators skip a hidden field,
     /// so no application's outcome differs — but a published version is history
     /// and is never edited in place, so it ships as its own version.
     /// </summary>
-    public const string Current = "dm-gap-01.2026-09-29";
+    public const string DeliveryModeTrainerOnly = "dm-gap-01.2026-09-29";
+
+    /// <summary>
+    /// The Notion review of 2026-10-07 (`P-342`) — published. «المجال» offers
+    /// «أخرى» with a text field to name it (criterion #3 pays 0 for it), and
+    /// «هل سبق لك التدريب» is mandatory for the Trainer, and «القطاع» arrives
+    /// (four sectors, mandatory for all four services).
+    /// </summary>
+    public const string Current = "dm-gap-01.2026-10-07";
 }
 
 /// <summary>`FORM_SCHEMA.status` — exactly one version is published at a time.</summary>

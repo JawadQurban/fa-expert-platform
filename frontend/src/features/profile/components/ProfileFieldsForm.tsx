@@ -13,6 +13,7 @@ import {
   sectionTitle,
   validateFieldValue,
   visibleSectionFields,
+  isFieldVisible,
 } from '../../applications/applicationValidation';
 import { DynamicFieldRenderer } from '../../applications/components/DynamicFieldRenderer';
 import { getNewApplicationContent } from '../../applications/newApplication.content';
@@ -102,6 +103,12 @@ export function ProfileFieldsForm({
   const save = () => {
     const nextErrors: Record<string, string> = {};
     for (const field of editableFields) {
+      // A field the trainer cannot see (another service's, or a `dependsOn`
+      // whose condition is unmet) is never required of them — the same rule
+      // the rendered form already follows.
+      if (!isFieldVisible(field, services, values)) {
+        continue;
+      }
       const message = validateFieldValue(
         field,
         values[field.id],

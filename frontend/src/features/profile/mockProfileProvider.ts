@@ -72,6 +72,7 @@ export const MOCK_PROFILE: MyProfileDto = {
     dateOfBirth: '1985-03-01',
     nationality: 'sa',
     gender: 'male',
+    sector: 'finance',
     domain: 'dom-023',
     qualificationType: 'master',
     generalSpecialization: 'finance',
@@ -96,6 +97,8 @@ export const MOCK_PROFILE: MyProfileDto = {
     // every editable field of the schema.
     participationTypes: ['official-programs', 'workshops'],
     audiences: ['executives'],
+    // Mandatory for the Trainer since `dm-gap-01.2026-10-07` (`P-342`).
+    hasTrainedBefore: 'yes',
     hasReadyMaterials: 'yes',
     preferredDeliveryMode: 'onsite',
     // Required by the per-service split of `dm-gap-01.2026-09-21`; this demo

@@ -83,7 +83,15 @@ internal static class EvaluationMatrixSeedData
     /// weights, aggregations and the threshold are all unchanged — only what an
     /// unruled value does changed, and that is enough to need its own version.
     /// </summary>
-    internal const string Version = "dm-gap-02.2026-09-29";
+    internal const string StrictTablesVersion = "dm-gap-02.2026-09-29";
+
+    /// <summary>
+    /// The Notion review of 2026-10-07 (`P-342`): «المجال» offers «أخرى», and
+    /// criterion #3 pays 0 for it — the Evaluation Matrix comment of
+    /// 2026-09-29, «ذات صلة المعتمدة في اللستة، ليست ذو صلة اي مجال يضاف
+    /// كـ"أخرى"». Everything else is unchanged.
+    /// </summary>
+    internal const string Version = "dm-gap-02.2026-10-07";
 
     /// <summary>`J-05/F2/AC-5` — display-only, never an automated gate.</summary>
     internal const decimal PassThreshold = 50m;
@@ -243,6 +251,17 @@ internal static class EvaluationMatrixSeedData
             "personal", "domain", 10m, CriterionAggregations.SingleAnswer,
             PracticalExperienceRelevance.ScoreRule);
 
+    /// <summary>
+    /// #3 as `dm-gap-02.2026-10-07` carries it: the same strict table plus
+    /// «أخرى» (<c>other</c>) as a DECIDED 0 — not omitted, because the business
+    /// ruled on it: a domain the applicant adds is not related.
+    /// </summary>
+    private static readonly Criterion ClassifiedFieldWithOther = ClassifiedField with
+    {
+        Rule = PracticalExperienceRelevance.ScoreRule.Replace(
+            "\"points\":{", "\"points\":{\"other\":0,", StringComparison.Ordinal),
+    };
+
     /// <summary>§1.2 — Trainer, max 30% (20+5+5).</summary>
     private static readonly Criterion[] TrainerSpecific =
     [
@@ -310,7 +329,7 @@ internal static class EvaluationMatrixSeedData
     ];
 
     /// <summary>
-    /// All three approved versions, seeded side by side. The superseded ones
+    /// Every approved version, seeded side by side. The superseded ones
     /// are INACTIVE and their rows are never deleted: a screening result decided
     /// under one resolves through `SCREENING_RESULT.model_id`, and
     /// `ComputeScoresAsync` reads a decided service through that pin rather
@@ -320,7 +339,8 @@ internal static class EvaluationMatrixSeedData
     [
         .. ModelsFor(SupersededVersion, active: false, prefix: 'e'),
         .. ModelsFor(ClassifiedDomainVersion, active: false, prefix: 'f'),
-        .. ModelsFor(Version, active: true, prefix: 'a'),
+        .. ModelsFor(StrictTablesVersion, active: false, prefix: 'a'),
+        .. ModelsFor(Version, active: true, prefix: 'b'),
     ];
 
     internal static readonly object[] Criteria =
@@ -328,6 +348,7 @@ internal static class EvaluationMatrixSeedData
         .. CriteriaFor(UnavailableField, LegacyLookups, prefix: 'e'),
         .. CriteriaFor(ClassifiedField, LegacyLookups, prefix: 'f'),
         .. CriteriaFor(ClassifiedField, StrictLookups, prefix: 'a'),
+        .. CriteriaFor(ClassifiedFieldWithOther, StrictLookups, prefix: 'b'),
     ];
 
     private static object[] ModelsFor(string version, bool active, char prefix) =>
@@ -367,7 +388,7 @@ internal static class EvaluationMatrixSeedData
       * 2026-09-21's rows and must keep the ids `M34` inserted, `f7…`/`f8…` are
       * 2026-09-22's from `M35`. It must be a HEXADECIMAL digit — a Guid cannot
       * be parsed otherwise — so the sequence does not continue at `g`. The
-      * 2026-09-29 version takes `a7…`/`a8…`.
+      * 2026-09-29 version takes `a7…`/`a8…`, 2026-10-07's `b7…`/`b8…`.
       */
     private static Guid ModelId(char prefix, int n) =>
         new($"{prefix}7000000-0000-0000-0000-{n:D12}");

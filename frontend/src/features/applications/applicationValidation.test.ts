@@ -14,7 +14,7 @@ import {
   visibleAttachmentRules,
   type ValidationMessages,
 } from './applicationValidation';
-import { APPLICATION_FORM_SCHEMA } from './applicationSchema';
+import { APPLICATION_FORM_SCHEMA, OTHER_DOMAIN_OPTION } from './applicationSchema';
 import { INACTIVE_DOMAIN_CODES } from '../../shared/content/domainCatalogueStatus';
 import { SPECIALIZATION_DOMAIN_OPTIONS } from '../../shared/content/specializationDomains';
 
@@ -170,7 +170,7 @@ describe('applicationValidation (schema engine)', () => {
   );
 
   it('the served schema is the supplied field map, not the retired mock', () => {
-    expect(APPLICATION_FORM_SCHEMA.version).toBe('dm-gap-01.2026-09-29');
+    expect(APPLICATION_FORM_SCHEMA.version).toBe('dm-gap-01.2026-10-07');
     // The six J-01 sections, in the workbook's own order.
     expect(APPLICATION_FORM_SCHEMA.sections.map((s) => s.id)).toEqual([
       'personal',
@@ -198,7 +198,8 @@ describe('applicationValidation (schema engine)', () => {
     const domain = APPLICATION_FORM_SCHEMA.fields.find((f) => f.id === 'domain');
     expect(SPECIALIZATION_DOMAIN_OPTIONS).toHaveLength(147);
     expect(INACTIVE_DOMAIN_CODES).toHaveLength(13);
-    expect(domain?.options?.length).toBe(134);
+    // …plus «أخرى» (2026-10-07, `P-342`).
+    expect(domain?.options?.length).toBe(135);
     // The retired mock's invented rows are gone (the `bio` lesson, §2.3).
     for (const id of ['fullName', 'email', 'phone', 'yearsExperience', 'noticePeriod']) {
       expect(APPLICATION_FORM_SCHEMA.fields.some((f) => f.id === id)).toBe(false);
@@ -299,8 +300,10 @@ describe('applicationValidation (schema engine)', () => {
   });
 
   it('adds nothing mandatory: the matrix has no required column', () => {
+    // `hasTrainedBefore` left this list on 2026-10-07: Notion's «Application
+    // Fields by Service» makes it mandatory for the Trainer (`P-342`).
+    expect(fieldById('hasTrainedBefore').requiredFor).toEqual(['trainer']);
     const added = [
-      'hasTrainedBefore',
       'trainedBeforeDetails',
       'weekdayAvailability',
       'dailyTrainingHours',
@@ -428,7 +431,18 @@ describe('applicationValidation (schema engine)', () => {
      * schema version still offers them, so a historical application that
      * selected one stays readable.
      */
-    expect(field?.options).toHaveLength(134);
+    // …plus «أخرى» (2026-10-07), which criterion #3 pays 0 for (`P-342`).
+    expect(field?.options).toHaveLength(135);
+    expect(field?.options?.at(-1)).toEqual(OTHER_DOMAIN_OPTION);
+    expect(fieldById('domainOther').dependsOn).toEqual({ fieldId: 'domain', equals: 'other' });
+    // «القطاع» — the owner's four sectors, mandatory for all four services.
+    expect(fieldById('sector').requiredFor).toHaveLength(4);
+    expect(fieldById('sector').options?.map((option) => option.labelAr)).toEqual([
+      'التمويل',
+      'التأمين',
+      'البنوك',
+      'الأوراق المالية',
+    ]);
     expect(SPECIALIZATION_DOMAIN_OPTIONS).toHaveLength(147);
     expect(field?.options?.[0]?.value).toBe('dom-001');
     const offered = field?.options?.map((option) => option.value) ?? [];

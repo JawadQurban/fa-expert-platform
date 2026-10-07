@@ -85,12 +85,14 @@ public sealed class ApplicationTests
             .Select(o => o.GetProperty("value").GetString())
             .ToArray();
 
-        Assert.Equal(134, offered.Length);
+        // The 134 ruled domains plus «أخرى», which criterion #3 pays 0 for.
+        Assert.Equal(135, offered.Length);
+        Assert.Equal("other", offered[^1]);
         Assert.DoesNotContain("dom-122", offered);
         Assert.DoesNotContain("dom-032", offered);
         Assert.DoesNotContain("dom-076", offered);
         // …and every value a new applicant CAN pick is one the business ruled on.
-        Assert.All(offered, value => Assert.StartsWith("dom-", value!));
+        Assert.All(offered[..^1], value => Assert.StartsWith("dom-", value!));
     }
 
     [Theory]
@@ -156,9 +158,10 @@ public sealed class ApplicationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var schema = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal("dm-gap-01.2026-09-29", schema.GetProperty("version").GetString());
+        Assert.Equal("dm-gap-01.2026-10-07", schema.GetProperty("version").GetString());
         Assert.Equal(6, schema.GetProperty("sections").GetArrayLength());
-        Assert.Equal(55, schema.GetProperty("fields").GetArrayLength());
+        // 57: «القطاع» and «المجال (أخرى)» joined on 2026-10-07 (`P-342`).
+        Assert.Equal(57, schema.GetProperty("fields").GetArrayLength());
         Assert.Equal(5, schema.GetProperty("attachments").GetArrayLength());
         // Speaker is never self-service selectable (BR-0113).
         var selectable = schema.GetProperty("selectableServices").EnumerateArray()
@@ -173,8 +176,8 @@ public sealed class ApplicationTests
         var domain = fields.Single(f => f.GetProperty("id").GetString() == "domain");
         // 134, not 147: the business classified 13 of the master list as
         // master-data problems on 2026-09-28, and a NEW application is no
-        // longer offered them.
-        Assert.Equal(134, domain.GetProperty("options").GetArrayLength());
+        // longer offered them. Plus «أخرى» (2026-10-07, `P-342`).
+        Assert.Equal(135, domain.GetProperty("options").GetArrayLength());
         Assert.Contains(fields, f =>
             f.TryGetProperty("validation", out var v) && v.TryGetProperty("pattern", out _));
         Assert.Contains(fields, f =>

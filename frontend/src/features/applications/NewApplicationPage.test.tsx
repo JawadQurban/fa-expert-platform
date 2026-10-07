@@ -121,6 +121,7 @@ async function fillPersonal(user: UserEvent) {
   await pickToday(user, /تاريخ الميلاد/);
   await pickOption(user, /الجنسية/, 'السعودية');
   await pickOption(user, /^الجنس(\s\*)?$/, 'ذكر');
+  await pickOption(user, /^القطاع(\s\*)?$/, 'التمويل');
   await pickOption(user, /^المجال(\s\*)?$/, 'التحليل المالي والتمويل');
 }
 
@@ -171,6 +172,8 @@ async function fillTraining(user: UserEvent) {
   await ensureChecked(user, 'ورش عمل متخصصة');
   await ensureChecked(user, 'القيادات التنفيذية والعليا');
   const perService: readonly [RegExp, string][] = [
+    // Mandatory for the Trainer since 2026-10-07 (`P-342`).
+    [/هل سبق لك التدريب أو التحدث في فعاليات/, 'لا'],
     [/هل لديك مواد أو حقائب تدريبية جاهزة/, 'نعم'],
     [/نمط التقديم/, 'حضوري'],
     [/سنوات الخبرة التدريبية/, 'أقل من سنتين'],
