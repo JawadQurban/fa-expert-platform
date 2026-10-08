@@ -51,6 +51,11 @@ export interface AddServiceContent {
     readonly cancel: string;
     readonly dismiss: string;
   };
+  /** RB-03 — submitted with no active agreement: rejected automatically. */
+  readonly noAgreement: {
+    readonly title: string;
+    readonly body: (requestId: string) => string;
+  };
   readonly success: {
     readonly title: string;
     readonly body: (requestId: string) => string;
@@ -111,6 +116,11 @@ const ar: AddServiceContent = {
     confirm: 'تأكيد الإرسال',
     cancel: 'إلغاء',
     dismiss: 'إغلاق',
+  },
+  noAgreement: {
+    title: 'رُفض طلب إضافة الخدمة تلقائيًا',
+    body: (requestId) =>
+      `رقم طلبك: ${requestId}. لا توجد لديك اتفاقية سارية مع الأكاديمية، ولا تُضاف خدمة إلا ضمن اتفاقية سارية. تواصل مع إدارة المدربين لتجديد اتفاقيتك، ثم أعد تقديم الطلب.`,
   },
   success: {
     title: 'تم إرسال طلب إضافة الخدمة',
@@ -175,6 +185,11 @@ const en: AddServiceContent = {
     confirm: 'Confirm & submit',
     cancel: 'Cancel',
     dismiss: 'Close',
+  },
+  noAgreement: {
+    title: 'Add-service request rejected automatically',
+    body: (requestId) =>
+      `Your request number: ${requestId}. You have no active agreement with the Academy, and a service can only be added under one. Contact Trainer Management to renew your agreement, then submit the request again.`,
   },
   success: {
     title: 'Add-service request submitted',

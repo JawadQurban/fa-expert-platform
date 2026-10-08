@@ -617,6 +617,84 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public async Task With_no_active_agreement_a_service_request_is_rejected_automatically_and_cannot_be_approved()
+    {
+        // RB-03 (Notion, 2026-09-20): «automatically rejected with a dedicated
+        // reason ("no active agreement") … cannot be overridden» (`P-345`).
+        await SignInApplicantAsync();
+        var applicationId = await SeedApprovedApplicationAsync("trainer", withActiveAgreement: false);
+
+        // Submitted with none: rejected at once, and the trainer is told why.
+        var created = await PostJsonAsync($"/api/v1/me/applications/{applicationId}/services", new
+        {
+            service = "consultant",
+            values = new Dictionary<string, object> { ["consulting-areas"] = "إدارة المخاطر" },
+            attachments = Array.Empty<object>(),
+        });
+        Assert.Equal("rejected", created.GetProperty("status").GetString());
+        Assert.Equal("no-active-agreement", created.GetProperty("rejectionReason").GetString());
+
+        using var staff = TestOidc.CreateClient(_configured!);
+        await TestOidc.SignInAsync(staff, _tokenEndpoint, "fa-staff");
+        await GrantAsync(TestOidc.Subject, RoleCode.Staff);
+        var requestId = created.GetProperty("requestId").GetString()!;
+        var detail = await (await staff.GetAsync($"/api/v1/internal/service-requests/{requestId}"))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("rejected", detail.GetProperty("status").GetString());
+        Assert.Equal("no-active-agreement",
+            detail.GetProperty("decision").GetProperty("reasonId").GetString());
+        // Served with its label, but never offered to the decision-maker.
+        Assert.True(detail.GetProperty("rejectionReasons").EnumerateArray()
+            .Single(r => r.GetProperty("id").GetString() == "no-active-agreement")
+            .GetProperty("system").GetBoolean());
+
+        // A request still pending when the agreement is no longer active
+        // (here: one made before this rule) is rejected the same way on review —
+        // even when the decision-maker asks to approve.
+        Guid pendingId;
+        await using (var db = _database.CreateContext())
+        {
+            var trainerUserId = (await db.Applications.SingleAsync(a => a.ApplicationId == applicationId))
+                .ApplicantUserId;
+            var pending = new ServiceRequest
+            {
+                ServiceRequestId = Guid.NewGuid(),
+                ApplicationId = applicationId,
+                TrainerUserId = trainerUserId,
+                Reference = "EH-ASR-2026-9901",
+                RequestedService = "question-writer",
+                Status = ServiceRequestStatuses.Pending,
+                DeltaValues = "{}",
+                DeltaAttachments = "[]",
+                SubmittedAt = DateTime.UtcNow,
+            };
+            db.ServiceRequests.Add(pending);
+            await db.SaveChangesAsync();
+            pendingId = pending.ServiceRequestId;
+        }
+        var review = await (await staff.GetAsync($"/api/v1/internal/service-requests/{pendingId}"))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(review.GetProperty("viewer").GetProperty("canDecide").GetBoolean());
+        Assert.Equal("no-active-agreement",
+            review.GetProperty("viewer").GetProperty("blockedReason").GetString());
+
+        var approveResponse = await staff.PostAsJsonAsync($"/api/v1/internal/service-requests/{pendingId}/decision",
+            new
+            {
+                kind = "approve",
+                addendum = new { fileName = "addendum.pdf", sizeBytes = 120_000, attachmentId = (await TestDocuments.UploadInternalAsync(staff, "service-addendum", "addendum.pdf")).GetProperty("attachmentId").GetString() },
+                note = "",
+            });
+        Assert.Equal(HttpStatusCode.OK, approveResponse.StatusCode);
+        var approve = await approveResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("rejected", approve.GetProperty("status").GetString());
+        Assert.Equal("no-active-agreement", approve.GetProperty("decision").GetProperty("reasonId").GetString());
+        // …and the trainer's services did not widen.
+        var context = await GetJsonAsync($"/api/v1/me/applications/{applicationId}/services/context");
+        Assert.Equal(1, context.GetProperty("currentServices").GetArrayLength());
+    }
+
+    [Fact]
     public async Task A_rejection_keeps_its_reason_internal_and_notifies_without_it()
     {
         await SignInApplicantAsync();
@@ -750,7 +828,8 @@ public sealed class ApplicationTests
         return application.ApplicationId;
     }
 
-    private async Task<Guid> SeedApprovedApplicationAsync(string acceptedService)
+    private async Task<Guid> SeedApprovedApplicationAsync(
+        string acceptedService, bool withActiveAgreement = true)
     {
         await using var db = _database.CreateContext();
         var user = await db.Users.SingleAsync(u => u.ExternalIdentityId == TestOidc.Subject);
@@ -775,6 +854,22 @@ public sealed class ApplicationTests
             Outcome = "accepted",
             DecidedAt = DateTime.UtcNow,
         });
+        // RB-03 — an accredited trainer normally holds a signed agreement; a
+        // service request without one is rejected automatically.
+        if (withActiveAgreement)
+        {
+            db.Agreements.Add(new Agreement
+            {
+                AgreementId = Guid.NewGuid(),
+                TrainerUserId = user.UserId,
+                ApplicationId = application.ApplicationId,
+                Reference = $"EH-AGR-{Guid.NewGuid():N}"[..20],
+                Status = AgreementStatuses.Active,
+                FieldValues = "{}",
+                CreatedBy = user.UserId,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
         await db.SaveChangesAsync();
         return application.ApplicationId;
     }

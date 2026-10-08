@@ -151,7 +151,12 @@ internal sealed record AddServiceRequestInputWire(
     IReadOnlyDictionary<string, JsonElement>? Values,
     IReadOnlyList<AddServiceAttachmentInputWire>? Attachments);
 
-internal sealed record AddServiceRequestWire(string RequestId, string SubmittedAt);
+/// <remarks><c>Status</c> / <c>RejectionReason</c> — RB-03: a request made with
+/// no active agreement is rejected on submission, and the trainer is told why
+/// (renew the agreement first).</remarks>
+internal sealed record AddServiceRequestWire(
+    string RequestId, string SubmittedAt,
+    string Status = ServiceRequestStatuses.Pending, string? RejectionReason = null);
 
 /// <summary>The CAP-01 trainer surface.</summary>
 public static class ApplicationEndpoints
@@ -818,6 +823,7 @@ public static class ApplicationEndpoints
             AddServiceRequestInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var (application, notFound) = await FindOwnedAsync(id, http, db, ct);
@@ -868,8 +874,16 @@ public static class ApplicationEndpoints
                 SubmittedAt = now,
             };
             db.ServiceRequests.Add(request);
+            // RB-03 — submitted with no active agreement: rejected at once, with
+            // the dedicated reason. Recorded, not refused, so it is on file.
+            if (!await ServiceRequests.ServiceRequestEndpoints.HasActiveAgreementAsync(
+                    db, application.ApplicantUserId, ct))
+            {
+                await ServiceRequests.ServiceRequestEndpoints.AutoRejectAsync(dispatcher, request, now, ct);
+            }
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new AddServiceRequestWire(request.ServiceRequestId.ToString(), Iso(now)));
+            return Results.Ok(new AddServiceRequestWire(
+                request.ServiceRequestId.ToString(), Iso(now), request.Status, request.RejectionReasonId));
         }).WithName("SubmitAddServiceRequest");
 
         return v1;

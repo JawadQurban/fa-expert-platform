@@ -85,7 +85,13 @@ export interface ServiceRequestsContent {
     readonly directRouteNote: string;
     readonly approve: string;
     readonly reject: string;
-    readonly blocked: Readonly<Record<'not-authorized' | 'already-decided', string>>;
+    readonly blocked: Readonly<
+      Record<'not-authorized' | 'already-decided' | 'no-active-agreement', string>
+    >;
+    /** RB-03 — no active agreement: the request can only be rejected. */
+    readonly noAgreementTitle: string;
+    readonly recordAutoRejection: string;
+    readonly openAgreements: string;
     readonly errors: Readonly<Record<ServiceRequestValidationCode, string>>;
     readonly approveDialog: {
       readonly title: string;
@@ -220,7 +226,12 @@ const ar: ServiceRequestsContent = {
     blocked: {
       'not-authorized': 'ليست لديك صلاحية اتخاذ القرار على هذا الطلب.',
       'already-decided': 'صدر القرار على هذا الطلب.',
+      'no-active-agreement':
+        'لا توجد لدى المدرب اتفاقية سارية، لذلك يُرفض الطلب تلقائيًا ولا يمكن اعتماده. يلزم تجديد الاتفاقية أولًا، ثم يعيد المدرب تقديم الطلب.',
     },
+    noAgreementTitle: 'لا توجد اتفاقية سارية',
+    recordAutoRejection: 'تسجيل الرفض التلقائي',
+    openAgreements: 'إدارة الاتفاقيات',
     errors: {
       'addendum-missing': 'يجب إرفاق ملحق الاتفاقية قبل اعتماد الطلب.',
       'reason-missing': 'يجب اختيار سبب الرفض.',
@@ -359,7 +370,12 @@ const en: ServiceRequestsContent = {
     blocked: {
       'not-authorized': 'You do not have permission to decide on this request.',
       'already-decided': 'This request has already been decided.',
+      'no-active-agreement':
+        'The trainer has no active agreement, so the request is rejected automatically and cannot be approved. The agreement must be renewed first; the trainer then submits the request again.',
     },
+    noAgreementTitle: 'No active agreement',
+    recordAutoRejection: 'Record the automatic rejection',
+    openAgreements: 'Agreement management',
     errors: {
       'addendum-missing': 'Attach the agreement addendum before approving.',
       'reason-missing': 'Select a rejection reason.',

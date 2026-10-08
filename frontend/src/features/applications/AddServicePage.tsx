@@ -69,7 +69,10 @@ export default function AddServicePage() {
   const [pending, setPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionFailed, setActionFailed] = useState<string | null>(null);
-  const [result, setResult] = useState<{ readonly requestId: string } | null>(null);
+  const [result, setResult] = useState<{
+    readonly requestId: string;
+    readonly rejected: boolean;
+  } | null>(null);
   const loadedOnce = useRef(false);
 
   useEffect(() => {
@@ -217,7 +220,8 @@ export default function AddServicePage() {
     void service.submitAddServiceRequest(applicationId, input).then((res) => {
       setBusy(false);
       if (res.ok) {
-        setResult({ requestId: res.value.requestId });
+        // RB-03 — with no active agreement the request comes back rejected.
+        setResult({ requestId: res.value.requestId, rejected: res.value.status === 'rejected' });
         setPhase('submitted');
       } else {
         setActionFailed(
@@ -308,15 +312,23 @@ export default function AddServicePage() {
     return (
       <Section aria-labelledby="eh-addservice-title">
         <Container size="prose">
-          <Alert tone="success" role="status" title={content.success.title}>
-            {content.success.body(result.requestId)}
-          </Alert>
+          {result.rejected ? (
+            <Alert tone="warning" role="status" title={content.noAgreement.title}>
+              {content.noAgreement.body(result.requestId)}
+            </Alert>
+          ) : (
+            <Alert tone="success" role="status" title={content.success.title}>
+              {content.success.body(result.requestId)}
+            </Alert>
+          )}
           <Typography as="h1" id="eh-addservice-title" variant="display-md" tabIndex={-1}>
-            {content.success.title}
+            {result.rejected ? content.noAgreement.title : content.success.title}
           </Typography>
-          <Typography as="p" variant="text-md" color="muted" className={styles.successNote}>
-            {content.success.note}
-          </Typography>
+          {!result.rejected && (
+            <Typography as="p" variant="text-md" color="muted" className={styles.successNote}>
+              {content.success.note}
+            </Typography>
+          )}
           <div className={styles.successActions}>
             <Button variant="primary" size="md" href={detailHref}>
               {content.success.backToApplication}

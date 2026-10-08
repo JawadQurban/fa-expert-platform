@@ -49,7 +49,10 @@ internal sealed record SubmittedFieldWire(LocalizedTextWire Label, string Value)
 
 internal sealed record SubmittedAttachmentWire(string Id, LocalizedTextWire Label, string FileName);
 
-internal sealed record RejectionReasonWire(string Id, LocalizedTextWire Label, bool RequiresText);
+/// <remarks><c>System</c> — applied by the platform (RB-03), never offered to
+/// the decision-maker.</remarks>
+internal sealed record RejectionReasonWire(
+    string Id, LocalizedTextWire Label, bool RequiresText, bool System = false);
 
 internal sealed record DecisionRecordWire(
     string Kind, string DecidedAt, string DecidedByName,
@@ -146,6 +149,15 @@ public static class ServiceRequestEndpoints
             }
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
             var now = DateTime.UtcNow;
+
+            // RB-03 — reviewed with no active agreement: the request is rejected
+            // with the dedicated reason, whatever was asked for. Not overridable.
+            if (!await HasActiveAgreementAsync(db, request.TrainerUserId, ct))
+            {
+                await AutoRejectAsync(dispatcher, request, now, ct);
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(await DetailWireAsync(db, request, ct));
+            }
 
             if (string.Equals(input.Kind, "approve", StringComparison.Ordinal))
             {
@@ -281,6 +293,39 @@ public static class ServiceRequestEndpoints
         return v1;
     }
 
+    /// <summary>RB-03 — the trainer holds an agreement in effect.</summary>
+    internal static Task<bool> HasActiveAgreementAsync(
+        ExpertHubDbContext db, Guid trainerUserId, CancellationToken ct) =>
+        db.Agreements.AnyAsync(
+            a => a.TrainerUserId == trainerUserId && a.Status == AgreementStatuses.Active, ct);
+
+    /// <summary>
+    /// RB-03 — the automatic rejection: the dedicated reason, decided by the
+    /// system (no decider), and the trainer told the outcome (EV-0104).
+    /// </summary>
+    internal static async Task AutoRejectAsync(
+        NotificationDispatcher dispatcher, ServiceRequest request, DateTime now, CancellationToken ct)
+    {
+        request.Status = ServiceRequestStatuses.Rejected;
+        request.DecisionKind = "reject";
+        request.RejectionReasonId = ServiceRequestRejectionReasons.NoActiveAgreement.Id;
+        request.RejectionReasonText = null;
+        request.DecidedBy = null;
+        request.DecidedAt = now;
+        await dispatcher.RaiseAsync(
+            "EV-0104",
+            new NotificationEventContext(
+                SourceEntityId: request.ServiceRequestId,
+                RecordSubjectUserId: request.TrainerUserId,
+                ActingStaffUserId: null),
+            new Dictionary<string, string>
+            {
+                ["serviceName"] = ApplicationServices.NameAr(request.RequestedService),
+                ["referenceNumber"] = request.Reference,
+            },
+            ct);
+    }
+
     private static async Task<ServiceRequest?> FindAsync(
         string id,
         ExpertHubDbContext db,
@@ -385,14 +430,29 @@ public static class ServiceRequestEndpoints
                 Agreement: null),
             submittedFields,
             submittedAttachments,
-            [.. ServiceRequestRejectionReasons.All.Select(r => new RejectionReasonWire(
-                r.Id, new LocalizedTextWire(r.LabelAr, r.LabelEn), r.RequiresText))],
+            [
+                .. ServiceRequestRejectionReasons.All.Select(r => new RejectionReasonWire(
+                    r.Id, new LocalizedTextWire(r.LabelAr, r.LabelEn), r.RequiresText)),
+                // RB-03 — served so a recorded automatic rejection reads by its
+                // label; `System` keeps it out of the decision-maker's list.
+                new RejectionReasonWire(
+                    ServiceRequestRejectionReasons.NoActiveAgreement.Id,
+                    new LocalizedTextWire(
+                        ServiceRequestRejectionReasons.NoActiveAgreement.LabelAr,
+                        ServiceRequestRejectionReasons.NoActiveAgreement.LabelEn),
+                    false,
+                    System: true),
+            ],
             decision,
             // J-03's open decision-maker role: any internal session may decide
             // (P-J9 — served, so the eventual ruling changes only this line).
-            new ViewerWire(
-                CanDecide: request.Status == ServiceRequestStatuses.Pending,
-                BlockedReason: request.Status == ServiceRequestStatuses.Pending ? null : "already-decided"));
+            // RB-03 — with no active agreement there is nothing to decide: the
+            // only action records the automatic rejection.
+            request.Status != ServiceRequestStatuses.Pending
+                ? new ViewerWire(CanDecide: false, BlockedReason: "already-decided")
+                : await HasActiveAgreementAsync(db, request.TrainerUserId, ct)
+                    ? new ViewerWire(CanDecide: true, BlockedReason: null)
+                    : new ViewerWire(CanDecide: false, BlockedReason: "no-active-agreement"));
     }
 
     private static string DisplayValue(JsonElement value) => value.ValueKind switch

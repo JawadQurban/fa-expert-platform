@@ -109,7 +109,7 @@ journey it changes and the test that holds it.
 | Decision | Question | Journey | UAT test | Status |
 |---|---|---|---|---|
 | BD-UAT-01 | How a nominee record links to an SSO identity | J-02 | — | **BLOCKED_BUSINESS** — J-02 not runnable |
-| BD-UAT-02 | Approve a service request with no active agreement? | J-03 | SC-D-06 | BLOCKED_BUSINESS (UAT tests the path *with* an active agreement) |
+| BD-UAT-02 | Approve a service request with no active agreement? | J-03 | SC-D-06 | DECIDED — rejected automatically, not overridable (`P-345`); `ApplicationTests.With_no_active_agreement_a_service_request_is_rejected_automatically_and_cannot_be_approved` |
 | BD-UAT-03 | Is internal acceptance legally sufficient? | J-10, J-11 | SC-D-04, SC-D-05 | BLOCKED_BUSINESS for production; UAT proceeds on `internal-acceptance` |
 | BD-UAT-04 | Which date starts an agreement's term? | J-11, J-12 | SC-D-07 | BLOCKED_BUSINESS — testers must know it is the signature timestamp today |
 | BD-UAT-05 | Must the pool sender differ from the approver? | J-17 | SC-F-05 | BLOCKED_BUSINESS — nothing enforces segregation today |

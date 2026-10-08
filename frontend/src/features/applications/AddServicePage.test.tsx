@@ -103,6 +103,20 @@ describe('EH-TP-06 — Add Service', () => {
     expect(screen.getByText(content.success.note)).toBeInTheDocument();
   });
 
+  it('RB-03: with no active agreement the request comes back rejected, and says to renew first', async () => {
+    injectProvider({ noActiveAgreement: true });
+    const { user } = await renderAddService();
+    await user.click(screen.getByRole('radio', { name: content.services.trainer }));
+    await screen.findByText(content.delta.heading);
+    await fillTrainerDelta(user);
+    await user.click(screen.getByRole('button', { name: content.submit }));
+    await user.click(await screen.findByRole('button', { name: content.confirm.confirm }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: content.noAgreement.title })
+    ).toBeInTheDocument();
+    expect(screen.queryByText(content.success.note)).not.toBeInTheDocument();
+  });
+
   it('blocks with a reason when FAST cannot verify current services (P-17)', async () => {
     injectProvider({ addServiceFastUnavailable: true });
     seedExpertHubSession(['trainer']);

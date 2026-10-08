@@ -326,6 +326,21 @@ describe('EH-INT-02b — Service Requests (J-03/F2 + F3)', () => {
     ).toBeInTheDocument();
   });
 
+  it('RB-03: with no active agreement the request cannot be approved; the only action records the automatic rejection', async () => {
+    injectProvider({ noActiveAgreement: true });
+    const { user } = await renderRequest('asr-001');
+    expect(await screen.findByText(content.decision.noAgreementTitle)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: content.decision.approve })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: content.decision.openAgreements })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: content.decision.recordAutoRejection }));
+    // Recorded with the dedicated reason, read by its label.
+    expect(
+      await screen.findByText(/لا توجد اتفاقية سارية — يلزم تجديد الاتفاقية/)
+    ).toBeInTheDocument();
+  });
+
   it('reaches the queue from the internal shell', async () => {
     seedExpertHubSession(['internal']);
     renderExpertHubAt(expertHubPaths.internal);

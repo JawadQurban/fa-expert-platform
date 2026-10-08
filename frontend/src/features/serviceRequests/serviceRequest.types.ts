@@ -123,7 +123,12 @@ export interface RejectionReasonOptionDto {
   readonly label: LocalizedText;
   /** `true` for the "Other" entry, which requires free text (F3/AC-3). */
   readonly requiresText: boolean;
+  /** RB-03 — applied by the platform, never offered to the decision-maker. */
+  readonly system?: boolean;
 }
+
+/** RB-03 — the dedicated reason of the automatic rejection. */
+export const NO_ACTIVE_AGREEMENT_REASON = 'no-active-agreement';
 
 /** What was decided, once it has been. */
 export interface ServiceRequestDecisionRecordDto {
@@ -157,7 +162,8 @@ export interface ServiceRequestViewerDto {
    * (P-J9).
    */
   readonly canDecide: boolean;
-  readonly blockedReason: 'not-authorized' | 'already-decided' | null;
+  /** RB-03 — `no-active-agreement`: the only action records the automatic rejection. */
+  readonly blockedReason: 'not-authorized' | 'already-decided' | 'no-active-agreement' | null;
 }
 
 export interface ServiceRequestDetailDto extends ServiceRequestSummaryDto {

@@ -242,6 +242,9 @@ export interface MockApplicationsProviderOptions {
   readonly hasApprovedTrainerRole?: boolean;
   /** EH-TP-05: simulate the `G5` field-map-unavailable blocked state. */
   readonly schemaUnavailable?: boolean;
+  /** RB-03: the trainer holds no active agreement — an add-service request is
+   *  rejected on submission. */
+  readonly noActiveAgreement?: boolean;
   /** EH-TP-05: what the Academy already knows, keyed by field code. */
   readonly prefill?: Record<string, string>;
   /** EH-TP-05: make uploads fail (upload-error / retry testing). */
@@ -499,6 +502,7 @@ export function createMockApplicationsProvider(
     prefill = {},
     uploadFailWith,
     hasApprovedTrainerRole = false,
+    noActiveAgreement = false,
   } = options;
 
   // EH-TP-05 draft state, held in the provider closure exactly as the future
@@ -1003,6 +1007,9 @@ export function createMockApplicationsProvider(
         value: {
           requestId: `EH-ASR-2026-${String(submitCounter).padStart(4, '0')}`,
           submittedAt: new Date().toISOString(),
+          // RB-03 — as the server: recorded, and rejected at once.
+          status: noActiveAgreement ? 'rejected' : 'pending',
+          rejectionReason: noActiveAgreement ? 'no-active-agreement' : null,
         },
       };
     },

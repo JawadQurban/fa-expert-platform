@@ -51,6 +51,9 @@ export interface AddServiceRequestInput {
 export interface AddServiceRequestDto {
   readonly requestId: string;
   readonly submittedAt: string;
+  /** RB-03 — `rejected` when submitted with no active agreement. */
+  readonly status?: 'pending' | 'rejected';
+  readonly rejectionReason?: string | null;
 }
 
 /* ------------------------------------------------------------------ *

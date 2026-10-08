@@ -181,4 +181,16 @@ public static class ServiceRequestRejectionReasons
         new("specialty-not-required", "التخصص غير مطلوب حاليًا", "Specialty not currently required", false),
         new("other", "سبب آخر", "Other", true),
     ];
+
+    /// <summary>
+    /// RB-03 (Notion, 2026-09-20): «the request is automatically rejected with
+    /// a dedicated reason ("no active agreement") pointing to the renewal path
+    /// (J-12), and this cannot be overridden by the decision-maker». Applied by
+    /// the system only — never offered in the decision-maker's list.
+    /// </summary>
+    public static readonly ServiceRequestRejectionReason NoActiveAgreement = new(
+        "no-active-agreement",
+        "لا توجد اتفاقية سارية — يلزم تجديد الاتفاقية",
+        "No active agreement — the agreement must be renewed",
+        false);
 }

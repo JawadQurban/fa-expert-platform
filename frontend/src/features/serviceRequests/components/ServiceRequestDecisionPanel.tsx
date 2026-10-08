@@ -4,9 +4,11 @@ import type { UploadedFile } from '@ds/composite';
 import { Button, Select, Textarea, Typography } from '@ds/primitives';
 import { useLocale } from '@i18n/LocaleProvider';
 import { localized } from '../../../shared/types/localizedText';
+import { expertHubPaths } from '../../../app/router/paths';
 import {
   ADDENDUM_FORMATS,
   addendumFileIssue,
+  NO_ACTIVE_AGREEMENT_REASON,
   validateServiceRequestDecision,
 } from '../serviceRequest.types';
 import type {
@@ -156,6 +158,28 @@ export function ServiceRequestDecisionPanel({
             {copy.reject}
           </Button>
         </div>
+      ) : viewer.blockedReason === 'no-active-agreement' ? (
+        // RB-03 — nothing to decide: renew first (J-12); the rejection is automatic.
+        <Alert tone="warning" surface="tinted" role="status" title={copy.noAgreementTitle}>
+          <Typography as="p" variant="text-md">
+            {copy.blocked['no-active-agreement']}
+          </Typography>
+          <div className={styles.actions}>
+            <Button
+              variant="primary"
+              size="md"
+              disabled={busy}
+              onClick={() =>
+                onDecide({ kind: 'reject', reasonId: NO_ACTIVE_AGREEMENT_REASON, reasonText: '' })
+              }
+            >
+              {copy.recordAutoRejection}
+            </Button>
+            <Button variant="secondary" size="md" href={expertHubPaths.internalAgreements}>
+              {copy.openAgreements}
+            </Button>
+          </div>
+        </Alert>
       ) : (
         viewer.blockedReason != null && (
           <Typography as="p" variant="text-md" color="muted">
@@ -258,10 +282,12 @@ export function ServiceRequestDecisionPanel({
               setReasonId(value);
               setError(null);
             }}
-            options={reasons.map((reason) => ({
-              value: reason.id,
-              label: localized(reason.label, locale),
-            }))}
+            options={reasons
+              .filter((reason) => reason.system !== true)
+              .map((reason) => ({
+                value: reason.id,
+                label: localized(reason.label, locale),
+              }))}
             requiredField
             errorText={error ?? undefined}
           />

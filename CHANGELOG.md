@@ -35,6 +35,10 @@ The history before this repository existed is in
   migration `M42`). When every member marks «did not attend», the screening
   decision-maker can reschedule — as often as needed — or reject; after such a
   reschedule, rejection stays available before the new interview happens.
+- **A service request with no active agreement is rejected automatically**
+  (`P-345`, RB-03). On submission the trainer is told to renew their agreement
+  first; on review the decision-maker cannot approve it, and the only action
+  records the automatic rejection, with a link to agreement management.
 
 ### Fixed
 

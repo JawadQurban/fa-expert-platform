@@ -3,6 +3,7 @@ import type { ExpertHubApiError } from '../../shared/services/apiClient';
 import type { ServiceRequestService } from './serviceRequestService';
 import {
   addendumFileIssue,
+  NO_ACTIVE_AGREEMENT_REASON,
   validateServiceRequestDecision,
   type RejectionReasonOptionDto,
   type ServiceRequestDecisionInput,
@@ -58,6 +59,16 @@ const MOCK_REJECTION_REASONS: readonly RejectionReasonOptionDto[] = [
   },
   // F3/AC-3 — "or free text under Other".
   { id: 'other', label: { ar: 'سبب آخر', en: 'Other' }, requiresText: true },
+  // RB-03 — the platform's own reason; served for its label, never offered.
+  {
+    id: NO_ACTIVE_AGREEMENT_REASON,
+    label: {
+      ar: 'لا توجد اتفاقية سارية — يلزم تجديد الاتفاقية',
+      en: 'No active agreement — the agreement must be renewed',
+    },
+    requiresText: false,
+    system: true,
+  },
 ];
 
 /** ⚠️ MOCK trainer profiles, as F2/AC-1 requires them to appear. */
@@ -129,6 +140,8 @@ export interface MockServiceRequestProviderOptions {
   readonly seed?: readonly ServiceRequestSummaryDto[];
   /** Simulate a viewer who may look but not decide (J-03 open item 1). */
   readonly canDecide?: boolean;
+  /** RB-03 — the trainer holds no active agreement. */
+  readonly noActiveAgreement?: boolean;
   readonly now?: string;
 }
 
@@ -156,6 +169,7 @@ export function createMockServiceRequestProvider(
     failWith,
     seed = SEED_REQUESTS,
     canDecide = true,
+    noActiveAgreement = false,
     now = '2026-08-19T10:00:00Z',
   } = options;
 
@@ -219,12 +233,14 @@ export function createMockServiceRequestProvider(
       rejectionReasons: MOCK_REJECTION_REASONS,
       decision,
       viewer: {
-        canDecide: canDecide && request.status === 'pending',
+        canDecide: canDecide && request.status === 'pending' && !noActiveAgreement,
         blockedReason: !canDecide
           ? 'not-authorized'
-          : request.status === 'pending'
-            ? null
-            : 'already-decided',
+          : request.status !== 'pending'
+            ? 'already-decided'
+            : noActiveAgreement
+              ? 'no-active-agreement'
+              : null,
       },
     };
   }
@@ -302,7 +318,8 @@ export function createMockServiceRequestProvider(
       };
     },
 
-    async decideServiceRequest(id: string, input: ServiceRequestDecisionInput) {
+    async decideServiceRequest(id: string, requested: ServiceRequestDecisionInput) {
+      let input = requested;
       await delay(latencyMs);
       if (failWith != null) {
         return { ok: false, error: failWith };
@@ -311,7 +328,11 @@ export function createMockServiceRequestProvider(
       if (detail == null) {
         return { ok: false, error: { status: 404, message: 'Service request not found.' } };
       }
-      if (!detail.viewer.canDecide) {
+      // RB-03 — with no active agreement, any decision records the
+      // automatic rejection with the dedicated reason (not overridable).
+      if (noActiveAgreement && detail.viewer.blockedReason === 'no-active-agreement') {
+        input = { kind: 'reject', reasonId: NO_ACTIVE_AGREEMENT_REASON, reasonText: '' };
+      } else if (!detail.viewer.canDecide) {
         return { ok: false, error: { status: 403, message: 'Not authorized to decide.' } };
       }
       // The same gates the UI applies (F3/AC-3, AC-4), applied again server-side.
