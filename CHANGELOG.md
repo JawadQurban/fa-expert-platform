@@ -31,6 +31,10 @@ The history before this repository existed is in
   inner panel — overview (sector, activity types), experience (years and the two
   most recent roles), degree / university / year of the highest qualification,
   and related fields (services, forum participation, field/domain).
+- **A full committee no-show no longer dead-ends the interview** (`P-344`,
+  migration `M42`). When every member marks «did not attend», the screening
+  decision-maker can reschedule — as often as needed — or reject; after such a
+  reschedule, rejection stays available before the new interview happens.
 
 ### Fixed
 

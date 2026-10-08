@@ -712,6 +712,86 @@ public sealed class Cap02Tests
     }
 
     [Fact]
+    public async Task A_full_committee_no_show_can_be_rescheduled_again_and_again_and_rejected_at_any_point()
+    {
+        // Notion «Resolved Issues», J-07/F3 AC-3 + AC-4 (`P-344`).
+        using var applicant = await SignInAsync("applicant-noshow", "unmapped", "متقدم");
+        var applicationId = await SubmitCompleteApplicationAsync(applicant);
+        using var decider = await SignInAsync("decider-noshow", "fa-staff", "مدير الفرز", RoleCode.Manager);
+        using var member = await SignInAsync("member-noshow", "fa-staff", "عضو اللجنة", RoleCode.Manager);
+        await AcceptToInterviewAsync(decider, applicant, applicationId, await UserIdOfAsync("member-noshow"));
+
+        var interviewPath = $"/api/v1/internal/applications/{applicationId}/interview";
+        var reschedulePath = $"{interviewPath}/reschedule";
+        object NewSlots(int days) => new
+        {
+            slots = new[]
+            {
+                DateTime.UtcNow.AddDays(days).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture),
+            },
+            note = "",
+        };
+
+        // AC-3 — «no limit on the number of times this can repeat»: twice here.
+        for (var round = 1; round <= 2; round++)
+        {
+            await PostAsync(member, $"{interviewPath}/evaluations", new { kind = "did-not-attend" });
+            var viewed = (await GetAsync(decider, interviewPath)).GetProperty("viewer");
+            Assert.True(viewed.GetProperty("fullNoShow").GetBoolean());
+            Assert.True(viewed.GetProperty("canReschedule").GetBoolean());
+            Assert.True(viewed.GetProperty("canReject").GetBoolean());
+
+            // Only the decision-maker may take this path (`BR-0208`).
+            var notTheirs = await member.PostAsJsonAsync(reschedulePath, NewSlots(5));
+            Assert.Equal(HttpStatusCode.Forbidden, notTheirs.StatusCode);
+
+            var rescheduled = await PostAsync(decider, reschedulePath, NewSlots(5 + round));
+            // The member evaluates the new interview from scratch.
+            Assert.Equal("pending",
+                rescheduled.GetProperty("committee").EnumerateArray().Single().GetProperty("state").GetString());
+            await PickFirstSlotAsync(applicant, applicationId);
+        }
+
+        // AC-4 — rejection stays available at any point, even before the new
+        // interview has happened; forwarding does not.
+        var decisionPath = $"{interviewPath}/decision";
+        var forward = await decider.PostAsJsonAsync(decisionPath, new { kind = "forward" });
+        Assert.Equal(HttpStatusCode.Conflict, forward.StatusCode);
+        var rejected = await PostAsync(decider, decisionPath,
+            new { kind = "reject", reason = "insufficient-experience", reasonOther = "" });
+        Assert.Equal("reject", rejected.GetProperty("kind").GetString());
+
+        // A decided interview takes no further responses.
+        var late = await member.PostAsJsonAsync($"{interviewPath}/evaluations", new { kind = "did-not-attend" });
+        Assert.Equal(HttpStatusCode.Conflict, late.StatusCode);
+
+        await using var db = _database.CreateContext();
+        var interview = await db.Interviews.SingleAsync(i => i.ApplicationId == Guid.Parse(applicationId));
+        Assert.Equal(2, interview.NoShowRescheduleCount);
+    }
+
+    [Fact]
+    public async Task An_interview_that_happened_is_not_rescheduled()
+    {
+        // AC-3 is for a FULL no-show only; an attended interview is behind them.
+        using var applicant = await SignInAsync("applicant-attended", "unmapped", "متقدم");
+        var applicationId = await SubmitCompleteApplicationAsync(applicant);
+        using var decider = await SignInAsync("decider-attended", "fa-staff", "مدير الفرز", RoleCode.Manager);
+        using var member = await SignInAsync("member-attended", "fa-staff", "عضو اللجنة", RoleCode.Manager);
+        await AcceptToInterviewAsync(decider, applicant, applicationId, await UserIdOfAsync("member-attended"));
+        await EvaluateAsync(member, applicationId, new Dictionary<string, decimal> { ["trainer"] = 4m });
+
+        var viewed = (await GetAsync(decider, $"/api/v1/internal/applications/{applicationId}/interview"))
+            .GetProperty("viewer");
+        Assert.False(viewed.GetProperty("fullNoShow").GetBoolean());
+        Assert.False(viewed.GetProperty("canReschedule").GetBoolean());
+        var refused = await decider.PostAsJsonAsync(
+            $"/api/v1/internal/applications/{applicationId}/interview/reschedule",
+            new { slots = new[] { DateTime.UtcNow.AddDays(5).ToString("o", CultureInfo.InvariantCulture) }, note = "" });
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+    }
+
+    [Fact]
     public async Task Staff_see_a_reschedule_request_and_the_interview_panel_is_invited()
     {
         var meetings = new CapturingMeetings();

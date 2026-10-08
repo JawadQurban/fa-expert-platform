@@ -65,8 +65,12 @@ internal sealed record ServiceResultWire(
     string Service, decimal Average, decimal MaxScore,
     int CountedEvaluations, int ExcludedNonAttendance, decimal? PassThreshold, bool? Passed);
 
+/// <remarks><c>CanReject</c> — J-07/F3/AC-4: after a reschedule for a full
+/// committee no-show, rejection stays available while forwarding does not.
+/// <c>FullNoShow</c> — every member marked «did not attend» (AC-3).</remarks>
 internal sealed record InterviewViewerWire(
-    string? MemberId, bool CanEvaluate, bool CanDecide, bool CanReschedule);
+    string? MemberId, bool CanEvaluate, bool CanDecide, bool CanReschedule,
+    bool CanReject = false, bool FullNoShow = false);
 
 internal sealed record PostInterviewDecisionWire(
     string Kind, string DecidedAt, string DecidedByName, string? RejectionReason);
@@ -143,8 +147,10 @@ public static class InterviewEndpoints
             {
                 return Results.Problem(statusCode: 403, detail: "Not an assigned committee member.");
             }
-            if (assignment.SubmittedAt is not null)
+            if (assignment.SubmittedAt is not null || interviewRow.DecisionKind is not null)
             {
+                // A decided interview (J-07/F3/AC-4 can decide one that is still
+                // scheduled) takes no further responses.
                 return Results.Problem(statusCode: 409, detail: "Already responded.");
             }
             if (interviewRow.Status != InterviewStatuses.Scheduled)
@@ -277,7 +283,12 @@ public static class InterviewEndpoints
             {
                 return Results.Problem(statusCode: 409, detail: "Already decided.");
             }
-            if (interviewRow.Status != InterviewStatuses.Completed)
+            // J-07/F3/AC-4 — after a reschedule for a full committee no-show,
+            // rejection stays available at any point; forwarding still needs
+            // the consolidated result of an interview that actually happened.
+            var rejectAnyTime = interviewRow.NoShowRescheduleCount > 0
+                && string.Equals(input.Kind, "reject", StringComparison.Ordinal);
+            if (interviewRow.Status != InterviewStatuses.Completed && !rejectAnyTime)
             {
                 // F2/AC-1 — the decision follows the consolidated result.
                 return Results.Problem(statusCode: 409, detail: "The consolidated result does not exist yet.");
@@ -373,9 +384,25 @@ public static class InterviewEndpoints
                 return Results.Problem(statusCode: 404, detail: "No interview exists for this application.");
             }
             var (application, interviewRow) = loaded.Value;
-            if (interviewRow.Status == InterviewStatuses.Completed)
+            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+            /*
+             * J-07/F3/AC-3 — a completed interview is behind them, EXCEPT when
+             * every assigned member marked «did not attend»: then the
+             * decision-maker may reschedule instead of rejecting, with no limit
+             * on how often. It stays their call (`BR-0208`).
+             */
+            var noShowReschedule = interviewRow.Status == InterviewStatuses.Completed;
+            if (noShowReschedule)
             {
-                return Results.Problem(statusCode: 409, detail: "The interview is already behind them.");
+                if (interviewRow.DecisionKind is not null
+                    || !await IsFullNoShowAsync(db, interviewRow.InterviewId, ct))
+                {
+                    return Results.Problem(statusCode: 409, detail: "The interview is already behind them.");
+                }
+                if (!await IsScreeningDeciderAsync(db, application.ApplicationId, actor.UserId, ct))
+                {
+                    return Results.Problem(statusCode: 403, detail: "Only the screening decision-maker may reschedule after a no-show.");
+                }
             }
             var slots = (input.Slots ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
             if (slots.Count == 0)
@@ -383,7 +410,6 @@ public static class InterviewEndpoints
                 // J-06/F4 — a reschedule must propose at least one usable slot.
                 return Results.Problem(statusCode: 400, detail: "slots-missing");
             }
-            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
             var now = DateTime.UtcNow;
             var proposed = new List<DateTime>();
             foreach (var slot in slots)
@@ -400,6 +426,36 @@ public static class InterviewEndpoints
                     return Results.Problem(statusCode: 400, detail: "slot-in-past");
                 }
                 proposed.Add(parsed);
+            }
+
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            if (noShowReschedule)
+            {
+                // Claim the transition: a double-click, or a decision racing
+                // it, must not reschedule a decided or already-reopened interview.
+                var claimed = await db.Interviews
+                    .Where(i => i.InterviewId == interviewRow.InterviewId
+                        && i.Status == InterviewStatuses.Completed
+                        && i.DecisionKind == null)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(i => i.Status, InterviewStatuses.AwaitingSelection)
+                        .SetProperty(i => i.NoShowRescheduleCount, i => i.NoShowRescheduleCount + 1), ct);
+                if (claimed == 0)
+                {
+                    return Results.Problem(statusCode: 409, detail: "The interview is already behind them.");
+                }
+                interviewRow.NoShowRescheduleCount += 1;
+                // The same members evaluate the new interview from scratch.
+                var responses = await db.InterviewEvaluations
+                    .Where(e => e.InterviewId == interviewRow.InterviewId)
+                    .ToListAsync(ct);
+                foreach (var response in responses)
+                {
+                    response.DidNotAttend = false;
+                    response.SubmittedAt = null;
+                    response.Recommendations = null;
+                    response.Note = null;
+                }
             }
 
             var oldSlots = await db.InterviewSlots
@@ -440,6 +496,7 @@ public static class InterviewEndpoints
                 },
                 ct);
             await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
             return Results.Ok(await BuildDetailAsync(db, application, interviewRow, actor.UserId, ct));
         }).WithName("StaffReschedule")
             .RequireFeature("F-0202");
@@ -551,6 +608,17 @@ public static class InterviewEndpoints
             return s.Score / axis.MaxScore * axis.Weight / 100m * model.ResultMaxScore;
         });
 
+    /// <summary>J-07/F3/AC-3 — every assigned member responded «did not attend».</summary>
+    internal static async Task<bool> IsFullNoShowAsync(
+        ExpertHubDbContext db, Guid interviewId, CancellationToken ct)
+    {
+        var responses = await db.InterviewEvaluations
+            .Where(e => e.InterviewId == interviewId)
+            .Select(e => new { e.SubmittedAt, e.DidNotAttend })
+            .ToListAsync(ct);
+        return responses.Count > 0 && responses.All(r => r.SubmittedAt != null && r.DidNotAttend);
+    }
+
     internal static async Task<bool> IsScreeningDeciderAsync(
         ExpertHubDbContext db, Guid applicationId, Guid userId, CancellationToken ct) =>
         await (
@@ -629,6 +697,8 @@ public static class InterviewEndpoints
 
         var mine = evaluations.FirstOrDefault(e => e.EvaluatorUserId == viewerUserId);
         var isDecider = await IsScreeningDeciderAsync(db, application.ApplicationId, viewerUserId, ct);
+        var fullNoShow = interviewRow.Status == InterviewStatuses.Completed
+            && await IsFullNoShowAsync(db, interviewRow.InterviewId, ct);
         PostInterviewDecisionWire? decision = null;
         if (interviewRow.DecisionKind is not null)
         {
@@ -685,8 +755,13 @@ public static class InterviewEndpoints
                     && interviewRow.Status == InterviewStatuses.Scheduled,
                 CanDecide: isDecider && interviewRow.DecisionKind is null
                     && interviewRow.Status == InterviewStatuses.Completed,
-                CanReschedule: interviewRow.Status != InterviewStatuses.Completed
-                    && interviewRow.DecisionKind is null),
+                CanReschedule: interviewRow.DecisionKind is null
+                    && (interviewRow.Status != InterviewStatuses.Completed
+                        || (fullNoShow && isDecider)),
+                CanReject: isDecider && interviewRow.DecisionKind is null
+                    && (interviewRow.Status == InterviewStatuses.Completed
+                        || interviewRow.NoShowRescheduleCount > 0),
+                FullNoShow: fullNoShow),
             decision,
             await ExemptedServicesAsync(db, application.ApplicationId, ct),
             interviewRow.RescheduleRequestedAt is { } requestedAt

@@ -44,6 +44,8 @@ export function PostInterviewDecisionPanel({
   locale,
   submitting,
   onSubmit,
+  fullNoShow = false,
+  rejectOnly = false,
 }: {
   readonly resultReady: boolean;
   readonly result: readonly ServiceInterviewResultDto[] | null;
@@ -56,6 +58,10 @@ export function PostInterviewDecisionPanel({
   readonly locale: Locale;
   readonly submitting: boolean;
   readonly onSubmit: (input: PostInterviewDecisionInput) => void;
+  /** J-07/F3/AC-3 — every member marked «did not attend». */
+  readonly fullNoShow?: boolean;
+  /** J-07/F3/AC-4 — the rescheduled interview has not happened: reject only. */
+  readonly rejectOnly?: boolean;
 }) {
   const copy = content.decision;
   const [forwardOpen, setForwardOpen] = useState(false);
@@ -145,14 +151,25 @@ export function PostInterviewDecisionPanel({
       </Typography>
 
       {/* `BR-0220` — a named blocker beats a vanished control. */}
-      {!resultReady && (
+      {!resultReady && !rejectOnly && (
         <Alert tone="info" surface="tinted" title={copy.blockedTitle} role="status">
           {copy.blockedBody}
         </Alert>
       )}
-      {nonePassed && (
-        <Alert tone="warning" surface="tinted" title={copy.noPassTitle} role="status">
-          {copy.noPassBody}
+      {fullNoShow ? (
+        <Alert tone="warning" surface="tinted" title={copy.noShowTitle} role="status">
+          {copy.noShowBody}
+        </Alert>
+      ) : (
+        nonePassed && (
+          <Alert tone="warning" surface="tinted" title={copy.noPassTitle} role="status">
+            {copy.noPassBody}
+          </Alert>
+        )
+      )}
+      {rejectOnly && (
+        <Alert tone="info" surface="tinted" title={copy.rejectOnlyTitle} role="status">
+          {copy.rejectOnlyBody}
         </Alert>
       )}
 
@@ -161,7 +178,7 @@ export function PostInterviewDecisionPanel({
           variant="primary"
           size="md"
           onClick={() => setForwardOpen(true)}
-          disabled={!resultReady || nonePassed || submitting}
+          disabled={!resultReady || nonePassed || rejectOnly || submitting}
         >
           {copy.forward}
         </Button>
@@ -169,7 +186,7 @@ export function PostInterviewDecisionPanel({
           variant="secondary"
           size="md"
           onClick={() => setRejectOpen(true)}
-          disabled={!resultReady || submitting}
+          disabled={(!resultReady && !rejectOnly) || submitting}
         >
           {copy.reject}
         </Button>

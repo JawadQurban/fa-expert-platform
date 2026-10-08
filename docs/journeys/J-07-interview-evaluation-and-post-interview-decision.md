@@ -76,5 +76,7 @@ Description: Once the interview result is finalized, the same decision-maker who
 | --- | --- |
 | AC-1 | Given the interview result is finalized, then the same person who formed the interview committee and made the initial screening acceptance decision (J-05) can either forward the application to the approval committee (J-09), or send a direct rejection for the whole application without going through committee — no other committee member holds this authority *(BR-0208, clarified)* |
 | AC-2 | Given direct rejection is selected, then it cannot be completed without selecting a reason from the platform-wide unified rejection reason list *(BR-0219)* |
+| AC-3 | Given all assigned committee members mark "did not attend" for an interview, then the decision-maker may trigger a reschedule (J-06/F3) instead of rejecting — with no limit on the number of times this can repeat *(Notion «Resolved Issues», 2026-09-20; `P-344`)* |
+| AC-4 | Given a reschedule due to full committee no-show, then the decision-maker retains the option to reject the application directly at any point, selecting a reason from the approved rejection reason list — rescheduling is never forced *(Notion «Resolved Issues», 2026-09-20; `P-344`)* |
 
 ---

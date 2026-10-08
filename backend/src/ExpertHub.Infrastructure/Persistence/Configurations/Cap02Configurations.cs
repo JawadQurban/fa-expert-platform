@@ -141,6 +141,7 @@ public sealed class InterviewConfiguration : IEntityTypeConfiguration<Interview>
         builder.Property(i => i.RescheduleRequestedAt).HasColumnName("reschedule_requested_at");
         builder.Property(i => i.RescheduleNote).HasColumnName("reschedule_note");
         builder.Property(i => i.RescheduleCount).HasColumnName("reschedule_count");
+        builder.Property(i => i.NoShowRescheduleCount).HasColumnName("no_show_reschedule_count");
         builder.Property(i => i.MeetingUrl).HasColumnName("meeting_url").HasMaxLength(500);
         builder.Property(i => i.MeetingExternalId)
             .HasColumnName("meeting_external_id").HasMaxLength(200);

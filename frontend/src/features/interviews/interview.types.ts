@@ -149,8 +149,14 @@ export interface InterviewViewerDto {
   readonly canEvaluate: boolean;
   /** `BR-0208` — only the person who formed the committee at screening (J-05). */
   readonly canDecide: boolean;
-  /** J-06/F4/AC-3 — staff-side reschedule trigger. */
+  /** J-06/F4/AC-3 — staff-side reschedule trigger; after a full committee
+   *  no-show, the decision-maker's (J-07/F3/AC-3). */
   readonly canReschedule: boolean;
+  /** J-07/F3/AC-4 — rejection stays available after a no-show reschedule,
+   *  even before the new interview happens. */
+  readonly canReject?: boolean;
+  /** J-07/F3/AC-3 — every assigned member marked «did not attend». */
+  readonly fullNoShow?: boolean;
 }
 
 /* ------------------------------------------------------------------ *

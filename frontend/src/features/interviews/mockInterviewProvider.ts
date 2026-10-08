@@ -194,6 +194,9 @@ export function createMockInterviewProvider(
         // `BR-0208` — the screening decision-maker only.
         canDecide: viewerOverride?.canDecide ?? true,
         canReschedule: viewerOverride?.canReschedule ?? true,
+        // As the server: only the decision-maker may reject.
+        canReject: viewerOverride?.canReject ?? viewerOverride?.canDecide ?? true,
+        fullNoShow: viewerOverride?.fullNoShow ?? false,
       },
       decision,
     };

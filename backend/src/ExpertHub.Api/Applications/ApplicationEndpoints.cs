@@ -669,7 +669,10 @@ public static class ApplicationEndpoints
             }
             var interview = await db.Interviews.FirstOrDefaultAsync(
                 i => i.ApplicationId == application.ApplicationId, ct);
-            if (interview is null || interview.Status != InterviewStatuses.AwaitingSelection)
+            // J-07/F3/AC-4 — a rejection can land while new slots are open
+            // (after a full committee no-show); a decided interview takes no pick.
+            if (interview is null || interview.Status != InterviewStatuses.AwaitingSelection
+                || interview.DecisionKind is not null)
             {
                 return Results.Problem(
                     statusCode: 409, detail: "The application has no interview to manage at this stage.");

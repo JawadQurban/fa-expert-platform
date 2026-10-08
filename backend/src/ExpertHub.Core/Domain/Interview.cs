@@ -32,6 +32,13 @@ public sealed class Interview
     public int RescheduleCount { get; set; }
 
     /// <summary>
+    /// J-07/F3/AC-3 — how many times the decision-maker rescheduled because
+    /// EVERY committee member marked «did not attend». Unlimited by rule; once
+    /// above zero, rejection stays available at any point (AC-4).
+    /// </summary>
+    public int NoShowRescheduleCount { get; set; }
+
+    /// <summary>
     /// The join link, once a meeting exists. Null while none does — the state
     /// this carried from the start, and still the honest answer when no
     /// meeting provider is configured (`J-06` open item 1).

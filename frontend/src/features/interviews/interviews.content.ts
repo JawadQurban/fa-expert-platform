@@ -107,6 +107,12 @@ export interface InterviewsContent {
     readonly blockedBody: string;
     readonly noPassTitle: string;
     readonly noPassBody: string;
+    /** J-07/F3/AC-3 — every member marked «did not attend». */
+    readonly noShowTitle: string;
+    readonly noShowBody: string;
+    /** J-07/F3/AC-4 — the new interview has not happened; rejection only. */
+    readonly rejectOnlyTitle: string;
+    readonly rejectOnlyBody: string;
   };
   readonly forwardDialog: {
     readonly title: string;
@@ -268,6 +274,12 @@ const ar: InterviewsContent = {
     noPassTitle: 'لا توجد خدمة ناجحة',
     noPassBody:
       'لم تبلغ أي خدمة حد النجاح، لذلك لا يمكن التحويل إلى لجنة الاعتماد. الإجراء المتاح هو الرفض المباشر.',
+    noShowTitle: 'لم يحضر أي من أعضاء اللجنة',
+    noShowBody:
+      'سجّل جميع أعضاء اللجنة عدم الحضور. يمكنك إعادة جدولة المقابلة دون حد لعدد المرات، أو رفض الطلب مباشرة.',
+    rejectOnlyTitle: 'المقابلة المعاد جدولتها لم تُعقد بعد',
+    rejectOnlyBody:
+      'يتاح التحويل إلى لجنة الاعتماد بعد انعقاد المقابلة واحتساب النتيجة، ويبقى الرفض المباشر متاحًا في أي وقت.',
   },
   forwardDialog: {
     title: 'تأكيد التحويل إلى لجنة الاعتماد',
@@ -439,6 +451,12 @@ const en: InterviewsContent = {
     noPassTitle: 'No service passed',
     noPassBody:
       'No service reached the pass mark, so the application cannot be forwarded to the approval committee. Direct rejection is the available action.',
+    noShowTitle: 'No committee member attended',
+    noShowBody:
+      'Every committee member recorded that they did not attend. You can reschedule the interview, as many times as needed, or reject the application directly.',
+    rejectOnlyTitle: 'The rescheduled interview has not taken place yet',
+    rejectOnlyBody:
+      'Forwarding to the approval committee becomes available once the interview takes place and the result is calculated. Direct rejection stays available at any time.',
   },
   forwardDialog: {
     title: 'Confirm forwarding to the approval committee',

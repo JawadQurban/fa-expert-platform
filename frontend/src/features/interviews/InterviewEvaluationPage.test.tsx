@@ -264,6 +264,25 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('J-07/F3/AC-3: a full committee no-show says so, and offers reschedule and rejection', async () => {
+    injectProvider({
+      allResponded: true,
+      viewer: { canDecide: true, canReject: true, canReschedule: true, fullNoShow: true },
+    });
+    await renderInterview();
+    expect(await screen.findByText(content.decision.noShowTitle)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: content.ticket.reschedule })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: content.decision.reject })).toBeEnabled();
+  });
+
+  it('J-07/F3/AC-4: before the rescheduled interview, rejection stays available and forwarding does not', async () => {
+    injectProvider({ viewer: { canDecide: false, canReject: true, canEvaluate: false } });
+    await renderInterview();
+    expect(await screen.findByText(content.decision.rejectOnlyTitle)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: content.decision.forward })).toBeDisabled();
+    expect(screen.getByRole('button', { name: content.decision.reject })).toBeEnabled();
+  });
+
   it('keeps the same interview number after a staff reschedule (J-06/F4/AC-6)', async () => {
     const { user } = await renderInterview();
     const ticketNumber = (await screen.findByText(/INT-/)).textContent;
