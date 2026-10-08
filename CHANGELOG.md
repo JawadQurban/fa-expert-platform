@@ -26,6 +26,11 @@ The history before this repository existed is in
   «هل سبق لك التدريب أو التحدث في فعاليات؟» is mandatory for the Trainer.
   A new mandatory «القطاع» field offers التمويل، التأمين، البنوك، الأوراق المالية.
   Earlier drafts, applications and decided scores keep their own versions.
+- **The Identity Card follows Notion's 2026-09-29 layout** (`P-343`): a
+  front cover (photo, name, every professional certificate, LinkedIn) and an
+  inner panel — overview (sector, activity types), experience (years and the two
+  most recent roles), degree / university / year of the highest qualification,
+  and related fields (services, forum participation, field/domain).
 
 ### Fixed
 

@@ -1,8 +1,15 @@
+import type { ReactNode } from 'react';
 import { Alert } from '@ds/composite';
 import { Avatar, Button, Icon, Typography } from '@ds/primitives';
-import { missingIdentityCardFields, type IdentityCardDto } from '../trainerSearch.types';
+import type { Locale } from '@/types';
+import {
+  missingIdentityCardFields,
+  type IdentityCardDto,
+  type IdentityCardRoleDto,
+} from '../trainerSearch.types';
 import type { TrainerSearchContent } from '../trainerSearch.content';
 import { apiUrl } from '../../../shared/services/apiClient';
+import { formatDate } from '../../../shared/formatting';
 import { Panel } from '../../../shared/workspace/Panel';
 import styles from './IdentityCardPanel.module.css';
 
@@ -11,14 +18,14 @@ import styles from './IdentityCardPanel.module.css';
  *
  * F2/AC-1 is unusually prescriptive: the card is "populated directly from the
  * Trainer Profile fields **per the matrix above, with no additional content or
- * custom wording**". So this component renders the matrix's seven rows, in the
- * matrix's order, and offers no slot for an eighth — the constraint is the
- * feature, not a limitation to work around.
+ * custom wording**". The matrix is Notion's «Identity Card Template Fields»
+ * (2026-09-29): a front cover (photo, name, certificates, LinkedIn) and an inner
+ * panel of four groups — «نبذة عامة», «الخبرات», «المؤهلات الأكاديمية»,
+ * «المجالات ذات العلاقة». This renders exactly those rows, in that order.
  *
- * ⚠️ **Every row comes from the trainer profile** — *Related Fields*
- * from the field/domain answer, *Social Media Accounts* from the LinkedIn and
- * website links. A row the API sends as `null` (no source) still renders as
- * explicitly unavailable rather than being dropped, so a gap is never hidden.
+ * ⚠️ **Every row comes from the trainer profile.** A row the API sends as
+ * `null` (no source) still renders as explicitly unavailable rather than being
+ * dropped, so a gap is never hidden.
  *
  * ⚠️ **PDF export is blocked.** `G26` leaves document generation and storage
  * unresolved, and the "approved design template" AC-1 requires is not in this
@@ -35,12 +42,29 @@ function experienceText(experience: string, content: TrainerSearchContent): stri
   return /^[0-9]+$/.test(trimmed) ? content.yearsValue(Number(trimmed)) : trimmed;
 }
 
+/** «المسمى — الجهة (من–إلى)», the years through the shared formatter (G-02). */
+function roleText(
+  role: IdentityCardRoleDto,
+  locale: Locale,
+  content: TrainerSearchContent
+): string {
+  const year = (iso: string | null) =>
+    iso == null ? null : formatDate(iso, locale, { year: 'numeric' });
+  const from = year(role.startedAt);
+  const to = role.current ? content.identityCard.current : year(role.endedAt);
+  const span = [from, to].filter((part) => part != null).join('–');
+  const head = [role.jobTitle, role.organization].filter((part) => part !== '').join(' — ');
+  return span === '' ? head : `${head} (${span})`;
+}
+
 export function IdentityCardPanel({
   card,
   content,
+  locale,
 }: {
   readonly card: IdentityCardDto;
   readonly content: TrainerSearchContent;
+  readonly locale: Locale;
 }) {
   const copy = content.identityCard;
   const missing = missingIdentityCardFields(card);
@@ -84,6 +108,15 @@ export function IdentityCardPanel({
     </div>
   );
 
+  const group = (heading: string, rows: readonly ReactNode[]) => (
+    <section key={heading} aria-label={heading} className={styles.rows}>
+      <Typography as="h3" variant="text-sm" weight="bold">
+        {heading}
+      </Typography>
+      <dl className={styles.rows}>{rows}</dl>
+    </section>
+  );
+
   return (
     <Panel>
       <Typography as="h2" variant="text-md" weight="bold">
@@ -106,14 +139,33 @@ export function IdentityCardPanel({
         </Typography>
       </div>
 
-      {/* The seven matrix rows, in the matrix's order. */}
+      {/* Front cover — certificates and LinkedIn, under the photo and name. */}
       <dl className={styles.rows}>
-        {row(copy.fields.experience, experienceText(card.experience, content))}
-        {row(copy.fields.academicQualifications, card.academicQualifications)}
-        {row(copy.fields.relatedFields, card.relatedFields)}
         {row(copy.fields.certifications, card.certifications)}
         {row(copy.fields.socialAccounts, card.socialAccounts)}
       </dl>
+
+      {/* Inner panel — the matrix's four groups, in its order. */}
+      {group(copy.sections.overview, [
+        row(copy.fields.sector, card.sector ?? ''),
+        row(copy.fields.participationTypes, card.participationTypes),
+      ])}
+      {group(copy.sections.experience, [
+        row(copy.fields.experience, experienceText(card.experience, content)),
+        row(
+          copy.fields.recentRoles,
+          card.recentRoles.map((role) => roleText(role, locale, content))
+        ),
+      ])}
+      {group(copy.sections.academic, [
+        row(
+          copy.fields.academicQualifications,
+          [card.academicQualifications, card.university, card.qualificationYear]
+            .filter((part): part is string => part != null && part !== '')
+            .join('، ')
+        ),
+      ])}
+      {group(copy.sections.relatedFields, [row(copy.fields.relatedFields, card.relatedFields)])}
 
       {/* `Q19` — name the gaps once, for the person who can report them. */}
       {missingLabels.length > 0 && (

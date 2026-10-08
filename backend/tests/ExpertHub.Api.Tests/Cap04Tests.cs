@@ -628,17 +628,30 @@ public sealed class Cap04Tests
         // Academic qualifications: the option's LABEL, never the stored value.
         Assert.Equal("دبلوم", card.GetProperty("academicQualifications").GetString());
         Assert.Equal("دبلوم", detail.GetProperty("academicQualification").GetString());
-        // Related fields ← the field/domain answer (dom-001's label).
-        Assert.Equal(["تقنية معلومات وادارة وقيادة"],
+        // Notion «Identity Card Template Fields», 2026-09-29.
+        // «المجالات ذات العلاقة» ← the services held, any forum participation,
+        // and «المجال» (dom-001's label). The fixture's first participation
+        // type is not «مؤتمرات وملتقيات مهنية», so none is listed.
+        Assert.Equal(["مدرب", "تقنية معلومات وادارة وقيادة"],
             card.GetProperty("relatedFields").EnumerateArray().Select(e => e.GetString()));
-        // Certifications ← the certificate the profile names, not file names.
-        // A code now, not free text: `certificateName` became the classified
-        // master-list dropdown the Evaluation Matrix scores criteria #7/#8 on.
-        Assert.Equal(["CERT-0001"],
+        // Certificates ← each entry's certificate, by its LABEL — not the
+        // stored master-list code, and not the uploaded file's name.
+        Assert.Equal(["Saudi Board Certification (Saudi Commission for Health Specialties)"],
             card.GetProperty("certifications").EnumerateArray().Select(e => e.GetString()));
-        // Social media accounts ← LinkedIn + personal website.
-        Assert.Equal(["https://example.com/profile", "https://example.com/profile"],
+        // The front cover carries LinkedIn only.
+        Assert.Equal(["https://example.com/profile"],
             card.GetProperty("socialAccounts").EnumerateArray().Select(e => e.GetString()));
+        // «نبذة عامة» ← «القطاع» and «نوعية الأنشطة والمشاركات».
+        Assert.Equal("التمويل", card.GetProperty("sector").GetString());
+        Assert.Equal(["برامج تدريبية رسمية"],
+            card.GetProperty("participationTypes").EnumerateArray().Select(e => e.GetString()));
+        // «الشهادة / الجامعة / السنة» — from the same (highest) entry.
+        Assert.Equal(JsonValueKind.String, card.GetProperty("university").ValueKind);
+        Assert.Matches(@"^\d{4}$", card.GetProperty("qualificationYear").GetString()!);
+        // «أبرز الخبرات الأخيرة» — at most two (`P-299`).
+        var roles = card.GetProperty("recentRoles").EnumerateArray().ToList();
+        Assert.InRange(roles.Count, 1, 2);
+        Assert.False(string.IsNullOrEmpty(roles[0].GetProperty("jobTitle").GetString()));
         // `G26` — no generated document, so no fabricated link.
         Assert.Equal(JsonValueKind.Null, card.GetProperty("pdfUrl").ValueKind);
         // Experience ← the structured «عدد سنوات الخبرة» range this form version

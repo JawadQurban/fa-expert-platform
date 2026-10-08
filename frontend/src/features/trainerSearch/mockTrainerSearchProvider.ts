@@ -165,11 +165,31 @@ function identityCardFor(trainer: MockTrainerRecord): IdentityCardDto {
   return {
     photoUrl: null,
     name: trainer.name,
-    experience: 'قيادة برامج التطوير المهني في القطاع المالي',
+    experience: 'من 11 إلى 15 سنة',
     academicQualifications: trainer.academicQualification,
-    relatedFields: ['القيادة وإدارة الأعمال العالمية'],
+    university: 'جامعة الملك سعود',
+    qualificationYear: '2012',
+    relatedFields: ['مدرب', 'القيادة وإدارة الأعمال العالمية'],
     certifications: trainer.certifications,
     socialAccounts: ['https://www.linkedin.com/in/example'],
+    sector: 'البنوك',
+    participationTypes: ['برامج تدريبية رسمية', 'ورش عمل متخصصة'],
+    recentRoles: [
+      {
+        jobTitle: 'مدير التطوير المهني',
+        organization: 'الأكاديمية المالية',
+        startedAt: '2020-01-01',
+        endedAt: null,
+        current: true,
+      },
+      {
+        jobTitle: 'مستشار تدريب',
+        organization: 'بنك محلي',
+        startedAt: '2014-03-01',
+        endedAt: '2019-12-31',
+        current: false,
+      },
+    ],
     // `G26` — no document generation/storage, and the approved design template
     // is not in this repository. No client-side PDF is invented to fill the gap.
     pdfUrl: null,

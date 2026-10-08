@@ -99,10 +99,25 @@ internal sealed record TrainerEvaluationWire(
 internal sealed record TrainerAgreementSummaryWire(
     string Reference, string Status, string StartsAt, string EndsAt);
 
+/// <summary>One of the card's «أبرز الخبرات الأخيرة» — dates as stored (ISO).</summary>
+internal sealed record IdentityCardRoleWire(
+    string JobTitle, string Organization, string? StartedAt, string? EndedAt, bool Current);
+
+/// <summary>
+/// Notion «Identity Card Template Fields» (2026-09-29): the front cover (photo,
+/// name, certificates, LinkedIn) and the inner panel — «نبذة عامة» (sector,
+/// participation types), «الخبرات» (years, recent roles), «المؤهلات الأكاديمية»
+/// (degree / university / year) and «المجالات ذات العلاقة».
+/// </summary>
 internal sealed record IdentityCardWire(
     string? PhotoUrl, string Name, string Experience, string AcademicQualifications,
     IReadOnlyList<string>? RelatedFields, IReadOnlyList<string> Certifications,
-    IReadOnlyList<string>? SocialAccounts, string? PdfUrl);
+    IReadOnlyList<string>? SocialAccounts, string? PdfUrl,
+    string? Sector = null,
+    IReadOnlyList<string>? ParticipationTypes = null,
+    IReadOnlyList<IdentityCardRoleWire>? RecentRoles = null,
+    string? University = null,
+    string? QualificationYear = null);
 
 internal sealed record TrainerProfileWire(
     string TrainerId, string Name, string Email, string Phone, string City,
@@ -483,18 +498,30 @@ public static class DirectoryEndpoints
             .Where(a => a.ApplicationId == profile.ApplicationId)
             .Select(a => a.SchemaVersion)
             .SingleAsync(ct);
+        string[] labelledFields =
+        [
+            "qualificationType", "domain", "yearsOfExperience", "sector",
+            "participationTypes", "certificateName", "universityName",
+        ];
         var optionDefinitions = await db.FormFields
-            .Where(f => f.SchemaVersion == schemaVersion
-                && (f.FieldCode == "qualificationType" || f.FieldCode == "domain"
-                    || f.FieldCode == "yearsOfExperience"))
+            .Where(f => f.SchemaVersion == schemaVersion && labelledFields.Contains(f.FieldCode))
             .ToDictionaryAsync(f => f.FieldCode, f => f.Definition, ct);
-        string OptionLabel(string code)
-        {
-            var stored = Value(code);
-            return stored.Length == 0 || !optionDefinitions.TryGetValue(code, out var definition)
+        string Label(string code, string stored) =>
+            stored.Length == 0 || !optionDefinitions.TryGetValue(code, out var definition)
                 ? stored
                 : SelectOptionLabelAr(definition, stored) ?? stored;
-        }
+        string OptionLabel(string code) => Label(code, Value(code));
+
+        // Every entry of a repeatable section, not just the first.
+        var fieldRows = await db.TrainerFieldValues
+            .Where(v => v.TrainerId == profile.TrainerId)
+            .ToListAsync(ct);
+        string EntryValue(string code, int entry) =>
+            fieldRows.FirstOrDefault(r => r.FieldCode == code && r.EntryIndex == entry) is { } row
+                ? StoredText(row.Value)
+                : string.Empty;
+        List<int> EntriesOf(string code) =>
+            [.. fieldRows.Where(r => r.FieldCode == code).Select(r => r.EntryIndex).Order()];
 
         /*
          * `CARD-GAP-05` — the card has ONE slot for الشهادة/الجامعة/السنة but
@@ -525,12 +552,42 @@ public static class DirectoryEndpoints
             .FirstOrDefault();
         var qualification = highest is null
             ? OptionLabel("qualificationType")
-            : optionDefinitions.TryGetValue("qualificationType", out var qualificationDefinition)
-                ? SelectOptionLabelAr(qualificationDefinition, highest.Code) ?? highest.Code
-                : highest.Code;
-        var domain = OptionLabel("domain");
+            : Label("qualificationType", highest.Code);
+        // «الشهادة / الجامعة / السنة» — all three from the SAME entry.
+        var highestEntry = highest is null
+            ? (int?)null
+            : qualificationEntries.First(r => StoredText(r.Value) == highest.Code).EntryIndex;
+        var university = highestEntry is { } entryOfHighest
+            ? Label("universityName", EntryValue("universityName", entryOfHighest))
+            : string.Empty;
+        var qualificationYear = highest is { Obtained.Length: >= 4 } ? highest.Obtained[..4] : string.Empty;
+
+        // «المجال» — what the trainer typed when they chose «أخرى» (`P-342`).
+        var domain = Value("domain") == "other" ? Value("domainOther") : OptionLabel("domain");
         string[] NonEmpty(params string[] entries) =>
             [.. entries.Where(e => !string.IsNullOrWhiteSpace(e))];
+
+        List<string> participation =
+            values.TryGetValue("participationTypes", out var types)
+                && types.ValueKind == System.Text.Json.JsonValueKind.Array
+                ? [.. types.EnumerateArray()
+                    .Where(t => t.ValueKind == System.Text.Json.JsonValueKind.String)
+                    .Select(t => t.GetString()!)]
+                : [];
+
+        // `CARD-GAP-04`, `P-299` — the two most recent roles, latest start first.
+        var recentRoles = EntriesOf("jobTitle")
+            .Select(entry => new IdentityCardRoleWire(
+                EntryValue("jobTitle", entry),
+                EntryValue("organization", entry),
+                NullIfEmpty(EntryValue("experienceStartDate", entry)),
+                NullIfEmpty(EntryValue("experienceEndDate", entry)),
+                fieldRows.Any(r => r.FieldCode == "currentlyEmployed" && r.EntryIndex == entry
+                    && r.Value == "true")))
+            .Where(role => role.JobTitle.Length > 0)
+            .OrderByDescending(role => role.StartedAt ?? string.Empty, StringComparer.Ordinal)
+            .Take(2)
+            .ToList();
         return new TrainerProfileWire(
             profile.TrainerId.ToString(),
             user.FullNameAr,
@@ -579,14 +636,25 @@ public static class DirectoryEndpoints
                     ? years
                     : Value("responsibilities"),
                 qualification,
-                // Related fields ← the profile's field/domain answer.
-                RelatedFields: NonEmpty(domain),
-                // Professional certifications ← the certificate the profile names,
-                // not the uploaded file names.
-                Certifications: NonEmpty(Value("certificateName")),
-                // Social media accounts ← the LinkedIn and personal-website links.
-                SocialAccounts: NonEmpty(Value("linkedin"), Value("personalWebsite")),
-                PdfUrl: null), // G26 — no generated document to link to.
+                // «المجالات ذات العلاقة» — the services held, the forum
+                // participations, and «المجال» (or what was typed for «أخرى»).
+                RelatedFields: NonEmpty([
+                    .. services.Select(s => ApplicationServices.NameAr(s.Service)),
+                    .. participation.Where(t => t == "conferences")
+                        .Select(t => Label("participationTypes", t)),
+                    domain]),
+                // One row per certificate entry, by name (not the file name).
+                Certifications: NonEmpty([
+                    .. EntriesOf("certificateName")
+                        .Select(entry => Label("certificateName", EntryValue("certificateName", entry)))]),
+                // The front cover carries LinkedIn only.
+                SocialAccounts: NonEmpty(Value("linkedin")),
+                PdfUrl: null, // G26 — no generated document to link to.
+                Sector: NullIfEmpty(OptionLabel("sector")),
+                ParticipationTypes: [.. participation.Select(t => Label("participationTypes", t))],
+                RecentRoles: recentRoles,
+                University: NullIfEmpty(university),
+                QualificationYear: NullIfEmpty(qualificationYear)),
             await TrainerBioEndpoints.PublishedAsync(db, profile.TrainerId, ct));
     }
 
@@ -604,6 +672,8 @@ public static class DirectoryEndpoints
             ? value.GetString() ?? string.Empty
             : string.Empty;
     }
+
+    private static string? NullIfEmpty(string value) => value.Length == 0 ? null : value;
 
     private static int QualificationRank(string code) => code switch
     {

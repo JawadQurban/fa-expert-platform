@@ -96,15 +96,27 @@ export interface TrainerSearchContent {
   readonly identityCard: {
     readonly heading: string;
     readonly description: string;
+    /** The inner panel's four groups (Notion, 2026-09-29). */
+    readonly sections: {
+      readonly overview: string;
+      readonly experience: string;
+      readonly academic: string;
+      readonly relatedFields: string;
+    };
     readonly fields: {
       readonly photo: string;
       readonly name: string;
+      readonly sector: string;
+      readonly participationTypes: string;
       readonly experience: string;
+      readonly recentRoles: string;
       readonly academicQualifications: string;
       readonly relatedFields: string;
       readonly certifications: string;
       readonly socialAccounts: string;
     };
+    /** A role still held. */
+    readonly current: string;
     /** ⚠️ `Q19` — two matrix rows have no source field yet. */
     readonly missingSource: string;
     readonly missingList: (fields: string) => string;
@@ -203,15 +215,25 @@ const ar: TrainerSearchContent = {
     heading: 'البطاقة التعريفية',
     description:
       'بطاقة تُبنى من بيانات ملف المدرب وفق النموذج المعتمد، دون أي محتوى أو صياغة إضافية.',
-    fields: {
-      photo: 'الصورة',
-      name: 'الاسم',
-      experience: 'الخبرة',
-      academicQualifications: 'المؤهلات العلمية',
+    sections: {
+      overview: 'نبذة عامة',
+      experience: 'الخبرات',
+      academic: 'المؤهلات الأكاديمية',
       relatedFields: 'المجالات ذات العلاقة',
-      certifications: 'الشهادات والعضويات المهنية',
-      socialAccounts: 'حسابات التواصل الاجتماعي',
     },
+    fields: {
+      photo: 'الصورة الشخصية',
+      name: 'الاسم',
+      sector: 'المجال',
+      participationTypes: 'نوعية الأنشطة والمشاركات',
+      experience: 'عدد سنوات الخبرة',
+      recentRoles: 'أبرز الخبرات الأخيرة',
+      academicQualifications: 'الشهادة / الجامعة / السنة',
+      relatedFields: 'المجالات',
+      certifications: 'الشهادات المهنية',
+      socialAccounts: 'حساب LinkedIn',
+    },
+    current: 'حتى الآن',
     missingSource: 'لا يوجد مصدر لهذا الحقل في ملف المدرب حتى الآن.',
     missingList: (fields) => `حقول بلا مصدر في النظام: ${fields}.`,
     export: 'تصدير البطاقة (PDF)',
@@ -309,15 +331,25 @@ const en: TrainerSearchContent = {
     heading: 'Identity card',
     description:
       'A card built from the trainer’s profile fields in the approved template, with no additional content or custom wording.',
+    sections: {
+      overview: 'Overview',
+      experience: 'Experience',
+      academic: 'Academic qualifications',
+      relatedFields: 'Related fields',
+    },
     fields: {
       photo: 'Photo',
       name: 'Name',
-      experience: 'Experience',
-      academicQualifications: 'Academic qualifications',
-      relatedFields: 'Related fields',
-      certifications: 'Certifications & memberships',
-      socialAccounts: 'Social media accounts',
+      sector: 'Sector',
+      participationTypes: 'Activities and participation',
+      experience: 'Years of experience',
+      recentRoles: 'Most recent roles',
+      academicQualifications: 'Degree / university / year',
+      relatedFields: 'Fields',
+      certifications: 'Professional certificates',
+      socialAccounts: 'LinkedIn',
     },
+    current: 'present',
     missingSource: 'There is no source for this field in the trainer profile yet.',
     missingList: (fields) => `Fields with no source in the system: ${fields}.`,
     export: 'Export the card (PDF)',

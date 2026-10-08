@@ -332,16 +332,9 @@ export const PENDING_FAST_SOURCES: readonly PendingFastSource[] = [
     needs: 'a ruling on which vocabulary is the public domain',
     question: 'Q16',
   },
-  {
-    field: 'IdentityCardDto.relatedFields',
-    needs: 'confirmation that profile.AreasOfTraining is the intended source',
-    question: 'Q19',
-  },
-  {
-    field: 'IdentityCardDto.socialAccounts',
-    needs: 'profile.UserProfile.SocialMediaUrl holds ONE url; the matrix says "accounts"',
-    question: 'Q19',
-  },
+  // `Q19` (IdentityCardDto.relatedFields / socialAccounts) closed by Notion's
+  // «Identity Card Template Fields», 2026-09-29: related fields = services +
+  // forum participations + «المجال»; the front cover carries LinkedIn only.
   {
     field: 'ApplicationService (the four accredited services)',
     needs: 'FAST has three Expert* bits and none of them is trainer or consultant',

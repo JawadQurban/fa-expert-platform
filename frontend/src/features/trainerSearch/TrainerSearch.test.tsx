@@ -264,7 +264,16 @@ describe('EH-INT-07/08 — Trainer Search & Unified Profile (J-15)', () => {
     await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
     const card = screen.getByText(content.identityCard.heading).closest('div') as HTMLElement;
     for (const label of [
+      // Notion «Identity Card Template Fields», 2026-09-29: front cover + the
+      // inner panel's four groups.
+      content.identityCard.sections.overview,
+      content.identityCard.sections.experience,
+      content.identityCard.sections.academic,
+      content.identityCard.sections.relatedFields,
+      content.identityCard.fields.sector,
+      content.identityCard.fields.participationTypes,
       content.identityCard.fields.experience,
+      content.identityCard.fields.recentRoles,
       content.identityCard.fields.academicQualifications,
       content.identityCard.fields.relatedFields,
       content.identityCard.fields.certifications,
@@ -285,8 +294,21 @@ describe('EH-INT-07/08 — Trainer Search & Unified Profile (J-15)', () => {
   it('shows free-text experience as written, never as "NaN"', async () => {
     renderTrainer(ACTIVE);
     await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
-    expect(screen.getByText('قيادة برامج التطوير المهني في القطاع المالي')).toBeInTheDocument();
+    expect(screen.getByText('من 11 إلى 15 سنة')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
+  it('the card shows the overview, the two most recent roles, and degree / university / year', async () => {
+    renderTrainer(ACTIVE);
+    await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
+    expect(screen.getByText('البنوك')).toBeInTheDocument();
+    expect(screen.getByText('ورش عمل متخصصة')).toBeInTheDocument();
+    // A role still held reads «حتى الآن»; years go through the formatter.
+    expect(
+      screen.getByText('مدير التطوير المهني — الأكاديمية المالية (2020–حتى الآن)')
+    ).toBeInTheDocument();
+    expect(screen.getByText('مستشار تدريب — بنك محلي (2014–2019)')).toBeInTheDocument();
+    expect(screen.getByText(/جامعة الملك سعود، 2012$/)).toBeInTheDocument();
   });
 
   it('G26: PDF export is disabled and explains why, rather than being a dead button', async () => {

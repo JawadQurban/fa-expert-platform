@@ -203,19 +203,36 @@ export type BioDecision = 'approve' | 'return';
  * platform has no source for the row (reported as missing), an empty list means
  * this trainer has none. The API fills both from the profile.
  */
+/** One of «أبرز الخبرات الأخيرة» — dates as stored (ISO), formatted on render. */
+export interface IdentityCardRoleDto {
+  readonly jobTitle: string;
+  readonly organization: string;
+  readonly startedAt: string | null;
+  readonly endedAt: string | null;
+  readonly current: boolean;
+}
+
 export interface IdentityCardDto {
   readonly photoUrl: string | null;
   readonly name: string;
-  /** The profile's experience as free text — shown as written. */
+  /** «عدد سنوات الخبرة» — the range label, never turned into a number. */
   readonly experience: string;
-  /** The qualification's label, not its stored option value. */
+  /** The HIGHEST qualification's label (`P-299`). */
   readonly academicQualifications: string;
-  /** From the profile's field/domain answer. */
+  /** The university and year of that same qualification. */
+  readonly university: string | null;
+  readonly qualificationYear: string | null;
+  /** The services held, forum participations, and «المجال». */
   readonly relatedFields: readonly string[] | null;
-  /** The certificate names the profile holds. */
+  /** One entry per certificate, by name. */
   readonly certifications: readonly string[];
-  /** From the profile's LinkedIn and personal-website links. */
+  /** The front cover's LinkedIn link. */
   readonly socialAccounts: readonly string[] | null;
+  /** «نبذة عامة» — «القطاع» and «نوعية الأنشطة والمشاركات». */
+  readonly sector: string | null;
+  readonly participationTypes: readonly string[];
+  /** The two most recent roles, latest first (`P-299`). */
+  readonly recentRoles: readonly IdentityCardRoleDto[];
   /**
    * The generated PDF. `null` while document generation/storage is unresolved
    * (`G26`) — no fabricated download, and no client-side PDF invented to fill
