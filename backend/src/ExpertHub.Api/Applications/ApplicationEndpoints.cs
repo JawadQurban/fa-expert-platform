@@ -581,16 +581,36 @@ public static class ApplicationEndpoints
             var rules = (await db.AttachmentRules
                     .Where(r => r.SchemaVersion == draft.SchemaVersion)
                     .ToListAsync(ct))
-                .Select(r => (r.RuleCode, (IReadOnlyList<string>)(
-                    JsonSerializer.Deserialize<string[]>(r.RequiredFor) ?? [])))
+                .Select(r => new AttachmentRequirement(
+                    r.RuleCode,
+                    JsonSerializer.Deserialize<string[]>(r.RequiredFor) ?? [],
+                    r.PerEntryOf))
                 .ToList();
             var present = await db.ApplicationAttachments
                 .Where(a => a.ApplicationId == draft.ApplicationId)
                 .Select(a => a.RuleCode)
                 .ToListAsync(ct);
 
-            var failedFields = ApplicationFormLogic.MissingOrInvalidFields(fields, services, values);
-            var missingRules = ApplicationFormLogic.MissingAttachmentRules(rules, services, present);
+            // The repeatable sections' answers travel in `entries`, never in
+            // the flat values — so they are judged per entry, as the form does.
+            var minEntriesBySection = (await db.FormSections
+                    .Where(s => s.SchemaVersion == draft.SchemaVersion && s.Repeatable != null)
+                    .ToListAsync(ct))
+                .ToDictionary(s => s.SectionCode, s => MinEntries(s.Repeatable!), StringComparer.Ordinal);
+            var entries = ApplicationFormLogic.NormalizeEntries(
+                fields,
+                minEntriesBySection,
+                values,
+                input.Entries?.ToDictionary(
+                    pair => pair.Key,
+                    pair => (IReadOnlyList<FormEntry>)pair.Value
+                        .Select(e => new FormEntry(
+                            e.EntryId, e.Values ?? new Dictionary<string, JsonElement>()))
+                        .ToList(),
+                    StringComparer.Ordinal));
+
+            var failedFields = ApplicationFormLogic.MissingOrInvalidFields(fields, services, values, entries);
+            var missingRules = ApplicationFormLogic.MissingAttachmentRules(rules, services, present, entries);
             if (services.Count == 0 || failedFields.Count > 0 || missingRules.Count > 0)
             {
                 return Results.Problem(
@@ -1057,6 +1077,16 @@ public static class ApplicationEndpoints
             });
         }
         return null;
+    }
+
+    /// <summary>`FORM_SECTION.repeatable`'s `minEntries`; absent reads as 0.</summary>
+    private static int MinEntries(string repeatableJson)
+    {
+        using var document = JsonDocument.Parse(repeatableJson);
+        return document.RootElement.TryGetProperty("minEntries", out var min)
+            && min.TryGetInt32(out var value)
+                ? value
+                : 0;
     }
 
     private static async Task<IReadOnlyDictionary<string, JsonElement>> LoadValuesAsync(

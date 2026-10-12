@@ -512,6 +512,72 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public async Task A_submission_in_the_forms_own_shape_judges_repeatable_sections_per_entry()
+    {
+        // The regression: the form sends a repeatable section's answers in
+        // `entries` ONLY, and the gate judged them against the flat values —
+        // so every live submission failed "Application is incomplete.".
+        await SignInApplicantAsync();
+        await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        await SeedRoutedEventAsync("EV-0101");
+
+        var schema = await GetJsonAsync("/api/v1/applications/schema");
+        var minEntries = schema.GetProperty("sections").EnumerateArray()
+            .Where(s => s.TryGetProperty("repeatable", out _))
+            .ToDictionary(
+                s => s.GetProperty("id").GetString()!,
+                s => s.GetProperty("repeatable").GetProperty("minEntries").GetInt32());
+        var sectionOf = schema.GetProperty("fields").EnumerateArray().ToDictionary(
+            f => f.GetProperty("id").GetString()!,
+            f => f.GetProperty("sectionId").GetString()!);
+        Assert.Contains(minEntries, s => s.Value == 0);
+        Assert.Contains(minEntries, s => s.Value > 0);
+
+        var all = await CompleteValuesForAsync("trainer");
+        var flat = all
+            .Where(v => !minEntries.ContainsKey(sectionOf[v.Key]))
+            .ToDictionary(v => v.Key, v => v.Value);
+        // A required section gets one complete entry; an optional one (the
+        // certificates) gets none — and so owes no per-entry file.
+        Dictionary<string, object[]> EntriesWith(Func<string, Dictionary<string, object?>> valuesOf) =>
+            minEntries.ToDictionary(
+                s => s.Key,
+                s => s.Value == 0
+                    ? Array.Empty<object>()
+                    : new object[] { new { entryId = $"{s.Key}-1", values = valuesOf(s.Key) } });
+        var optionalSections = minEntries.Where(s => s.Value == 0).Select(s => s.Key).ToHashSet();
+        await SeedAllAttachmentsAsync(rule => rule.PerEntryOf is null
+            || !optionalSections.Contains(rule.PerEntryOf));
+
+        // An empty required entry fails, keyed by its entry.
+        var blankEntries = await _client.PostAsJsonAsync("/api/v1/me/applications/submit", new
+        {
+            services = new[] { "trainer" },
+            values = flat,
+            entries = EntriesWith(_ => new Dictionary<string, object?>()),
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, blankEntries.StatusCode);
+        var problem = await blankEntries.Content.ReadFromJsonAsync<JsonElement>();
+        var fieldErrors = problem.GetProperty("fieldErrors").EnumerateArray()
+            .Select(e => e.GetString()!)
+            .ToList();
+        Assert.NotEmpty(fieldErrors);
+        Assert.All(fieldErrors, key => Assert.Contains("::", key, StringComparison.Ordinal));
+        Assert.Empty(problem.GetProperty("missingAttachmentRuleIds").EnumerateArray());
+
+        // Filled in, it is accepted.
+        var submitted = await PostJsonAsync("/api/v1/me/applications/submit", new
+        {
+            services = new[] { "trainer" },
+            values = flat,
+            entries = EntriesWith(section => all
+                .Where(v => sectionOf[v.Key] == section)
+                .ToDictionary(v => v.Key, v => v.Value)),
+        });
+        Assert.Matches(@"^EH-\d{4}-\d{5}$", submitted.GetProperty("reference").GetString()!);
+    }
+
+    [Fact]
     public async Task The_stage_gated_actions_conflict_for_everything_this_stage_can_produce()
     {
         await SignInApplicantAsync();
@@ -701,12 +767,16 @@ public sealed class ApplicationTests
 
     /// <summary>`G26` keeps the upload endpoint closed, so the required files
     /// are seeded as the stored rows a future upload will create.</summary>
-    private async Task SeedAllAttachmentsAsync()
+    private async Task SeedAllAttachmentsAsync(Func<AttachmentRule, bool>? include = null)
     {
         await using var db = _database.CreateContext();
         var draft = await db.Applications.SingleAsync(a => a.Status == "draft");
         foreach (var rule in await db.AttachmentRules.Where(r => r.SchemaVersion == FormSchemaVersions.Current).ToListAsync())
         {
+            if (include is not null && !include(rule))
+            {
+                continue;
+            }
             db.ApplicationAttachments.Add(new ApplicationAttachment
             {
                 ApplicationAttachmentId = Guid.NewGuid(),
