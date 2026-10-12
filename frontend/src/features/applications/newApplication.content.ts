@@ -263,8 +263,8 @@ const ar: NewApplicationContent = {
   },
   blockedTrainer: {
     title: 'أنت مدرب معتمد بالفعل',
-    body: 'حسابك يحمل دور مدرب معتمد، ولا حاجة لتقديم طلب انضمام جديد. لإضافة خدمة لم تُعتمد لك بعد، استخدم طلب «إضافة خدمة» من ملفك الشخصي — ولن يُطلب منك سوى الحقول الناقصة لتلك الخدمة.',
-    addService: 'إضافة خدمة من ملفي',
+    body: 'حسابك يحمل دور مدرب معتمد، ولا حاجة لتقديم طلب انضمام جديد. لإضافة خدمة لم تُعتمد لك بعد، استخدم طلب «إضافة خدمة» على طلبك المعتمد — ولن يُطلب منك سوى الحقول الناقصة لتلك الخدمة.',
+    addService: 'إضافة خدمة',
   },
   schemaUnavailable: {
     title: 'نموذج الطلب غير متاح حاليًا',
@@ -405,8 +405,8 @@ const en: NewApplicationContent = {
   },
   blockedTrainer: {
     title: 'You are already an accredited trainer',
-    body: 'Your account holds an approved Trainer role, so a new join application is not needed. To add a service you are not yet approved for, use the Add Service request from your profile — you will only be asked for the fields missing for that service.',
-    addService: 'Add a service from my profile',
+    body: 'Your account holds an approved Trainer role, so a new join application is not needed. To add a service you are not yet approved for, use the Add Service request on your approved application — you will only be asked for the fields missing for that service.',
+    addService: 'Add a service',
   },
   schemaUnavailable: {
     title: 'The application form is currently unavailable',

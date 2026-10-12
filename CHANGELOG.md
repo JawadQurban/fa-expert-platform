@@ -9,6 +9,20 @@ The history before this repository existed is in
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **An accredited trainer is no longer sent to a dead end** (J-01/F3/AC-4 →
+  J-03, found in hands-on testing: «يوجهه بس مافيه زر اضافة خدمة»). Starting a
+  new application as an accredited trainer showed «إضافة خدمة من ملفي», which
+  opened My Profile, where there is no add-service entry. `POST
+  v1/me/applications/draft/start` now returns the trainer's approved or active
+  application as `blockedByApplicationId`, and the button («إضافة خدمة») opens
+  that application's add-service form. A trainer accredited outside Expert Hub
+  has no such application, so no button is shown and My Applications remains
+  the exit.
+
 ## [1.4.1] — 2026-10-06 — The business-review decisions (`P-333`–`P-340`)
 
 The owner answered the 13 open decisions from the 2026-10-01 review. This work

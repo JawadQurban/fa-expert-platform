@@ -21,7 +21,13 @@ import type { ApplicationService } from './application.types';
  * string), bounded by `validation.min`/`max`.
  */
 export type ApplicationFieldType =
-  'text' | 'textarea' | 'select' | 'checkbox' | 'date' | 'multi-select' | 'number';
+  | 'text'
+  | 'textarea'
+  | 'select'
+  | 'checkbox'
+  | 'date'
+  | 'multi-select'
+  | 'number';
 
 /** Who owns a field's value (`02C` ownership model). Pre-accreditation the
  *  application data is Expert-Hub-owned; SSO-sourced identity fields are
@@ -210,7 +216,9 @@ export interface StartOrResumeDraftDto {
   readonly resumed: boolean;
   /** `null` when not blocked. */
   readonly blockReason: NewApplicationBlockReason | null;
-  /** The un-decided application to link to — set only for `open-application`. */
+  /** `open-application`: the un-decided application to track.
+   *  `approved-trainer`: the accredited application to add a service to, or
+   *  `null` when the trainer was accredited outside Expert Hub. */
   readonly blockedByApplicationId: string | null;
 }
 

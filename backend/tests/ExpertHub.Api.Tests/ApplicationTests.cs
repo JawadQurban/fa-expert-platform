@@ -442,6 +442,36 @@ public sealed class ApplicationTests
         var blocked = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
         Assert.Equal("approved-trainer", blocked.GetProperty("blockReason").GetString());
         Assert.Equal(JsonValueKind.Null, blocked.GetProperty("draft").ValueKind);
+        // Accredited outside Expert Hub: no application to add a service to.
+        Assert.Equal(JsonValueKind.Null, blocked.GetProperty("blockedByApplicationId").ValueKind);
+
+        Guid approvedId;
+        await using (var db = _database.CreateContext())
+        {
+            var user = await db.Users.SingleAsync(u => u.ExternalIdentityId == TestOidc.Subject);
+            var approved = new Application
+            {
+                ApplicationId = Guid.NewGuid(),
+                ApplicantUserId = user.UserId,
+                SchemaVersion = FormSchemaVersions.Current,
+                Reference = "EH-2026-00008",
+                Status = ApplicationStatuses.Approved,
+                Origin = ApplicationOrigins.SelfService,
+                CreatedAt = DateTime.UtcNow,
+                SubmittedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+            db.Applications.Add(approved);
+            await db.SaveChangesAsync();
+            approvedId = approved.ApplicationId;
+        }
+
+        // The block names the accredited application, so the page's
+        // «إضافة خدمة» button opens its add-service form directly.
+        var routed = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        Assert.Equal("approved-trainer", routed.GetProperty("blockReason").GetString());
+        Assert.Equal(
+            approvedId.ToString(), routed.GetProperty("blockedByApplicationId").GetString());
     }
 
     /* ── submission — BR-0105, BR-0107, and the CAP-07 raise ───────────────── */

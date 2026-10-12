@@ -615,7 +615,11 @@ export function createMockApplicationsProvider(
             draft: null,
             resumed: false,
             blockReason: 'approved-trainer',
-            blockedByApplicationId: null,
+            // The accredited application, as the API returns it, so the page
+            // links straight to its add-service form.
+            blockedByApplicationId:
+              seed.find((item) => item.status === 'approved' || item.status === 'active')?.id ??
+              null,
           },
         };
       }
