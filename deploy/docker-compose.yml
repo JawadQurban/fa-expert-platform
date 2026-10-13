@@ -97,6 +97,15 @@ services:
       Teams__ClientSecret: ${EXPERT_HUB_TEAMS_CLIENT_SECRET:-}
       Teams__OrganizerUpn: ${EXPERT_HUB_TEAMS_ORGANIZER_UPN:-}
       Teams__InterviewMinutes: ${EXPERT_HUB_TEAMS_INTERVIEW_MINUTES:-30}
+      # INT-04 — notification email over SMTP. Empty host or sender = off:
+      # emails stay pending in the outbox, as before. The password is a
+      # secret: env/api.secrets.env only.
+      Email__Host: ${EXPERT_HUB_EMAIL_HOST:-}
+      Email__Port: ${EXPERT_HUB_EMAIL_PORT:-25}
+      Email__EnableSsl: ${EXPERT_HUB_EMAIL_ENABLE_SSL:-false}
+      Email__Username: ${EXPERT_HUB_EMAIL_USERNAME:-}
+      Email__Password: ${EXPERT_HUB_EMAIL_PASSWORD:-}
+      Email__From: ${EXPERT_HUB_EMAIL_FROM:-}
       # INT-05 — the Academy's own API. Empty = off: every call fails closed
       # with a reason and the product behaves exactly as it did before. Set it
       # and each sign-in reads that person's profile (`P-227`).

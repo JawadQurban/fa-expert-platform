@@ -5,12 +5,18 @@
 ## Setup / connection
 
 - `IEmailGateway` (`backend/src/ExpertHub.Infrastructure/Notifications/`).
-  The registered default is **`NullEmailGateway`**: nothing is sent, and every
-  send is recorded as pending in `NOTIFICATION_LOG`.
+  **`SmtpEmailGateway`** is registered when `Email:Host` and `Email:From` are
+  set (`EXPERT_HUB_EMAIL_*` in the compose file, the password in
+  `env/api.secrets.env` only); otherwise **`NullEmailGateway`**, and every send
+  stays pending in the outbox.
+- Settings: `Email:Host`, `Port` (25), `EnableSsl` (false), `Username`,
+  `Password`, `From`, `FromName` (default «الأكاديمية المالية»),
+  `TimeoutSeconds` (30).
+- The testing server is **smtp4dev** — SMTP on `testingsmtp.fa.gov.sa:25`, no
+  TLS; caught mail is readable at https://testingsmtp.fa.gov.sa/. Port 25 is
+  not reachable from staff workstations, only from the server network.
 - `NotificationEmailChannel` is the CAP-12 channel for INT-04; the outbox
-  publisher delivers through it once a real gateway is registered.
-- Infrastructure has not supplied gateway details yet, so turning this on means
-  one DI registration and no change to any capability.
+  publisher delivers through it.
 
 ## Conventions
 
@@ -29,8 +35,10 @@
 
 ## Gotchas
 
-- Nothing is actually delivered today. A screen that says "notified" means the
-  event was raised and logged — check `NOTIFICATION_LOG.status` before concluding
-  a person was told.
+- A screen that says "notified" means the event was raised — check
+  `NOTIFICATION_LOG.status` before concluding a person was told. With no SMTP
+  settings nothing is delivered at all.
+- The template is plain text; the gateway HTML-encodes it and wraps it in
+  `dir="rtl"` (or `ltr` for English) so Arabic reads correctly in mail clients.
 - The SLA deadlines that drive reminders are read from `SLA_MATRIX`, never
   restated in code (`BR-0705`).

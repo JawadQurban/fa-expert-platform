@@ -224,7 +224,15 @@ public static class PersistenceServiceCollectionExtensions
     public static IServiceCollection AddExpertHubNotifications(this IServiceCollection services)
     {
         services.AddScoped<NotificationDispatcher>();
-        services.TryAddSingleton<IEmailGateway, NullEmailGateway>();
+        // SMTP once `Email:Host` and `Email:From` are set; the null object
+        // otherwise, so `IsConfigured` is the only thing any caller asks.
+        services.TryAddSingleton<IEmailGateway>(sp =>
+        {
+            var smtp = new SmtpEmailGateway(
+                sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SmtpEmailGateway>>());
+            return smtp.IsConfigured ? smtp : new NullEmailGateway();
+        });
         services.AddSingleton<ISystemChannel, NotificationEmailChannel>();
         return services;
     }

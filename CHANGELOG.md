@@ -13,6 +13,12 @@ The history before this repository existed is in
 
 ### Added
 
+- **Notification email is sent over SMTP** (INT-04). `SmtpEmailGateway` takes
+  over from the null gateway once `EXPERT_HUB_EMAIL_HOST` and
+  `EXPERT_HUB_EMAIL_FROM` are set; the password goes in
+  `env/api.secrets.env`. Arabic emails are sent right-to-left. A failed send is
+  recorded in `NOTIFICATION_LOG` and retried by the outbox.
+
 - **Speaker records (J-04, `P-346`–`P-349`).** Staff create, edit and search
   speaker records from the internal dashboard («سجل المتحدثين»), with the 11
   fields of the owner's Speaker Record matrix: photo, title, four name parts in
