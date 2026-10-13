@@ -407,7 +407,7 @@ erDiagram
     string last_name_en
     text bio "max 2000 - Needs Confirmation"
     uuid photo_attachment_id FK
-    string fast_user_id "email source - P-342"
+    string fast_user_id "email source - P-347"
     uuid created_by FK
     datetime created_at
     uuid updated_by FK

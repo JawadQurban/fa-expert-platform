@@ -26,7 +26,7 @@ Covers speaker record creation and updates, its visibility within trainer record
 
 ## **Supporting Matrix: Speaker Fields**
 
-From the owner's Notion page *Speaker Record* (Matrices). Built as `SPEAKER_RECORD` (M41, `P-341`).
+From the owner's Notion page *Speaker Record* (Matrices). Built as `SPEAKER_RECORD` (M43, `P-346`).
 
 | # | Field (Arabic) | Field (English) | Type | FAST column named by the matrix |
 | --- | --- | --- | --- | --- |
@@ -83,7 +83,7 @@ Description: Any linking of the speaker's name to an event via FAST is automatic
 
 ### Open items
 
-1. ~~Speaker Fields matrix — pending upload.~~ Resolved: Notion *Speaker Record* (`P-341`).
-2. Notification template — to be added to the Notification Matrix (J-26). The email address comes from the speaker's FAST profile (`P-342`), which FAST cannot serve yet (B-13, B-16 in the FAST contract), so AC-4 is blocked.
-3. FAST integration scope (INT-05) doesn't explicitly mention speaker-event linking — asked of FAST as B-17. F3 shows the history as unavailable until then (`P-344`).
-4. Search fields beyond name and title (specialization, field) — to be defined after the speaker record is approved (`P-343`).
+1. ~~Speaker Fields matrix — pending upload.~~ Resolved: Notion *Speaker Record* (`P-346`).
+2. Notification template — to be added to the Notification Matrix (J-26). The email address comes from the speaker's FAST profile (`P-347`), which FAST cannot serve yet (B-13, B-16 in the FAST contract), so AC-4 is blocked.
+3. FAST integration scope (INT-05) doesn't explicitly mention speaker-event linking — asked of FAST as B-17. F3 shows the history as unavailable until then (`P-349`).
+4. Search fields beyond name and title (specialization, field) — to be defined after the speaker record is approved (`P-348`).

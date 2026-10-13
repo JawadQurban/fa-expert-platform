@@ -7,13 +7,13 @@
 | **Branch** | `claude/charming-euler-vbqhft` (pushed) |
 | **Head** | `ca22990` — on top of `6e6ca21`: `757b901` add-service fix · `25f050c` speakers API · `db88c1b` speakers screens · `ca22990` format fix |
 | **Release tag** | none for this state; latest is `expert-hub-v1.3.0` |
-| **Deployed** | Nothing from this session. **M41** (`SPEAKER_RECORD`, F-0105/F-0413 relabel and regrant) is not on any server |
+| **Deployed** | Nothing from this session. **M43** (`SPEAKER_RECORD`, F-0105/F-0413 relabel and regrant) is not on any server |
 | **Backend validation** | `dotnet build` 0 warnings / 0 errors · `dotnet test` **406/406** in 11 min (run 2026-10-13 on `ca22990`, Linux container, SQL Server 2022 in Docker — see *Environment traps*) |
 | **Frontend validation** | `npm run validate` clean (1 existing warning, `InterviewSlotsField.tsx:43`) · **1648/1648** in 122 files · `npm run build` ✓ · `lint:css` OK · `tokens:check-coverage` Missing 0 |
 | **State** | J-04 F1 and F2 built; AC-4's email and F3's history wait on FAST (B-16, B-17). The FAST contract document is written; its email is drafted, not sent |
 | **Next thing to do** | Send the FAST document and email (the user's call). Then the user's choice between J-02 (blocked on Yaqeen) and the open owner questions below |
 
-**Reading order:** this record → `DECISIONS.md` `P-341`–`P-344` → the FAST
+**Reading order:** this record → `DECISIONS.md` `P-346`–`P-349` → the FAST
 contract document (Claude Docs, *Expert Hub ↔ FAST — Integration Contract and
 Blocked Items*, https://claude.ai/code/artifact/cf9e6786-3a93-4100-bc73-92af1171c769).
 
@@ -44,9 +44,9 @@ rewritten to match — the document is the newer, fuller version.
 its add-service form. **Root cause, not symptom:** the page had no id to link to,
 so it linked to My Profile, which has no add-service entry.
 
-### J-04 speaker records (`25f050c`, `db88c1b`; `P-341`–`P-344`)
+### J-04 speaker records (`25f050c`, `db88c1b`; `P-346`–`P-349`)
 - **Schema** from the Notion *Speaker Record* matrix, exactly its 11 fields plus
-  a nullable `fast_user_id` (M41, generated with `dotnet ef`).
+  a nullable `fast_user_id` (M43, generated with `dotnet ef`).
 - **Internal only** by construction: the routes sit behind the internal policy
   and no `/me` route exists (`BR-0113`).
 - **Update is POST**, not PUT — the codebase has no PUT and the frontend client
@@ -70,17 +70,17 @@ so it linked to My Profile, which has no add-service entry.
 | *"english email"* | The FAST email is fully English |
 | *"2 and 3 is on notion, and fix 1."* | Fixed add-service; the J-02/J-04 specs live in Notion |
 | *"yes start it and before start push it"* | Push first, then J-04 |
-| *"it should take the email for the profail from fast"* | No email field on the speaker form; `fast_user_id`; AC-4 blocked on FAST (`P-342`) |
-| «Own screen + tagged in search» (chosen option) | Speakers screen + `speakers` list in the trainer search (`P-343`) |
-| «Name and title» (chosen option) | One search box over names and title; no specialization filter (`P-343`) |
-| «Defer, add to FAST doc» (chosen option) | F3 shows a pending state; B-17 in the FAST doc (`P-344`) |
+| *"it should take the email for the profail from fast"* | No email field on the speaker form; `fast_user_id`; AC-4 blocked on FAST (`P-347`) |
+| «Own screen + tagged in search» (chosen option) | Speakers screen + `speakers` list in the trainer search (`P-348`) |
+| «Name and title» (chosen option) | One search box over names and title; no specialization filter (`P-348`) |
+| «Defer, add to FAST doc» (chosen option) | F3 shows a pending state; B-17 in the FAST doc (`P-349`) |
 
 ## Corrections
 
 1. **"Yaqeen account creation is FAST's `identity/registration` service"** (first version of B-02, with its 20-field `IndividualRegistrationRequest`). **Wrong** — the user: the Yaqeen service takes only the identity number and birth date and builds the account from Yaqeen's data. The exact path is still unknown and is asked of FAST.
 2. **"J-04 is not built and out of scope — the speaker field list was never supplied."** **Wrong.** The repo said so (`24_RELEASE_READINESS`, `11_JOURNEY_IMPLEMENTATION_MAP`, the journey file), but Notion's *Speaker Record* page had the finalized matrix. All three repo files now point at it.
-3. **Notion's J-04 page says «13 fields finalized … (title, dates, delivery mode, language, specialization, named speaker)»**; the matrix it links has **11**, and none of dates/delivery/language/specialization. Built the 11; the discrepancy is in `P-341`.
-4. **F-0105 was «إدخال بيانات متقدّم نيابةً عنه» granted to the Trainer role.** The BRD (§8.1.5, US-0107) says F-0105 is «إدخال بيانات متحدث»; F-0413 likewise (§8.4.5, US-0417). Corrected in M41 (`P-344`).
+3. **Notion's J-04 page says «13 fields finalized … (title, dates, delivery mode, language, specialization, named speaker)»**; the matrix it links has **11**, and none of dates/delivery/language/specialization. Built the 11; the discrepancy is in `P-346`.
+4. **F-0105 was «إدخال بيانات متقدّم نيابةً عنه» granted to the Trainer role.** The BRD (§8.1.5, US-0107) says F-0105 is «إدخال بيانات متحدث»; F-0413 likewise (§8.4.5, US-0417). Corrected in M43 (`P-349`).
 5. **"The first backend test run is hung."** It was not a test hang: it was disturbed by my rebuilds while it ran, and my restart killed itself (see traps). A clean run here takes 4 to 11 minutes, logging only failures at normal verbosity. The single `Cap02Tests` content-root failure in that run did not recur.
 6. **`757b901` passed `npm run validate` before commit and still went in unformatted** — the pre-commit hook reformatted `applicationForm.types.ts` with the global Prettier 3.8.1. Fixed in `ca22990`.
 
