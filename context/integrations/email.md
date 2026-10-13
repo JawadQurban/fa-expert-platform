@@ -5,16 +5,19 @@
 ## Setup / connection
 
 - `IEmailGateway` (`backend/src/ExpertHub.Infrastructure/Notifications/`).
-  **`SmtpEmailGateway`** is registered when `Email:Host` and `Email:From` are
-  set (`EXPERT_HUB_EMAIL_*` in the compose file, the password in
+  **`NotificationsGatewayEmail`** — the Academy's **Notifications Gateway**,
+  `POST /api/v1/Notifications/NotifyByEmail` with HTTP Basic — is registered
+  when `Email:GatewayUrl`, `Email:Username` and `Email:Password` are all set
+  (`EXPERT_HUB_EMAIL_*` in the compose file, the password in
   `env/api.secrets.env` only); otherwise **`NullEmailGateway`**, and every send
   stays pending in the outbox.
-- Settings: `Email:Host`, `Port` (25), `EnableSsl` (false), `Username`,
-  `Password`, `From`, `FromName` (default «الأكاديمية المالية»),
-  `TimeoutSeconds` (30).
-- The testing server is **smtp4dev** — SMTP on `testingsmtp.fa.gov.sa:25`, no
-  TLS; caught mail is readable at https://testingsmtp.fa.gov.sa/. Port 25 is
-  not reachable from staff workstations, only from the server network.
+- Settings: `Email:GatewayUrl`, `Username`, `Password`, `FromName` (default
+  «الأكاديمية المالية»), `TimeoutSeconds` (30).
+- Testing gateway: https://testingnotifications.fa.gov.sa (Swagger at
+  `/swagger/index.html`). Mail it delivers in testing is readable in smtp4dev
+  at https://testingsmtp.fa.gov.sa/. Expert Hub never talks SMTP: port 25 is
+  closed from FA-QIYAS.
+- The same gateway also offers SMS (`NotifyBySms`) and OTP; neither is used.
 - `NotificationEmailChannel` is the CAP-12 channel for INT-04; the outbox
   publisher delivers through it.
 

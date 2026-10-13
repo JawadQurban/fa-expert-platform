@@ -19,11 +19,13 @@ The history before this repository existed is in
   nominee's name, records who nominated them, and enters screening on
   submission; the nominee is notified (EV-0102). A staff member cannot nominate
   themselves, and an accredited trainer is pointed to add-service instead.
-- **Notification email is sent over SMTP** (INT-04). `SmtpEmailGateway` takes
-  over from the null gateway once `EXPERT_HUB_EMAIL_HOST` and
-  `EXPERT_HUB_EMAIL_FROM` are set; the password goes in
+- **Notification email is sent through the Academy's Notifications Gateway**
+  (INT-04, `NotifyByEmail`, HTTP Basic). It takes over from the null gateway
+  once `EXPERT_HUB_EMAIL_GATEWAY_URL`, `EXPERT_HUB_EMAIL_USERNAME` and
+  `EXPERT_HUB_EMAIL_PASSWORD` are set; the password goes in
   `env/api.secrets.env`. Arabic emails are sent right-to-left. A failed send is
-  recorded in `NOTIFICATION_LOG` and retried by the outbox.
+  recorded in `NOTIFICATION_LOG` and retried by the outbox. (It replaced a
+  direct SMTP sender the same day: SMTP port 25 is closed from the server.)
 
 - **Speaker records (J-04, `P-346`–`P-349`).** Staff create, edit and search
   speaker records from the internal dashboard («سجل المتحدثين»), with the 11
