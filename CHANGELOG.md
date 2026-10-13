@@ -42,6 +42,18 @@ The history before this repository existed is in
 
 ### Fixed
 
+- **Every live application submission failed with «تعذّر تقديم الطلب»**
+  (`400 Application is incomplete.`), whatever the applicant filled in. The form
+  sends a repeatable section's answers (education, certifications, experience)
+  in `entries`, and the server's `BR-0105` gate judged those fields against the
+  flat `values`, which never hold them. The gate now judges them per entry, the
+  way `validateCompleteness` does on the client, and reports a failure as
+  `entryId::fieldId`.
+- **A per-entry file was required for a section with no entries.** The
+  professional-certificate file was demanded from an applicant who listed no
+  certificate. A per-entry rule now applies only when its section has an entry.
+  ⚠️ Attachments still don't record which entry they belong to, so the server
+  checks one file per *rule*, not one per entry.
 - Saving the profile no longer demands a field the trainer cannot see (a
   conditional field whose condition is unmet).
 - **The favicon is the Academy logo, and a new one actually shows.** It is

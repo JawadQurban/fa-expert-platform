@@ -1179,6 +1179,8 @@ public sealed class Cap02Tests
         Assert.Equal(5.00m, qualification.GetProperty("weightedScore").GetDecimal());
     }
 
+    /// <remarks>Each entry is complete: since the submit gate judges a
+    /// repeatable section per entry, a half-filled qualification is refused.</remarks>
     private static Dictionary<string, object?> TwoQualifications() =>
         new()
         {
@@ -1191,6 +1193,9 @@ public sealed class Cap02Tests
                     {
                         ["qualificationType"] = "bachelor",
                         ["universityName"] = "uni-001",
+                        ["generalSpecialization"] = "قيمة تجريبية",
+                        ["specializationDetail"] = "spec-001",
+                        ["qualificationDate"] = "2015-06-01",
                     },
                 },
                 new
@@ -1200,6 +1205,9 @@ public sealed class Cap02Tests
                     {
                         ["qualificationType"] = "doctorate",
                         ["universityName"] = "uni-002",
+                        ["generalSpecialization"] = "قيمة تجريبية",
+                        ["specializationDetail"] = "spec-002",
+                        ["qualificationDate"] = "2015-06-01",
                     },
                 },
             },
