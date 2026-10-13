@@ -5,6 +5,7 @@ import {
   renderExpertHubAt,
   screen,
   seedExpertHubSession,
+  waitFor,
   within,
 } from '../../test/renderExpertHub';
 import { expertHubPaths } from '../../app/router/paths';
@@ -18,6 +19,7 @@ import { createMockTrainerSearchProvider } from './mockTrainerSearchProvider';
 import type { MockTrainerSearchProviderOptions } from './mockTrainerSearchProvider';
 import { getTrainerSearchContent } from './trainerSearch.content';
 import { arNumber } from '../../shared/formatting';
+import { getSpeakersContent } from '../speakers/speakers.content';
 
 const content = getTrainerSearchContent('ar');
 
@@ -45,6 +47,13 @@ function renderTrainer(id: string) {
  *   trn-004  ريم    suspended· 3.5 · 3 certs · 11y
  */
 const ACTIVE = 'trn-001';
+
+/** The search refreshes asynchronously; wait until no speaker row remains. */
+async function waitForSpeakerRowsGone(table: HTMLElement) {
+  await waitFor(() =>
+    expect(within(table).queryByText('فيصل عبدالله الحربي')).not.toBeInTheDocument()
+  );
+}
 const IDLE = 'trn-002';
 const UNRATED = 'trn-003';
 
@@ -210,6 +219,60 @@ describe('EH-INT-07/08 — Trainer Search & Unified Profile (J-15)', () => {
       'search',
       'service',
     ]);
+  });
+
+  /* ── J-04 — speakers in the same search, tagged «متحدث» ─────────────────── */
+
+  it('J-04: lists speaker records after the trainers, tagged «متحدث» and linking to their record', async () => {
+    const { container } = await renderSearch();
+    const table = await screen.findByRole('table', { name: content.resultsLabel });
+    const link = within(table).getByRole('link', { name: 'فيصل عبدالله الحربي' });
+    expect(link).toHaveAttribute('href', expertHubPaths.internalSpeaker('spk-001'));
+
+    const row = link.closest('tr') as HTMLElement;
+    expect(within(row).getByText(content.services.speaker)).toBeInTheDocument();
+    // Trainer-only cells say «—», never a value a speaker cannot have.
+    expect(within(row).getAllByText(content.notApplicableToSpeaker)).toHaveLength(4);
+    expect(within(row).queryByText(content.notEvaluated)).not.toBeInTheDocument();
+
+    // After every trainer row.
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows.indexOf(row)).toBeGreaterThan(
+      rows.findIndex((candidate) => within(candidate).queryByText('د. سارة العتيبي') != null)
+    );
+    await expectNoA11yViolations(container);
+  });
+
+  it('J-04: counts the speakers in the summary, and opens the speaker records', async () => {
+    await renderSearch();
+    const speakers = getSpeakersContent('ar');
+    await screen.findByRole('table', { name: content.resultsLabel });
+    expect(
+      screen.getByText(
+        content.resultsWithSpeakers(content.resultsCount(4), speakers.list.resultsCount(3))
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: speakers.openLink })).toHaveAttribute(
+      'href',
+      expertHubPaths.internalSpeakers
+    );
+  });
+
+  it('J-04: a trainer-only filter leaves the speakers out, as the server does', async () => {
+    const { user } = await renderSearch();
+    await user.click(screen.getByRole('combobox', { name: content.filters.fileStatusLabel }));
+    await user.click(await screen.findByRole('option', { name: content.fileStatuses.active }));
+    const table = await screen.findByRole('table', { name: content.resultsLabel });
+    await waitForSpeakerRowsGone(table);
+    expect(within(table).getByText('د. سارة العتيبي')).toBeInTheDocument();
+  });
+
+  it('J-04: a name search that matches only a speaker still shows a result, not the empty state', async () => {
+    const { user } = await renderSearch();
+    await user.type(screen.getByRole('searchbox', { name: content.filters.searchLabel }), 'هيفاء');
+    const table = await screen.findByRole('table', { name: content.resultsLabel });
+    expect(await within(table).findByRole('link', { name: 'هيفاء الزهراني' })).toBeInTheDocument();
+    expect(screen.queryByText(content.empty.title)).not.toBeInTheDocument();
   });
 
   /* ── J-15 scope — oversight, not candidate selection ───────────────────── */

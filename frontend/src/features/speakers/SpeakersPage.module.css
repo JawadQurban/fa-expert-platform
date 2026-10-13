@@ -1,0 +1,14 @@
+/* EH-INT-11 speaker records list — layout-only, token-only (DC-04/DC-23). */
+
+/* One search box (owner ruling: name and title only), kept to a readable
+   width rather than stretched across the whole card. */
+.search {
+  max-inline-size: 28rem;
+}
+
+/* Avatar and name on one line, so a scanning eye lands on the person. */
+.nameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-sm);
+}

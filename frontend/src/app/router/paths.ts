@@ -57,6 +57,10 @@ export const expertHubRouteSegments = {
   internalTrainers: 'internal/trainers',
   internalTrainerBios: 'internal/trainers/bios',
   internalTrainer: 'internal/trainers/:trainerId',
+  internalSpeakers: 'internal/speakers',
+  internalSpeakerNew: 'internal/speakers/new',
+  internalSpeaker: 'internal/speakers/:speakerId',
+  internalSpeakerEdit: 'internal/speakers/:speakerId/edit',
   internalAgreements: 'internal/agreements',
   internalAgreementTemplate: 'internal/agreements/template',
   internalAgreement: 'internal/agreements/:agreementId',
@@ -168,6 +172,17 @@ export const expertHubPaths = {
   internalTrainerBios: abs('internal/trainers/bios'),
   /** EH-INT-08 — the unified trainer profile, complete in one screen (J-15/F1). */
   internalTrainer: (id = ':trainerId') => abs(`internal/trainers/${id}`),
+  /** EH-INT-11 — Speaker records (J-04): the internal-only register of the
+   *  speakers the Academy hosts, searched by name and title (owner ruling).
+   *  `BR-0113`: no portal route reaches it. */
+  internalSpeakers: abs('internal/speakers'),
+  /** EH-INT-11 — create a speaker record (J-04/F1, `F-0105`). */
+  internalSpeakerNew: abs('internal/speakers/new'),
+  /** EH-INT-11 detail — one record, with the FAST-sourced email and the
+   *  participation history, both pending FAST (owner rulings). */
+  internalSpeaker: (id = ':speakerId') => abs(`internal/speakers/${id}`),
+  /** EH-INT-11 — edit a record: the create form, prefilled (`F-0413`). */
+  internalSpeakerEdit: (id = ':speakerId') => abs(`internal/speakers/${id}/edit`),
   /** EH-INT-06 — Agreement Management (J-12/F1: expiry tracking across the base). */
   internalAgreements: abs('internal/agreements'),
   /** EH-INT-06 — the central agreement template (J-12/F4, System Administrator). */

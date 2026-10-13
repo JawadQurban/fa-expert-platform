@@ -68,6 +68,7 @@ export const EXPERT_HUB_MODULES = [
   'reRouting',
   'screening',
   'serviceRequests',
+  'speakers',
   'submissions',
   'trainerSearch',
   'withdrawal',

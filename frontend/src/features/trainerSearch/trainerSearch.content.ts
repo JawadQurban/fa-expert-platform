@@ -31,6 +31,13 @@ export interface TrainerSearchContent {
   readonly scopeNote: string;
   readonly resultsLabel: string;
   readonly resultsCount: (count: number) => string;
+  /** J-04 — both counts, when speaker rows follow the trainers. */
+  readonly resultsWithSpeakers: (trainers: string, speakers: string) => string;
+  /**
+   * J-04 — what a speaker row's trainer-only cells say to a screen reader
+   * (specialties, file status, evaluation, experience). Shown as «—».
+   */
+  readonly notApplicableToSpeaker: string;
   readonly filters: {
     readonly regionLabel: string;
     readonly searchLabel: string;
@@ -136,6 +143,8 @@ const ar: TrainerSearchContent = {
     'هذه الشاشة للاستعراض والمتابعة. ترشيح المدربين لارتباط أو فعالية محدّدة يتم في مسار الإسناد، لا من هنا.',
   resultsLabel: 'نتائج البحث',
   resultsCount: (count) => (count === 1 ? 'مدرب واحد' : `${arNumber(count)} مدربًا`),
+  resultsWithSpeakers: (trainers, speakers) => `${trainers}، ${speakers}`,
+  notApplicableToSpeaker: 'لا ينطبق على المتحدث',
   filters: {
     regionLabel: 'تصفية قاعدة المدربين',
     searchLabel: 'بحث بالاسم',
@@ -242,6 +251,8 @@ const en: TrainerSearchContent = {
     'This screen is for browsing and monitoring. Sourcing trainers for a specific assignment or event happens in the assignment flow, not here.',
   resultsLabel: 'Search results',
   resultsCount: (count) => (count === 1 ? '1 trainer' : `${count} trainers`),
+  resultsWithSpeakers: (trainers, speakers) => `${trainers}, ${speakers}`,
+  notApplicableToSpeaker: 'Not applicable to a speaker',
   filters: {
     regionLabel: 'Filter the trainer database',
     searchLabel: 'Search by name',
