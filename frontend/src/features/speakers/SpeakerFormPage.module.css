@@ -1,0 +1,45 @@
+/* EH-INT-11 speaker form — layout-only, token-only (DC-04/DC-23). */
+
+/* The form's panels stack at the workspace rhythm. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+/* The current photo beside its uploader, so a replacement is chosen with the
+   old one in view; they stack when there is no room. */
+.photoRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--fads-sys-space-inline-md);
+}
+
+.photoField {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-xs);
+  min-inline-size: 0;
+}
+
+/* Four name parts, two to a row on a desktop, one on a phone. */
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--fads-ref-space-3) var(--fads-sys-space-inline-md);
+}
+
+.actions,
+.modalActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}

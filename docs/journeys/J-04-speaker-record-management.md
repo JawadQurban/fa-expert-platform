@@ -24,11 +24,25 @@ Covers speaker record creation and updates, its visibility within trainer record
 
 ---
 
-## **Supporting Matrix: Speaker Fields** *(not yet approved — pending upload)*
+## **Supporting Matrix: Speaker Fields**
 
-| # | Field | Notes |
-| --- | --- | --- |
-| — | *Pending matrix upload* | — |
+From the owner's Notion page *Speaker Record* (Matrices). Built as `SPEAKER_RECORD` (M43, `P-346`).
+
+| # | Field (Arabic) | Field (English) | Type | FAST column named by the matrix |
+| --- | --- | --- | --- | --- |
+| 1 | الصورة الشخصية | Profile picture | Image file | `profile.UserProfile.ProfileImageAttachmentId` |
+| 2 | صفة المتحدث | Speaker title/role | Text | New field |
+| 3 | الاسم الأول (بالعربية) | First name (Arabic) | Text | `dbo.AspNetUsers.FirstNameAr` |
+| 4 | الاسم الثاني (بالعربية) | Middle name (Arabic) | Text | `dbo.AspNetUsers.MiddleNameAr` |
+| 5 | الاسم الثالث (بالعربية) | Third name (Arabic) | Text | `dbo.AspNetUsers.ThirdNameAr` |
+| 6 | الاسم الأخير (بالعربية) | Last name (Arabic) | Text | `dbo.AspNetUsers.LastNameAr` |
+| 7 | الاسم الأول (بالإنجليزية) | First name (English) | Text | `dbo.AspNetUsers.FirstNameEn` |
+| 8 | الاسم الثاني (بالإنجليزية) | Middle name (English) | Text | `dbo.AspNetUsers.MiddleNameEn` |
+| 9 | الاسم الثالث (بالإنجليزية) | Third name (English) | Text | `dbo.AspNetUsers.ThirdNameEn` |
+| 10 | الاسم الأخير (بالإنجليزية) | Last name (English) | Text | `dbo.AspNetUsers.LastNameEn` |
+| 11 | نبذة عن المتحدث | Speaker bio | Multi-line text | New |
+
+⚠️ Needs Confirmation: the matrix marks no field mandatory (Expert Hub requires the Arabic first and last name) and gives no bio length (Expert Hub caps it at 2000).
 
 ---
 
@@ -69,6 +83,7 @@ Description: Any linking of the speaker's name to an event via FAST is automatic
 
 ### Open items
 
-1. Speaker Fields matrix — pending upload.
-2. Notification template — to be added to the Notification Matrix (J-26).
-3. FAST integration scope (INT-05) doesn't explicitly mention speaker-event linking — needs expansion or documentation as a new integration point.
+1. ~~Speaker Fields matrix — pending upload.~~ Resolved: Notion *Speaker Record* (`P-346`).
+2. Notification template — to be added to the Notification Matrix (J-26). The email address comes from the speaker's FAST profile (`P-347`), which FAST cannot serve yet (B-13, B-16 in the FAST contract), so AC-4 is blocked.
+3. FAST integration scope (INT-05) doesn't explicitly mention speaker-event linking — asked of FAST as B-17. F3 shows the history as unavailable until then (`P-349`).
+4. Search fields beyond name and title (specialization, field) — to be defined after the speaker record is approved (`P-348`).

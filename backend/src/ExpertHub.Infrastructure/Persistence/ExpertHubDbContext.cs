@@ -70,6 +70,9 @@ public sealed class ExpertHubDbContext : DbContext
 
     public DbSet<ServiceRequest> ServiceRequests => Set<ServiceRequest>();
 
+    /// <summary>J-04 — hosted speakers; a record, never an account (`BR-0412`).</summary>
+    public DbSet<SpeakerRecord> SpeakerRecords => Set<SpeakerRecord>();
+
     /* ── CAP-05 — assignment through engagement (`10` §3.7, migration 10) ── */
 
     public DbSet<AssignmentRequest> AssignmentRequests => Set<AssignmentRequest>();

@@ -1,5 +1,11 @@
 import type { ExpertHubApiError } from '../../shared/services/apiClient';
+import {
+  MOCK_SPEAKERS,
+  speakerMatchesSearch,
+  toSpeakerSummary,
+} from '../speakers/mockSpeakerProvider';
 import type { TrainerSearchService } from './trainerSearchService';
+import { hasTrainerOnlyFilter } from './trainerSearch.types';
 import type {
   BioDecision,
   IdentityCardDto,
@@ -289,9 +295,17 @@ export function createMockTrainerSearchProvider(
         return true;
       }).map(toResult);
 
+      // J-04 — the seeded speakers, under the server's rules: name and title
+      // only, newest first, and none while a trainer-only filter is set.
+      const speakers = hasTrainerOnlyFilter(filters)
+        ? []
+        : MOCK_SPEAKERS.filter((speaker) => speakerMatchesSearch(speaker, filters.search))
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+            .map(toSpeakerSummary);
+
       return {
         ok: true,
-        value: { items, totalCount: items.length },
+        value: { items, totalCount: items.length, speakers },
       };
     },
 

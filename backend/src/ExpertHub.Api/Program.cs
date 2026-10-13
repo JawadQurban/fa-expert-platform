@@ -219,6 +219,8 @@ v1.MapInternalEndpoints();
 // CAP-01/03 — J-03's internal half: the service-request queue and decision,
 // behind `serviceRequestService.ts`'s contract.
 v1.MapServiceRequestEndpoints();
+// J-04 — speaker records, internal only (`BR-0113`).
+ExpertHub.Api.Speakers.SpeakerEndpoints.MapSpeakerEndpoints(v1);
 // J-16 brochure / J-03 addendum uploads — the application form's own store.
 ExpertHub.Api.Documents.AttachmentUploads.MapAttachmentUploadEndpoints(v1);
 

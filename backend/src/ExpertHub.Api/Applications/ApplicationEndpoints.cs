@@ -259,10 +259,20 @@ public static class ApplicationEndpoints
 
             // J-01/F3/AC-4 — an accredited trainer is sent to add-service, not
             // to a second full application.
+            // The accredited application is returned so the page links straight
+            // to its add-service form; null for a trainer accredited outside it.
             if (await ActorResolution.HoldsRoleAsync(db, actor.UserId, RoleCode.Trainer, ct))
             {
+                var accredited = await db.Applications
+                    .Where(a => a.ApplicantUserId == actor.UserId
+                        && (a.Status == ApplicationStatuses.Approved
+                            || a.Status == ApplicationStatuses.Active))
+                    .OrderByDescending(a => a.UpdatedAt)
+                    .Select(a => (Guid?)a.ApplicationId)
+                    .FirstOrDefaultAsync(ct);
                 await db.SaveChangesAsync(ct);
-                return Results.Ok(new StartOrResumeDraftWire(null, false, "approved-trainer", null));
+                return Results.Ok(new StartOrResumeDraftWire(
+                    null, false, "approved-trainer", accredited?.ToString()));
             }
 
             var mine = await db.Applications

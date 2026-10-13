@@ -11,6 +11,18 @@ The history before this repository existed is in
 
 ## [Unreleased]
 
+### Added
+
+- **Speaker records (J-04, `P-346`–`P-349`).** Staff create, edit and search
+  speaker records from the internal dashboard («سجل المتحدثين»), with the 11
+  fields of the owner's Speaker Record matrix: photo, title, four name parts in
+  Arabic and in English, and bio. Search is by name or title. Speakers also
+  appear in the trainer database search, tagged «متحدث». Migration **M43** adds
+  `SPEAKER_RECORD`. Not yet working, because FAST does not provide the data:
+  the speaker's email (read from their FAST profile, so the creation email is
+  not sent) and their participation history. Both are now items B-16 and B-17
+  of the FAST contract.
+
 ### Changed
 
 - **Assignment routing follows Notion's 2026-09-29 update** (`P-341`). A
@@ -39,6 +51,10 @@ The history before this repository existed is in
   (`P-345`, RB-03). On submission the trainer is told to renew their agreement
   first; on review the decision-maker cannot approve it, and the only action
   records the automatic rejection, with a link to agreement management.
+- **F-0105 and F-0413 carry the BRD's names** — «إدخال بيانات متحدث» and
+  «إدارة سجل المتحدث» — and **F-0105 moves from the Trainer role to Staff and
+  Manager** (M43). The Trainer grant would have let a trainer create a speaker
+  record, which `BR-0113` forbids. Nothing used F-0105 before.
 
 ### Fixed
 
@@ -61,6 +77,15 @@ The history before this repository existed is in
   (`assets/favicon-<hash>.svg`, cached as immutable). In `public/` it kept one
   URL, `/expert-hub/favicon.svg`, so browsers went on showing the old icon after
   a redeploy.
+- **An accredited trainer is no longer sent to a dead end** (J-01/F3/AC-4 →
+  J-03, found in hands-on testing: «يوجهه بس مافيه زر اضافة خدمة»). Starting a
+  new application as an accredited trainer showed «إضافة خدمة من ملفي», which
+  opened My Profile, where there is no add-service entry. `POST
+  v1/me/applications/draft/start` now returns the trainer's approved or active
+  application as `blockedByApplicationId`, and the button («إضافة خدمة») opens
+  that application's add-service form. A trainer accredited outside Expert Hub
+  has no such application, so no button is shown and My Applications remains
+  the exit.
 
 ## [1.4.1] — 2026-10-06 — The business-review decisions (`P-333`–`P-340`)
 

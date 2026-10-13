@@ -1,6 +1,7 @@
 import type { ApplicationService } from '../applications/application.types';
 import type { DirectorySpecialty, TrainerClassification } from '../directory/directory.types';
 import type { ProfileAgreementStatus } from '../profile/profile.types';
+import type { SpeakerSummaryDto } from '../speakers/speaker.types';
 
 /**
  * EH-INT-07 / EH-INT-08 — Trainer Search & Unified Profile contracts (CAP-04,
@@ -105,9 +106,29 @@ export interface TrainerSearchResultDto {
   readonly yearsExperience: number | null;
 }
 
+/**
+ * A filter only a trainer can answer: a service other than `speaker`, a file
+ * status, or a certification floor. While one is set the server returns no
+ * speakers — a speaker has none of these, so matching one would be a lie.
+ */
+export function hasTrainerOnlyFilter(filters: TrainerSearchFilters): boolean {
+  return (
+    (filters.service !== 'all' && filters.service !== 'speaker') ||
+    filters.fileStatus !== 'all' ||
+    filters.minCertifications != null
+  );
+}
+
 export interface TrainerSearchListDto {
   readonly items: readonly TrainerSearchResultDto[];
   readonly totalCount: number;
+  /**
+   * J-04 (owner ruling) — speaker records appear in this search too, tagged
+   * «متحدث», after the trainers. Matched on name and title only. Empty when the
+   * caller lacks `F-0413`, or while a trainer-only filter is set
+   * (`hasTrainerOnlyFilter`).
+   */
+  readonly speakers: readonly SpeakerSummaryDto[];
   // The API still serves an always-empty `availableDomains` (`Q16`). Not read:
   // the domain filter it fed is refused server-side.
 }

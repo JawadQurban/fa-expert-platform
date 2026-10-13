@@ -1,0 +1,55 @@
+/* EH-INT-11 speaker record — layout-only, token-only (DC-04/DC-23). */
+
+/* Who the speaker is beside what FAST will add (email, history); the two
+   columns stack on narrow viewports. */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--fads-sys-space-stack-md);
+  align-items: start;
+}
+
+@media (max-width: 64rem) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+  min-inline-size: 0;
+}
+
+/* Label over value (Option B prototype `.fg` / `.ff`). */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--fads-sys-space-stack-md);
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+}
+
+.term {
+  color: var(--fads-sys-color-text-muted);
+  font-size: var(--fads-sys-typography-text-xs);
+}
+
+.value {
+  margin: 0;
+  font-size: var(--fads-sys-typography-text-sm);
+  font-weight: var(--fads-ref-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+/* The bio is multi-line as typed: keep its line breaks. */
+.bio {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

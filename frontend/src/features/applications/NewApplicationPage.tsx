@@ -415,6 +415,12 @@ export default function NewApplicationPage() {
     // screen would send an accredited trainer to the wrong place.
     const approvedTrainer = blockReason === 'approved-trainer';
     const copy = approvedTrainer ? content.blockedTrainer : content.blocked;
+    // An accredited trainer goes to the accredited application's add-service
+    // form (J-03). `blockedBy` is null for a trainer accredited outside Expert
+    // Hub: there is no form to open, so My Applications is the only exit.
+    const blockedExit = approvedTrainer
+      ? { href: expertHubPaths.applicationAddService, label: content.blockedTrainer.addService }
+      : { href: expertHubPaths.applicationDetail, label: content.blocked.viewCurrent };
     return (
       <Section aria-labelledby="eh-new-application-blocked-title">
         <Container size="prose">
@@ -426,20 +432,10 @@ export default function NewApplicationPage() {
               {copy.body}
             </Alert>
             <div className={styles.blockedActions}>
-              {approvedTrainer ? (
-                <Button variant="primary" size="md" href={expertHubPaths.profile}>
-                  {content.blockedTrainer.addService}
+              {blockedBy != null && (
+                <Button variant="primary" size="md" href={blockedExit.href(blockedBy)}>
+                  {blockedExit.label}
                 </Button>
-              ) : (
-                blockedBy != null && (
-                  <Button
-                    variant="primary"
-                    size="md"
-                    href={expertHubPaths.applicationDetail(blockedBy)}
-                  >
-                    {content.blocked.viewCurrent}
-                  </Button>
-                )
               )}
               <Button variant="secondary" size="md" href={expertHubPaths.applications}>
                 {content.actions.goToApplications}

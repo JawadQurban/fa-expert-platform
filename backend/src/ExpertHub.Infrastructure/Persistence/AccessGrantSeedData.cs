@@ -43,10 +43,9 @@ internal static class AccessGrantSeedData
 {
     internal static readonly object[] Grants =
     [
-        /* Trainer — 18 features, own scope. */
+        /* Trainer — 17 features, own scope. */
         new { RoleId = 1, PermissionId = 1, Scope = DataScope.Own }, // F-0101
         new { RoleId = 1, PermissionId = 3, Scope = DataScope.Own }, // F-0104
-        new { RoleId = 1, PermissionId = 4, Scope = DataScope.Own }, // F-0105
         new { RoleId = 1, PermissionId = 10, Scope = DataScope.Own }, // F-0206
         new { RoleId = 1, PermissionId = 18, Scope = DataScope.Own }, // F-0403
         new { RoleId = 1, PermissionId = 20, Scope = DataScope.Own }, // F-0405
@@ -62,8 +61,11 @@ internal static class AccessGrantSeedData
         new { RoleId = 1, PermissionId = 56, Scope = DataScope.Own }, // F-1002
         new { RoleId = 1, PermissionId = 57, Scope = DataScope.Own }, // F-1003
         new { RoleId = 1, PermissionId = 58, Scope = DataScope.Own }, // F-1004
-        /* Staff — 34 features, all scope. */
+        /* Staff — 35 features, all scope. */
         new { RoleId = 2, PermissionId = 2, Scope = DataScope.All }, // F-0102
+        // J-04 — speaker records are entered by the trainer-management team
+        // only (`BR-0113`, US-0107); never by the trainer.
+        new { RoleId = 2, PermissionId = 4, Scope = DataScope.All }, // F-0105
         new { RoleId = 2, PermissionId = 5, Scope = DataScope.All }, // F-0201
         new { RoleId = 2, PermissionId = 6, Scope = DataScope.All }, // F-0202
         new { RoleId = 2, PermissionId = 7, Scope = DataScope.All }, // F-0203
@@ -97,8 +99,9 @@ internal static class AccessGrantSeedData
         new { RoleId = 2, PermissionId = 55, Scope = DataScope.All }, // F-1001
         new { RoleId = 2, PermissionId = 56, Scope = DataScope.All }, // F-1002
         new { RoleId = 2, PermissionId = 58, Scope = DataScope.All }, // F-1004
-        /* Manager — 41 features, all scope. */
+        /* Manager — 42 features, all scope. */
         new { RoleId = 3, PermissionId = 2, Scope = DataScope.All }, // F-0102
+        new { RoleId = 3, PermissionId = 4, Scope = DataScope.All }, // F-0105
         new { RoleId = 3, PermissionId = 5, Scope = DataScope.All }, // F-0201
         new { RoleId = 3, PermissionId = 6, Scope = DataScope.All }, // F-0202
         new { RoleId = 3, PermissionId = 7, Scope = DataScope.All }, // F-0203

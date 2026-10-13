@@ -428,12 +428,30 @@ describe('EH-TP-05 — New Application', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(content.blockedTrainer.body)).toBeInTheDocument();
 
-    // The exit is the add-service path (J-03) — not "track your open application".
+    // The exit is the add-service form of the accredited application (J-03),
+    // not My Profile (which has no add-service entry) and not "track your
+    // open application". The demo seed's accredited application is app-004.
     const addService = screen.getByRole('link', { name: content.blockedTrainer.addService });
-    expect(addService).toHaveAttribute('href', expertHubPaths.profile);
+    expect(addService).toHaveAttribute('href', expertHubPaths.applicationAddService('app-004'));
     expect(
       screen.queryByRole('link', { name: content.blocked.viewCurrent })
     ).not.toBeInTheDocument();
+  });
+
+  it('J-01/F3/AC-4: a trainer accredited outside Expert Hub gets no dead-end add-service link', async () => {
+    injectProvider({ hasApprovedTrainerRole: true, seed: [] });
+    seedExpertHubSession(['trainer']);
+    renderExpertHubAt(expertHubPaths.applicationsNew);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: content.blockedTrainer.title })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: content.blockedTrainer.addService })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: content.actions.goToApplications })
+    ).toBeInTheDocument();
   });
 
   it('derives one step per schema section — nine steps, in schema order', async () => {

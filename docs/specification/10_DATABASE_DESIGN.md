@@ -396,13 +396,22 @@ erDiagram
   }
   SPEAKER_RECORD {
     uuid speaker_record_id PK
-    uuid user_id FK
-    string full_name_ar
-    string full_name_en
-    string organisation
-    text bio "⟨gap⟩ Speaker Fields matrix pending - J-04"
+    string title "J-04 matrix row 2"
+    string first_name_ar
+    string middle_name_ar
+    string third_name_ar
+    string last_name_ar
+    string first_name_en
+    string middle_name_en
+    string third_name_en
+    string last_name_en
+    text bio "max 2000 - Needs Confirmation"
+    uuid photo_attachment_id FK
+    string fast_user_id "email source - P-347"
     uuid created_by FK
     datetime created_at
+    uuid updated_by FK
+    datetime updated_at
   }
 ```
 

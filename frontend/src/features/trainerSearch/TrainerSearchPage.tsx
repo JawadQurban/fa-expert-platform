@@ -24,6 +24,9 @@ import {
 import { getTrainerSearchService } from './trainerSearchService';
 import { getTrainerSearchContent } from './trainerSearch.content';
 import { getBioReviewContent } from './bioReview.content';
+import { getSpeakersContent } from '../speakers/speakers.content';
+import { speakerDisplayName, type SpeakerSummaryDto } from '../speakers/speaker.types';
+import { apiUrl } from '../../shared/services/apiClient';
 import { describeLoadFailure } from '../../shared/errors/loadFailure';
 import { WorkspacePage } from '../../shared/workspace/WorkspacePage';
 import { PageHead } from '../../shared/workspace/PageHead';
@@ -49,7 +52,17 @@ import { formatNumber } from '../../shared/formatting';
  * control: there is no specialty or domain taxonomy (`Q16`), no calculated
  * rating (`DM-GAP-14`) and no numeric years source, so each filter could only
  * answer wrongly — the API refuses them, and this page does not offer them.
+ *
+ * **Speakers appear here too** (J-04, owner ruling): after the trainer rows, in
+ * the same table, tagged «متحدث» and linking to their own record. A speaker has
+ * no specialty, file status, evaluation or experience (`BR-0413`), so those
+ * cells say «—» ("not applicable") rather than a value that would be invented.
  */
+
+/** One table row: a trainer, or a speaker record following the trainers. */
+type ResultRow =
+  | { readonly kind: 'trainer'; readonly trainer: TrainerSearchResultDto }
+  | { readonly kind: 'speaker'; readonly speaker: SpeakerSummaryDto };
 
 const FILE_STATUS_VARIANT: Readonly<Record<TrainerFileStatus, TagVariant>> = {
   active: 'success',
@@ -68,6 +81,7 @@ function toMin(value: string): number | null {
 export default function TrainerSearchPage() {
   const { locale } = useLocale();
   const content = useMemo(() => getTrainerSearchContent(locale), [locale]);
+  const speakersContent = useMemo(() => getSpeakersContent(locale), [locale]);
 
   const [filters, setFilters] = useState<TrainerSearchFilters>(DEFAULT_TRAINER_SEARCH_FILTERS);
   const [result, setResult] = useState<TrainerSearchListDto | null>(null);
@@ -102,8 +116,14 @@ export default function TrainerSearchPage() {
     };
   }, [filters, reloadKey]);
 
-  const rows = [...(result?.items ?? [])];
-  const showIdleNote = rows.some((row) => row.fileStatus === 'idle');
+  const trainers = result?.items ?? [];
+  // `?? []` — a server predating J-04 serves no `speakers` at all.
+  const speakers = result?.speakers ?? [];
+  const rows: ResultRow[] = [
+    ...trainers.map((trainer) => ({ kind: 'trainer' as const, trainer })),
+    ...speakers.map((speaker) => ({ kind: 'speaker' as const, speaker })),
+  ];
+  const showIdleNote = trainers.some((row) => row.fileStatus === 'idle');
   const hasRows = error == null && result != null && rows.length > 0;
 
   /*
@@ -155,63 +175,117 @@ export default function TrainerSearchPage() {
     minCertifications: { minCertifications: null },
   };
 
-  const columns: Array<TableColumn<TrainerSearchResultDto>> = [
+  /** A trainer-only cell on a speaker row: «—», named for a screen reader. */
+  const notApplicable = (
+    <Typography as="span" variant="text-sm" color="muted">
+      <span aria-hidden="true">—</span>
+      <span className="fads-visually-hidden">{content.notApplicableToSpeaker}</span>
+    </Typography>
+  );
+
+  const columns: Array<TableColumn<ResultRow>> = [
     {
       key: 'name',
       header: content.columns.name,
       // The person, not just the name (FADS kit, EH-INT-07). Staff scan this
       // table looking for somebody, and a face — even initials — is faster to
       // find again than a line of text.
-      render: (row) => (
-        <span className={styles.nameCell}>
-          <Avatar name={row.name} size="sm" decorative />
-          <Link href={expertHubPaths.internalTrainer(row.trainerId)}>{row.name}</Link>
-        </span>
-      ),
+      render: (row) => {
+        if (row.kind === 'speaker') {
+          const name = speakerDisplayName(row.speaker, locale);
+          return (
+            <span className={styles.nameCell}>
+              <Avatar
+                name={name}
+                src={row.speaker.photoUrl == null ? undefined : apiUrl(row.speaker.photoUrl)}
+                size="sm"
+                decorative
+              />
+              <Link href={expertHubPaths.internalSpeaker(row.speaker.speakerId)}>{name}</Link>
+            </span>
+          );
+        }
+        return (
+          <span className={styles.nameCell}>
+            <Avatar name={row.trainer.name} size="sm" decorative />
+            <Link href={expertHubPaths.internalTrainer(row.trainer.trainerId)}>
+              {row.trainer.name}
+            </Link>
+          </span>
+        );
+      },
     },
     {
       key: 'services',
       header: content.columns.services,
       render: (row) =>
-        row.services
-          .map((service) => content.services[service])
-          .join(locale === 'ar' ? '، ' : ', '),
+        row.kind === 'speaker' ? (
+          // J-04 — the approved service label, so «متحدث» means one thing.
+          <Tag variant="information" size="sm">
+            {content.services.speaker}
+          </Tag>
+        ) : (
+          row.trainer.services
+            .map((service) => content.services[service])
+            .join(locale === 'ar' ? '، ' : ', ')
+        ),
     },
     {
       key: 'specialties',
       header: content.columns.specialties,
       render: (row) =>
-        row.specialties
-          .map((specialty) => content.specialties[specialty])
-          .join(locale === 'ar' ? '، ' : ', '),
+        row.kind === 'speaker'
+          ? notApplicable
+          : row.trainer.specialties
+              .map((specialty) => content.specialties[specialty])
+              .join(locale === 'ar' ? '، ' : ', '),
     },
     {
       key: 'fileStatus',
       header: content.columns.fileStatus,
-      render: (row) => (
-        <Tag variant={FILE_STATUS_VARIANT[row.fileStatus]} size="sm">
-          {content.fileStatuses[row.fileStatus]}
-        </Tag>
-      ),
+      render: (row) =>
+        row.kind === 'speaker' ? (
+          notApplicable
+        ) : (
+          <Tag variant={FILE_STATUS_VARIANT[row.trainer.fileStatus]} size="sm">
+            {content.fileStatuses[row.trainer.fileStatus]}
+          </Tag>
+        ),
     },
     {
       key: 'evaluation',
       header: content.columns.evaluation,
       render: (row) =>
-        row.evaluationOverall == null ? (
+        row.kind === 'speaker' ? (
+          notApplicable
+        ) : row.trainer.evaluationOverall == null ? (
           <Typography as="span" variant="text-sm" color="muted">
             {content.notEvaluated}
           </Typography>
         ) : (
-          <bdi>{formatScore(row.evaluationOverall, locale)}</bdi>
+          <bdi>{formatScore(row.trainer.evaluationOverall, locale)}</bdi>
         ),
     },
     {
       key: 'experience',
       header: content.columns.experience,
-      render: (row) => content.yearsValue(row.yearsExperience),
+      render: (row) =>
+        row.kind === 'speaker' ? notApplicable : content.yearsValue(row.trainer.yearsExperience),
     },
   ];
+
+  /* Both counts once speakers follow the trainers; only the non-empty ones. */
+  const summary =
+    result == null
+      ? undefined
+      : speakers.length === 0
+        ? content.resultsCount(result.totalCount)
+        : trainers.length === 0
+          ? speakersContent.list.resultsCount(speakers.length)
+          : content.resultsWithSpeakers(
+              content.resultsCount(result.totalCount),
+              speakersContent.list.resultsCount(speakers.length)
+            );
 
   // A denial is not a load failure: `P-190`'s gate answers 403 with the
   // feature it wanted, and telling someone their system broke sends them
@@ -227,11 +301,17 @@ export default function TrainerSearchPage() {
         titleId="eh-trainers-title"
         title={content.title}
         lead={content.description}
-        summary={hasRows && result != null ? content.resultsCount(result.totalCount) : undefined}
+        summary={hasRows ? summary : undefined}
         actions={
-          <Button variant="secondary" size="md" href={expertHubPaths.internalTrainerBios}>
-            {getBioReviewContent(locale).openLink}
-          </Button>
+          <>
+            <Button variant="secondary" size="md" href={expertHubPaths.internalTrainerBios}>
+              {getBioReviewContent(locale).openLink}
+            </Button>
+            {/* J-04 — speakers have their own record screen too (owner ruling). */}
+            <Button variant="secondary" size="md" href={expertHubPaths.internalSpeakers}>
+              {speakersContent.openLink}
+            </Button>
+          </>
         }
       />
 
@@ -352,7 +432,9 @@ export default function TrainerSearchPage() {
           <Table
             columns={columns}
             rows={rows}
-            getRowId={(row) => row.trainerId}
+            getRowId={(row) =>
+              row.kind === 'speaker' ? `speaker-${row.speaker.speakerId}` : row.trainer.trainerId
+            }
             caption={content.resultsLabel}
             captionHidden
             density="compact"

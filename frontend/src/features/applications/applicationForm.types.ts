@@ -210,7 +210,9 @@ export interface StartOrResumeDraftDto {
   readonly resumed: boolean;
   /** `null` when not blocked. */
   readonly blockReason: NewApplicationBlockReason | null;
-  /** The un-decided application to link to — set only for `open-application`. */
+  /** `open-application`: the un-decided application to track.
+   *  `approved-trainer`: the accredited application to add a service to, or
+   *  `null` when the trainer was accredited outside Expert Hub. */
   readonly blockedByApplicationId: string | null;
 }
 

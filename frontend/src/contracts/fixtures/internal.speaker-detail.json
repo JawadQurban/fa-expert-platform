@@ -1,0 +1,24 @@
+{
+  "speakerId": "b9b7a4ca-8313-4a99-917e-9f147049e3ee",
+  "title": "خبيرة أسواق المال",
+  "firstNameAr": "سارة",
+  "middleNameAr": null,
+  "thirdNameAr": null,
+  "lastNameAr": "العتيبي",
+  "firstNameEn": "Sarah",
+  "middleNameEn": null,
+  "thirdNameEn": null,
+  "lastNameEn": "Alotaibi",
+  "bio": "نبذة محدثة.",
+  "photoAttachmentId": null,
+  "photoUrl": null,
+  "email": null,
+  "emailUnavailableReason": "fast-profile-unavailable",
+  "history": {
+    "available": false,
+    "reason": "fast-speaker-history-unavailable",
+    "items": []
+  },
+  "createdAt": "2026-10-13T08:49:19Z",
+  "updatedAt": "2026-10-13T08:49:19Z"
+}

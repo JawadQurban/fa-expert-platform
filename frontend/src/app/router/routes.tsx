@@ -70,6 +70,9 @@ const SubmissionQueuePage = lazy(() => import('../../features/submissions/Submis
 const SubmissionReviewPage = lazy(() => import('../../features/submissions/SubmissionReviewPage'));
 const TrainerSearchPage = lazy(() => import('../../features/trainerSearch/TrainerSearchPage'));
 const BioReviewPage = lazy(() => import('../../features/trainerSearch/BioReviewPage'));
+const SpeakersPage = lazy(() => import('../../features/speakers/SpeakersPage'));
+const SpeakerDetailPage = lazy(() => import('../../features/speakers/SpeakerDetailPage'));
+const SpeakerFormPage = lazy(() => import('../../features/speakers/SpeakerFormPage'));
 const InternalTrainerProfilePage = lazy(
   () => import('../../features/trainerSearch/TrainerProfilePage')
 );
@@ -416,6 +419,31 @@ export const expertHubRoutes: RouteObject[] = [
                     // J-15/F1/AC-1 enumerates, in one screen.
                     path: expertHubRouteSegments.internalTrainer,
                     element: withSuspense(<InternalTrainerProfilePage />),
+                  },
+                  {
+                    // EH-INT-11 — Speaker records (J-04/F2). Internal only
+                    // (BR-0113): no portal route reaches a speaker, and a
+                    // speaker is never classified, evaluated, contracted or
+                    // paid (BR-0413), so nothing here offers it.
+                    path: expertHubRouteSegments.internalSpeakers,
+                    element: withSuspense(<SpeakersPage />),
+                  },
+                  {
+                    // EH-INT-11 — create a record (J-04/F1). Registered ABOVE
+                    // `:speakerId` so the literal segment is unambiguous.
+                    path: expertHubRouteSegments.internalSpeakerNew,
+                    element: withSuspense(<SpeakerFormPage />),
+                  },
+                  {
+                    // EH-INT-11 detail — the record, with the email and the
+                    // participation history both pending FAST (owner rulings).
+                    path: expertHubRouteSegments.internalSpeaker,
+                    element: withSuspense(<SpeakerDetailPage />),
+                  },
+                  {
+                    // EH-INT-11 — edit: the create form, prefilled.
+                    path: expertHubRouteSegments.internalSpeakerEdit,
+                    element: withSuspense(<SpeakerFormPage />),
                   },
                   {
                     // EH-INT-06 — Agreement Management (J-12/F1: expiry tracking
