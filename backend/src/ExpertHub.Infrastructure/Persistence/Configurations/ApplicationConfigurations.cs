@@ -276,3 +276,49 @@ public sealed class ServiceRequestConfiguration : IEntityTypeConfiguration<Servi
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+/// <summary>`SPEAKER_RECORD` — a hosted speaker (J-04, `BR-0412`).</summary>
+public sealed class SpeakerRecordConfiguration : IEntityTypeConfiguration<SpeakerRecord>
+{
+    public const int NameMaxLength = 100;
+
+    public const int TitleMaxLength = 200;
+
+    /// <summary>⚠️ Needs Confirmation — the matrix says «multi-line text» and
+    /// gives no limit. 2000 characters holds a long paragraph.</summary>
+    public const int BioMaxLength = 2000;
+
+    public void Configure(EntityTypeBuilder<SpeakerRecord> builder)
+    {
+        builder.ToTable("SPEAKER_RECORD");
+
+        builder.HasKey(s => s.SpeakerRecordId);
+        builder.Property(s => s.SpeakerRecordId).HasColumnName("speaker_record_id");
+        builder.Property(s => s.Title).HasColumnName("title").HasMaxLength(TitleMaxLength);
+        builder.Property(s => s.FirstNameAr).HasColumnName("first_name_ar").HasMaxLength(NameMaxLength);
+        builder.Property(s => s.MiddleNameAr).HasColumnName("middle_name_ar").HasMaxLength(NameMaxLength);
+        builder.Property(s => s.ThirdNameAr).HasColumnName("third_name_ar").HasMaxLength(NameMaxLength);
+        builder.Property(s => s.LastNameAr).HasColumnName("last_name_ar").HasMaxLength(NameMaxLength);
+        builder.Property(s => s.FirstNameEn).HasColumnName("first_name_en").HasMaxLength(NameMaxLength);
+        builder.Property(s => s.MiddleNameEn).HasColumnName("middle_name_en").HasMaxLength(NameMaxLength);
+        builder.Property(s => s.ThirdNameEn).HasColumnName("third_name_en").HasMaxLength(NameMaxLength);
+        builder.Property(s => s.LastNameEn).HasColumnName("last_name_en").HasMaxLength(NameMaxLength);
+        builder.Property(s => s.Bio).HasColumnName("bio").HasMaxLength(BioMaxLength);
+        builder.Property(s => s.PhotoAttachmentId).HasColumnName("photo_attachment_id");
+        builder.Property(s => s.FastUserId).HasColumnName("fast_user_id").HasMaxLength(100);
+        builder.Property(s => s.CreatedBy).HasColumnName("created_by");
+        builder.Property(s => s.CreatedAt).HasColumnName("created_at");
+        builder.Property(s => s.UpdatedBy).HasColumnName("updated_by");
+        builder.Property(s => s.UpdatedAt).HasColumnName("updated_at");
+
+        // The list is read newest first.
+        builder.HasIndex(s => s.CreatedAt);
+
+        builder.HasOne<Attachment>().WithMany().HasForeignKey(s => s.PhotoAttachmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(s => s.CreatedBy)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(s => s.UpdatedBy)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

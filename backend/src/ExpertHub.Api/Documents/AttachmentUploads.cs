@@ -37,7 +37,15 @@ internal static class AttachmentUploads
         ["service-addendum"] = "F-0305",
         // `P-333` — the trainer's own agreement file, uploaded at J-10 preparation.
         ["agreement-document"] = "F-0301",
+        // J-04 — the speaker's personal photo (matrix row 1).
+        [SpeakerPhotoPurpose] = "F-0105",
     };
+
+    internal const string SpeakerPhotoPurpose = "speaker-photo";
+
+    /// <summary>J-01's approved photo rule (`photo`: JPG/JPEG/PNG, 1 MB), reused
+    /// for the speaker's photo rather than a new rule invented.</summary>
+    internal static readonly string[] PhotoFormats = ["jpg", "jpeg", "png"];
 
     internal static string DownloadUrl(Guid attachmentId) =>
         $"/{ExpertHub.Core.ApiVersions.V1}/attachments/{attachmentId:D}";
@@ -123,7 +131,9 @@ internal static class AttachmentUploads
                 return Results.Problem(statusCode: 403, detail: "Not permitted.");
             }
             var (attachment, problem) = await StoreAsync(
-                form.Files.GetFile("file"), DocumentFormats, DocumentMaxSizeMb, actor.UserId, db, store, scanner, ct);
+                form.Files.GetFile("file"),
+                purpose == SpeakerPhotoPurpose ? PhotoFormats : DocumentFormats,
+                DocumentMaxSizeMb, actor.UserId, db, store, scanner, ct);
             if (problem is not null)
             {
                 return problem;

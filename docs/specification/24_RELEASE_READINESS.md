@@ -31,7 +31,7 @@ at runtime. A contract test per feature would have caught each one.
 | J-01 Onboarding & application submission | READY_WITH_EXTERNAL_DEPENDENCY | NO |
 | J-02 Internal nomination | NOT_IMPLEMENTED | **YES** (RB-02) |
 | J-03 Add service to approved trainer | PARTIALLY_IMPLEMENTED | **YES** (RB-03) |
-| J-04 Speaker record | NOT_IMPLEMENTED (descoped, `EXPERT-HUB-J04-SPEAKER`) | NO |
+| J-04 Speaker record | PARTIALLY_IMPLEMENTED (2026-10-13, `P-341`–`P-344`): F1 create/edit and F2 search built; the creation email (F1/AC-4) and the participation history (F3) wait on FAST (B-16, B-17) | NO |
 | J-05 Screening & initial decision | READY_WITH_BUSINESS_DECISION_PENDING | NO |
 | J-06 Interview scheduling | PARTIALLY_IMPLEMENTED | **YES** (RB-04) |
 | J-07 Interview evaluation & decision | READY_WITH_BUSINESS_DECISION_PENDING | NO |

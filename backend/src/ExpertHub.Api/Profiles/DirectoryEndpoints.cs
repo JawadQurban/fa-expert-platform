@@ -86,9 +86,16 @@ internal sealed record TrainerSearchResultWire(
     IReadOnlyList<string> Specialties, string Classification, string FileStatus,
     decimal? EvaluationOverall, int CertificationCount, int? YearsExperience);
 
+/// <summary>
+/// The trainer base search. <c>Speakers</c> is J-04/F2/AC-1: speaker records
+/// in the same results, tagged «متحدث». They are a separate list rather than
+/// trainer rows, because a speaker has no file status, rating, certifications
+/// or experience, and a trainer row would have to invent all four.
+/// </summary>
 internal sealed record TrainerSearchListWire(
     IReadOnlyList<TrainerSearchResultWire> Items, int TotalCount,
-    IReadOnlyList<DomainOptionWire> AvailableDomains);
+    IReadOnlyList<DomainOptionWire> AvailableDomains,
+    IReadOnlyList<ExpertHub.Api.Speakers.SpeakerSummaryWire> Speakers);
 
 internal sealed record TrainerRecordEntryWire(string Id, string Name, string Role, int Year);
 
@@ -226,7 +233,7 @@ public static class DirectoryEndpoints
             string? search, string? service, string? specialty, string? domain,
             string? fileStatus, int? minCertifications, int? minYearsExperience,
             decimal? minEvaluation,
-            ExpertHubDbContext db, CancellationToken ct) =>
+            HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
         {
             // ⚠️ The minimum-years filter has no numeric source (see
             // `YearsExperience`), so it answered «nobody» for every value. It
@@ -268,7 +275,9 @@ public static class DirectoryEndpoints
                 filtered.Count,
                 // `Q16` — empty until the domain taxonomy exists, exactly as
                 // the contract's own comment says it will be.
-                AvailableDomains: []));
+                AvailableDomains: [],
+                Speakers: await SpeakerRowsAsync(
+                    http, db, search, service, fileStatus, minCertifications, ct)));
         })
             .WithName("TrainerSearch")
             .RequireFeature("F-0410");
@@ -392,6 +401,34 @@ public static class DirectoryEndpoints
             Classification: TrainerProfileService.Classification(
                 [.. services.Where(s => s.TrainerId == r.TrainerId)]),
             PhotoUrl: photos.ContainsKey(r.ApplicationId) ? PhotoUrl(r.TrainerId) : null))];
+    }
+
+    /// <summary>
+    /// J-04/F2/AC-1 — the speakers that belong in this search. None when the
+    /// caller may not read speaker records (F-0413), or when a filter only a
+    /// trainer can meet is set: a speaker has no file status or certification
+    /// count, and a service filter other than «متحدث» excludes them by name.
+    /// </summary>
+    private static async Task<IReadOnlyList<ExpertHub.Api.Speakers.SpeakerSummaryWire>> SpeakerRowsAsync(
+        HttpContext http, ExpertHubDbContext db, string? search, string? service,
+        string? fileStatus, int? minCertifications, CancellationToken ct)
+    {
+        var trainerOnlyFilter = (!string.IsNullOrWhiteSpace(service) && service != ApplicationServices.Speaker)
+            || !string.IsNullOrWhiteSpace(fileStatus)
+            || minCertifications is not null;
+        if (trainerOnlyFilter)
+        {
+            return [];
+        }
+        var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+        if (!await FeatureAuthorization.HasFeatureAsync(db, actor.UserId, "F-0413", ct))
+        {
+            return [];
+        }
+        var speakers = await ExpertHub.Api.Speakers.SpeakerEndpoints.Matching(db, search)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(ct);
+        return [.. speakers.Select(ExpertHub.Api.Speakers.SpeakerEndpoints.Summary)];
     }
 
     private static async Task<List<(TrainerSearchResultWire Wire, Guid TrainerId)>>

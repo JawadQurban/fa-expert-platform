@@ -356,7 +356,9 @@ public sealed class AccessEndpointsTests
                     == grant.GetProperty("permissionId").GetString());
         });
         Assert.Equal("unapproved", matrix.GetProperty("modelStatus").GetString());
-        Assert.Equal(58, matrix.GetProperty("unverifiedLabelCount").GetInt32());
+        // `P-344` — F-0105 and F-0413 now carry the BRD's own names (§8.1.5
+        // US-0107, §8.4.5 US-0417), so two of the 58 labels are verified.
+        Assert.Equal(56, matrix.GetProperty("unverifiedLabelCount").GetInt32());
     }
 
     /* ── grants — §8.8.3, and the audit that rides the same transaction ───── */

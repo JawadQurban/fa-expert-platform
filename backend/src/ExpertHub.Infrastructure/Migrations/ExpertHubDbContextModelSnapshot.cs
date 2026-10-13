@@ -11079,9 +11079,9 @@ namespace ExpertHub.Infrastructure.Migrations
                             PermissionId = 4,
                             CapabilityCode = "CAP-01",
                             FeatureCode = "F-0105",
-                            LabelNeedsVerification = true,
-                            NameAr = "إدخال بيانات متقدّم نيابةً عنه",
-                            NameEn = "Enter applicant details on their behalf"
+                            LabelNeedsVerification = false,
+                            NameAr = "إدخال بيانات متحدث",
+                            NameEn = "Enter speaker details"
                         },
                         new
                         {
@@ -11295,9 +11295,9 @@ namespace ExpertHub.Infrastructure.Migrations
                             PermissionId = 28,
                             CapabilityCode = "CAP-04",
                             FeatureCode = "F-0413",
-                            LabelNeedsVerification = true,
-                            NameAr = "إدارة سجل المدرب لدى الأكاديمية",
-                            NameEn = "Manage the trainer’s Academy record"
+                            LabelNeedsVerification = false,
+                            NameAr = "إدارة سجل المتحدث",
+                            NameEn = "Manage a speaker record"
                         },
                         new
                         {
@@ -12127,12 +12127,6 @@ namespace ExpertHub.Infrastructure.Migrations
                         new
                         {
                             RoleId = 1,
-                            PermissionId = 4,
-                            Scope = "own"
-                        },
-                        new
-                        {
-                            RoleId = 1,
                             PermissionId = 10,
                             Scope = "own"
                         },
@@ -12224,6 +12218,12 @@ namespace ExpertHub.Infrastructure.Migrations
                         {
                             RoleId = 2,
                             PermissionId = 2,
+                            Scope = "all"
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 4,
                             Scope = "all"
                         },
                         new
@@ -12428,6 +12428,12 @@ namespace ExpertHub.Infrastructure.Migrations
                         {
                             RoleId = 3,
                             PermissionId = 2,
+                            Scope = "all"
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            PermissionId = 4,
                             Scope = "all"
                         },
                         new
@@ -13396,6 +13402,103 @@ namespace ExpertHub.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("SLOT_CYCLE", (string)null);
+                });
+
+            modelBuilder.Entity("ExpertHub.Core.Domain.SpeakerRecord", b =>
+                {
+                    b.Property<Guid>("SpeakerRecordId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("speaker_record_id");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("bio");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("FastUserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("fast_user_id");
+
+                    b.Property<string>("FirstNameAr")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("first_name_ar");
+
+                    b.Property<string>("FirstNameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("first_name_en");
+
+                    b.Property<string>("LastNameAr")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("last_name_ar");
+
+                    b.Property<string>("LastNameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("last_name_en");
+
+                    b.Property<string>("MiddleNameAr")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("middle_name_ar");
+
+                    b.Property<string>("MiddleNameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("middle_name_en");
+
+                    b.Property<Guid?>("PhotoAttachmentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("photo_attachment_id");
+
+                    b.Property<string>("ThirdNameAr")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("third_name_ar");
+
+                    b.Property<string>("ThirdNameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("third_name_en");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("SpeakerRecordId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("PhotoAttachmentId");
+
+                    b.HasIndex("UpdatedBy");
+
+                    b.ToTable("SPEAKER_RECORD", (string)null);
                 });
 
             modelBuilder.Entity("ExpertHub.Core.Domain.SubmissionRound", b =>
@@ -14542,6 +14645,25 @@ namespace ExpertHub.Infrastructure.Migrations
                         .HasForeignKey("SlotId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ExpertHub.Core.Domain.SpeakerRecord", b =>
+                {
+                    b.HasOne("ExpertHub.Core.Domain.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExpertHub.Core.Domain.Attachment", null)
+                        .WithMany()
+                        .HasForeignKey("PhotoAttachmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ExpertHub.Core.Domain.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("ExpertHub.Core.Domain.SubmissionRound", b =>

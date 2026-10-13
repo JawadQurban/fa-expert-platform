@@ -11,6 +11,25 @@ The history before this repository existed is in
 
 ## [Unreleased]
 
+### Added
+
+- **Speaker records (J-04, `P-341`–`P-344`).** Staff create, edit and search
+  speaker records from the internal dashboard («سجل المتحدثين»), with the 11
+  fields of the owner's Speaker Record matrix: photo, title, four name parts in
+  Arabic and in English, and bio. Search is by name or title. Speakers also
+  appear in the trainer database search, tagged «متحدث». Migration **M41** adds
+  `SPEAKER_RECORD`. Not yet working, because FAST does not provide the data:
+  the speaker's email (read from their FAST profile, so the creation email is
+  not sent) and their participation history. Both are now items B-16 and B-17
+  of the FAST contract.
+
+### Changed
+
+- **F-0105 and F-0413 carry the BRD's names** — «إدخال بيانات متحدث» and
+  «إدارة سجل المتحدث» — and **F-0105 moves from the Trainer role to Staff and
+  Manager** (M41). The Trainer grant would have let a trainer create a speaker
+  record, which `BR-0113` forbids. Nothing used F-0105 before.
+
 ### Fixed
 
 - **An accredited trainer is no longer sent to a dead end** (J-01/F3/AC-4 →
