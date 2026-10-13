@@ -1,5 +1,7 @@
 # Journey J-02 — Internal Nomination of New Applicant
 
+> **As built (2026-10-13, `P-350`):** owner ruling «build it back and the internal staff should be able to link it with user id». Staff find an **existing** Expert Hub user (EH-INT-12, by user id, name or email) and fill this form for them; the application is the nominee's, with `NominatedBy` = the staff member. No «unverified» account is created, so F2/AC-3 and F4's activation step are not built — a person who has never signed in signs in once first. F3's notification is EV-0102.
+
 **Journey Name (AR):** التسجيل الداخلي لمتقدم جديد
 
 ---

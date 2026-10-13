@@ -229,3 +229,19 @@ export interface SubmitApplicationDto {
   readonly reference: string;
   readonly submittedAt: string;
 }
+
+/**
+ * **J-02** — one existing Expert Hub user a staff member may nominate, linked
+ * by their user id (owner ruling, 2026-10-13). `blocked`: `self` (never your
+ * own), `approved-trainer` (add-service instead) or `open-application`
+ * (`BR-0101`); `null` when the form can be opened.
+ */
+export interface NominationCandidateDto {
+  readonly userId: string;
+  readonly externalIdentityId: string;
+  readonly fullNameAr: string;
+  readonly fullNameEn: string;
+  readonly email: string;
+  readonly blocked: 'self' | 'approved-trainer' | 'open-application' | null;
+  readonly openApplicationId: string | null;
+}

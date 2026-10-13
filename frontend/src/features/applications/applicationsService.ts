@@ -8,6 +8,7 @@ import type {
   ApplicationDraftDto,
   ApplicationFormSchemaDto,
   DraftAttachmentDto,
+  NominationCandidateDto,
   SaveDraftInput,
   StartOrResumeDraftDto,
   SubmitApplicationDto,
@@ -280,4 +281,117 @@ export function getApplicationsService(): ApplicationsService {
  */
 export function setApplicationsServiceForTesting(service: ApplicationsService | null): void {
   serviceInstance = service;
+}
+
+/** The part of the service the application form (`NewApplicationPage`) uses. */
+export type ApplicationFormService = Pick<
+  ApplicationsService,
+  | 'getApplicationFormSchema'
+  | 'getApplicationPrefill'
+  | 'startOrResumeDraft'
+  | 'saveDraft'
+  | 'uploadAttachment'
+  | 'removeAttachment'
+  | 'submitApplication'
+>;
+
+/**
+ * **J-02** — a staff member fills the application form for an existing user
+ * (`F-0102`). The same form, pointed at `/internal/nominations/{userId}`: the
+ * application is the nominee's, and the server records who nominated them.
+ */
+export interface NominationService {
+  searchCandidates(
+    query: string
+  ): Promise<Result<readonly NominationCandidateDto[], ExpertHubApiError>>;
+  formFor(userId: string): ApplicationFormService;
+}
+
+export function createHttpNominationProvider(
+  client: ExpertHubApiClient = createExpertHubApiClient()
+): NominationService {
+  const shared = createHttpApplicationsProvider(client);
+  return {
+    searchCandidates(query) {
+      return client.get<readonly NominationCandidateDto[]>(
+        `${APPLICATIONS_API_VERSION}/internal/nominations/candidates?q=${encodeURIComponent(query)}`
+      );
+    },
+    formFor(userId) {
+      const base = `${APPLICATIONS_API_VERSION}/internal/nominations/${encodeURIComponent(userId)}`;
+      return {
+        getApplicationFormSchema: (version) => shared.getApplicationFormSchema(version),
+        getApplicationPrefill: () => client.get<Record<string, string>>(`${base}/prefill`),
+        startOrResumeDraft: () => client.post<StartOrResumeDraftDto>(`${base}/draft/start`),
+        saveDraft: (input) => client.post<ApplicationDraftDto>(`${base}/draft`, input),
+        uploadAttachment(ruleId, file, entryId) {
+          const payload = new FormData();
+          payload.append('ruleId', ruleId);
+          payload.append('file', file);
+          if (entryId != null) {
+            payload.append('entryId', entryId);
+          }
+          return client.post<DraftAttachmentDto>(`${base}/draft/attachments`, payload);
+        },
+        removeAttachment: (attachmentId) =>
+          client.post<null>(`${base}/draft/attachments/remove`, { attachmentId }),
+        submitApplication: (input) => client.post<SubmitApplicationDto>(`${base}/submit`, input),
+      };
+    },
+  };
+}
+
+/** Demo stand-in: two people to pick, and the applicant's own mock form. */
+function createMockNominationProvider(): NominationService {
+  const people: readonly NominationCandidateDto[] = [
+    {
+      userId: '7b1c0f6e-0000-4000-8000-000000000101',
+      externalIdentityId: 'fast-10101',
+      fullNameAr: 'نورة السبيعي',
+      fullNameEn: 'Noura Alsubaie',
+      email: 'noura@example.sa',
+      blocked: null,
+      openApplicationId: null,
+    },
+    {
+      userId: '7b1c0f6e-0000-4000-8000-000000000102',
+      externalIdentityId: 'fast-10102',
+      fullNameAr: 'خالد المطيري',
+      fullNameEn: 'Khalid Almutairi',
+      email: 'khalid@example.sa',
+      blocked: 'approved-trainer',
+      openApplicationId: null,
+    },
+  ];
+  return {
+    searchCandidates(query) {
+      const term = query.trim().toLowerCase();
+      return Promise.resolve({
+        ok: true,
+        value:
+          term.length < 2
+            ? []
+            : people.filter((p) =>
+                [p.userId, p.externalIdentityId, p.email, p.fullNameAr, p.fullNameEn].some((v) =>
+                  v.toLowerCase().includes(term)
+                )
+              ),
+      });
+    },
+    formFor: () => getApplicationsService(),
+  };
+}
+
+let nominationInstance: NominationService | null = null;
+
+export function getNominationService(): NominationService {
+  nominationInstance ??= isModuleLive('applications')
+    ? createHttpNominationProvider()
+    : createMockNominationProvider();
+  return nominationInstance;
+}
+
+/** Test seam (pass `null` to restore the default). */
+export function setNominationServiceForTesting(service: NominationService | null): void {
+  nominationInstance = service;
 }

@@ -238,6 +238,16 @@ export default function ApplicationInboxPage() {
         title={inbox.title}
         lead={inbox.subtitle}
         summary={result != null ? inbox.countSummary(result.totalCount) : undefined}
+        actions={
+          <Button
+            variant="primary"
+            size="md"
+            href={expertHubPaths.internalNominations}
+            iconStart={<Icon name="add-circle" size="sm" decorative />}
+          >
+            {inbox.registerApplicant}
+          </Button>
+        }
         breadcrumbs={
           <Breadcrumbs
             items={[

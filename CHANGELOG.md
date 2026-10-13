@@ -13,6 +13,12 @@ The history before this repository existed is in
 
 ### Added
 
+- **Staff can register an applicant again (J-02, `P-350`).** «تسجيل متقدّم جديد» on
+  the application inbox finds an existing user by user id, name or email, and
+  opens the same application form on their behalf. The application is in the
+  nominee's name, records who nominated them, and enters screening on
+  submission; the nominee is notified (EV-0102). A staff member cannot nominate
+  themselves, and an accredited trainer is pointed to add-service instead.
 - **Notification email is sent over SMTP** (INT-04). `SmtpEmailGateway` takes
   over from the null gateway once `EXPERT_HUB_EMAIL_HOST` and
   `EXPERT_HUB_EMAIL_FROM` are set; the password goes in

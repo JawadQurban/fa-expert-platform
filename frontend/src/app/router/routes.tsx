@@ -73,6 +73,8 @@ const BioReviewPage = lazy(() => import('../../features/trainerSearch/BioReviewP
 const SpeakersPage = lazy(() => import('../../features/speakers/SpeakersPage'));
 const SpeakerDetailPage = lazy(() => import('../../features/speakers/SpeakerDetailPage'));
 const SpeakerFormPage = lazy(() => import('../../features/speakers/SpeakerFormPage'));
+const NominationsPage = lazy(() => import('../../features/applications/NominationsPage'));
+const NominationFormPage = lazy(() => import('../../features/applications/NominationFormPage'));
 const InternalTrainerProfilePage = lazy(
   () => import('../../features/trainerSearch/TrainerProfilePage')
 );
@@ -419,6 +421,16 @@ export const expertHubRoutes: RouteObject[] = [
                     // J-15/F1/AC-1 enumerates, in one screen.
                     path: expertHubRouteSegments.internalTrainer,
                     element: withSuspense(<InternalTrainerProfilePage />),
+                  },
+                  {
+                    // EH-INT-12 — J-02 internal nomination: find an existing
+                    // user (`F-0102`), then fill the form on their behalf.
+                    path: expertHubRouteSegments.internalNominations,
+                    element: withSuspense(<NominationsPage />),
+                  },
+                  {
+                    path: expertHubRouteSegments.internalNomination,
+                    element: withSuspense(<NominationFormPage />),
                   },
                   {
                     // EH-INT-11 — Speaker records (J-04/F2). Internal only

@@ -91,6 +91,8 @@ export interface InternalContent {
     readonly documentTitle: string;
     readonly title: string;
     readonly subtitle: string;
+    /** J-02 — opens the internal nomination search (`F-0102`). */
+    readonly registerApplicant: string;
     /** The workspace root the breadcrumb starts from. */
     readonly breadcrumbRoot: string;
     readonly breadcrumbLabel: string;
@@ -221,6 +223,7 @@ const ar: InternalContent = {
     documentTitle: 'صندوق الطلبات — منصة الخبراء والمدربين',
     title: 'صندوق الطلبات',
     subtitle: 'استعرض الطلبات الواردة، وافتح أي طلب لبدء الفرز.',
+    registerApplicant: 'تسجيل متقدّم جديد',
     breadcrumbRoot: 'لوحة العمل',
     breadcrumbLabel: 'مسار التنقل',
     countSummary: (total) => `${arNumber(total)} طلبًا في صندوق الوارد`,
@@ -355,6 +358,7 @@ const en: InternalContent = {
     documentTitle: 'Application inbox — Expert Hub',
     title: 'Application inbox',
     subtitle: 'Review incoming applications, and open one to start screening.',
+    registerApplicant: 'Register a new applicant',
     breadcrumbRoot: 'Workspace',
     breadcrumbLabel: 'Breadcrumb',
     countSummary: (total) => `${formatNumber(total, 'en')} applications in the inbox`,

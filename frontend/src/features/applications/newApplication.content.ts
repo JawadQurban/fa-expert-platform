@@ -135,6 +135,42 @@ export interface NewApplicationContent {
     readonly title: string;
     readonly body: string;
   };
+  /** J-02 — a staff member fills the form for an existing user (`F-0102`). */
+  readonly nomination: {
+    readonly title: string;
+    readonly onBehalf: (name: string) => string;
+    readonly breadcrumbRoot: string;
+    readonly breadcrumbList: string;
+    readonly successTitle: string;
+    readonly successBody: (name: string) => string;
+    readonly backToSearch: string;
+    readonly openInInbox: string;
+    readonly blockedTitle: string;
+    readonly blockedOpen: (name: string) => string;
+    readonly blockedTrainer: (name: string) => string;
+    readonly search: {
+      readonly documentTitle: string;
+      readonly title: string;
+      readonly lead: string;
+      readonly regionLabel: string;
+      readonly label: string;
+      readonly placeholder: string;
+      readonly hint: string;
+      readonly resultsLabel: string;
+      readonly noResultsTitle: string;
+      readonly noResultsBody: (term: string) => string;
+      readonly columns: {
+        readonly name: string;
+        readonly email: string;
+        readonly userId: string;
+        readonly action: string;
+      };
+      readonly select: string;
+      readonly blocked: Readonly<Record<'self' | 'approved-trainer' | 'open-application', string>>;
+      readonly notFoundTitle: string;
+      readonly notFoundBody: string;
+    };
+  };
   /** Control labels for the DS DatePicker the `date` fields render. */
   readonly datePicker: {
     readonly placeholder: string;
@@ -265,6 +301,50 @@ const ar: NewApplicationContent = {
     title: 'أنت مدرب معتمد بالفعل',
     body: 'حسابك يحمل دور مدرب معتمد، ولا حاجة لتقديم طلب انضمام جديد. لإضافة خدمة لم تُعتمد لك بعد، استخدم طلب «إضافة خدمة» على طلبك المعتمد — ولن يُطلب منك سوى الحقول الناقصة لتلك الخدمة.',
     addService: 'إضافة خدمة',
+  },
+  nomination: {
+    title: 'تسجيل متقدّم جديد',
+    onBehalf: (name) =>
+      `تُعبّئ هذا الطلب نيابةً عن: ${name}. يُسجَّل الطلب باسمه وعلى حسابه، ويُسجَّل اسمك بصفتك من رشّحه، ويُبلَّغ المتقدّم عند تقديم الطلب.`,
+    breadcrumbRoot: 'صندوق الطلبات',
+    breadcrumbList: 'تسجيل متقدّم',
+    successTitle: 'تم تقديم الطلب نيابةً عن المتقدّم',
+    successBody: (name) =>
+      `قُدّم الطلب باسم ${name} ودخل قائمة الفرز مباشرةً، وسيصله إشعار بتقديمه.`,
+    backToSearch: 'تسجيل متقدّم آخر',
+    openInInbox: 'صندوق الطلبات',
+    blockedTitle: 'لا يمكن فتح طلب لهذا المستخدم',
+    blockedOpen: (name) =>
+      `لدى ${name} طلب قيد المعالجة، ولا يُفتح له طلب جديد قبل اكتمال معالجته.`,
+    blockedTrainer: (name) =>
+      `${name} مدرب معتمد بالفعل؛ تُضاف له الخدمات عبر طلب «إضافة خدمة» لا بطلب انضمام جديد.`,
+    search: {
+      documentTitle: 'تسجيل متقدّم جديد — منصة الخبراء',
+      title: 'تسجيل متقدّم جديد',
+      lead: 'ابحث عن المستخدم برقم المستخدم أو اسمه أو بريده الإلكتروني، ثم عبّئ طلب الانضمام نيابةً عنه. يجب أن يكون للمتقدّم حساب في المنصة.',
+      regionLabel: 'البحث عن مستخدم',
+      label: 'رقم المستخدم أو الاسم أو البريد الإلكتروني',
+      placeholder: 'مثال: نورة أو noura@example.sa',
+      hint: 'حرفان على الأقل.',
+      resultsLabel: 'المستخدمون المطابقون',
+      noResultsTitle: 'لا يوجد مستخدم مطابق',
+      noResultsBody: (term) =>
+        `لم نجد حسابًا يطابق «${term}». يجب أن يسجّل المتقدّم الدخول إلى المنصة مرة واحدة على الأقل قبل ترشيحه.`,
+      columns: {
+        name: 'الاسم',
+        email: 'البريد الإلكتروني',
+        userId: 'رقم المستخدم',
+        action: 'الإجراء',
+      },
+      select: 'تعبئة الطلب',
+      blocked: {
+        self: 'لا يمكنك ترشيح نفسك',
+        'approved-trainer': 'مدرب معتمد',
+        'open-application': 'لديه طلب قيد المعالجة',
+      },
+      notFoundTitle: 'المستخدم غير موجود',
+      notFoundBody: 'لم يُعثر على هذا المستخدم أو أن حسابه غير نشط. ابحث عنه من جديد.',
+    },
   },
   schemaUnavailable: {
     title: 'نموذج الطلب غير متاح حاليًا',
@@ -407,6 +487,50 @@ const en: NewApplicationContent = {
     title: 'You are already an accredited trainer',
     body: 'Your account holds an approved Trainer role, so a new join application is not needed. To add a service you are not yet approved for, use the Add Service request on your approved application — you will only be asked for the fields missing for that service.',
     addService: 'Add a service',
+  },
+  nomination: {
+    title: 'Register a new applicant',
+    onBehalf: (name) =>
+      `You are filling this application on behalf of ${name}. It is recorded in their name and on their account, you are recorded as the nominator, and the applicant is notified when it is submitted.`,
+    breadcrumbRoot: 'Application inbox',
+    breadcrumbList: 'Register an applicant',
+    successTitle: 'Application submitted on the applicant’s behalf',
+    successBody: (name) =>
+      `The application was submitted in ${name}’s name and went straight into screening; they will be notified.`,
+    backToSearch: 'Register another applicant',
+    openInInbox: 'Application inbox',
+    blockedTitle: 'An application cannot be opened for this user',
+    blockedOpen: (name) =>
+      `${name} already has an application in progress; a new one cannot be opened until it is decided.`,
+    blockedTrainer: (name) =>
+      `${name} is already an accredited trainer; services are added through an add-service request, not a new application.`,
+    search: {
+      documentTitle: 'Register a new applicant — Expert Hub',
+      title: 'Register a new applicant',
+      lead: 'Find the user by user id, name or email, then fill the join application on their behalf. The applicant must have an account on the platform.',
+      regionLabel: 'Find a user',
+      label: 'User id, name or email',
+      placeholder: 'e.g. Noura or noura@example.sa',
+      hint: 'At least two characters.',
+      resultsLabel: 'Matching users',
+      noResultsTitle: 'No matching user',
+      noResultsBody: (term) =>
+        `No account matches “${term}”. The applicant must sign in to the platform at least once before they can be nominated.`,
+      columns: {
+        name: 'Name',
+        email: 'Email',
+        userId: 'User id',
+        action: 'Action',
+      },
+      select: 'Fill the application',
+      blocked: {
+        self: 'You cannot nominate yourself',
+        'approved-trainer': 'Accredited trainer',
+        'open-application': 'Has an application in progress',
+      },
+      notFoundTitle: 'User not found',
+      notFoundBody: 'This user was not found or their account is inactive. Search for them again.',
+    },
   },
   schemaUnavailable: {
     title: 'The application form is currently unavailable',

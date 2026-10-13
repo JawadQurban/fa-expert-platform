@@ -108,7 +108,7 @@ journey it changes and the test that holds it.
 
 | Decision | Question | Journey | UAT test | Status |
 |---|---|---|---|---|
-| BD-UAT-01 | How a nominee record links to an SSO identity | J-02 | — | **BLOCKED_BUSINESS** — J-02 not runnable |
+| BD-UAT-01 | How a nominee record links to an SSO identity | J-02 | `ApplicationTests.Staff_nominate_an_existing_user_by_id_and_the_application_is_the_nominees` | **RESOLVED** — linked to an existing user by id (`P-350`) |
 | BD-UAT-02 | Approve a service request with no active agreement? | J-03 | SC-D-06 | DECIDED — rejected automatically, not overridable (`P-345`); `ApplicationTests.With_no_active_agreement_a_service_request_is_rejected_automatically_and_cannot_be_approved` |
 | BD-UAT-03 | Is internal acceptance legally sufficient? | J-10, J-11 | SC-D-04, SC-D-05 | BLOCKED_BUSINESS for production; UAT proceeds on `internal-acceptance` |
 | BD-UAT-04 | Which date starts an agreement's term? | J-11, J-12 | SC-D-07 | BLOCKED_BUSINESS — testers must know it is the signature timestamp today |
@@ -128,7 +128,7 @@ not inferred from its name.
 | RB | Journey | UAT test | Automated test class(es) | Status |
 |---|---|---|---|---|
 | RB-01 | all signed-in | SEC-01 | `OidcFlowTests`, `AuthEndpointsTests`, `ConfigurationSafetyTests` | BLOCKED_EXTERNAL (EXT-01) |
-| RB-02 | J-02 | — | **none — no test file references J-02** | BLOCKED_BUSINESS (BD-UAT-01) |
+| RB-02 | J-02 | — | `ApplicationTests.Staff_nominate_…`, `Nominations.test.tsx` | READY_FOR_UAT |
 | RB-03 | J-03 | SC-D-06 | `ApplicationTests`, `Cap03Tests`, `Cap04Tests` | BLOCKED_BUSINESS (BD-UAT-02) |
 | RB-04 | J-06 | SC-C-01 … SC-C-05 | `Cap02Tests`, `MeetingProviderTests` | AUTOMATED |
 | RB-05 | J-10 | SC-D-01 … SC-D-03 | `Cap03Tests` | BLOCKED_BUSINESS (BD-UAT-03/07) |

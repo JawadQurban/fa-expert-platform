@@ -211,6 +211,7 @@ v1.MapNotificationEndpoints();
 // CAP-01 — the application form schema (public read), the trainer's own
 // applications, and add-service, behind `applicationsService.ts`'s contract.
 v1.MapApplicationEndpoints();
+ExpertHub.Api.Applications.NominationEndpoints.MapNominationEndpoints(v1);
 
 // EH-INT-01/02 — the staff dashboard and the application inbox: the entry
 // every internal journey is reached FROM, so it ships with them.

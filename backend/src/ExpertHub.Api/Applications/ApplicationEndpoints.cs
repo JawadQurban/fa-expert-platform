@@ -256,60 +256,7 @@ public static class ApplicationEndpoints
             CancellationToken ct) =>
         {
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
-
-            // J-01/F3/AC-4 — an accredited trainer is sent to add-service, not
-            // to a second full application.
-            // The accredited application is returned so the page links straight
-            // to its add-service form; null for a trainer accredited outside it.
-            if (await ActorResolution.HoldsRoleAsync(db, actor.UserId, RoleCode.Trainer, ct))
-            {
-                var accredited = await db.Applications
-                    .Where(a => a.ApplicantUserId == actor.UserId
-                        && (a.Status == ApplicationStatuses.Approved
-                            || a.Status == ApplicationStatuses.Active))
-                    .OrderByDescending(a => a.UpdatedAt)
-                    .Select(a => (Guid?)a.ApplicationId)
-                    .FirstOrDefaultAsync(ct);
-                await db.SaveChangesAsync(ct);
-                return Results.Ok(new StartOrResumeDraftWire(
-                    null, false, "approved-trainer", accredited?.ToString()));
-            }
-
-            var mine = await db.Applications
-                .Where(a => a.ApplicantUserId == actor.UserId)
-                .ToListAsync(ct);
-            var draft = mine.FirstOrDefault(a => a.Status == ApplicationStatuses.Draft);
-            if (draft is not null)
-            {
-                await db.SaveChangesAsync(ct);
-                return Results.Ok(new StartOrResumeDraftWire(
-                    await DraftWireAsync(db, draft, ct), Resumed: true, null, null));
-            }
-
-            // BR-0101 / J-01/F3/AC-3 — one un-decided application at a time.
-            var open = mine.FirstOrDefault(a => ApplicationStatuses.Undecided.Contains(a.Status));
-            if (open is not null)
-            {
-                await db.SaveChangesAsync(ct);
-                return Results.Ok(new StartOrResumeDraftWire(
-                    null, false, "open-application", open.ApplicationId.ToString()));
-            }
-
-            var now = DateTime.UtcNow;
-            var created = new Application
-            {
-                ApplicationId = Guid.NewGuid(),
-                ApplicantUserId = actor.UserId,
-                SchemaVersion = FormSchemaVersions.Current,
-                Status = ApplicationStatuses.Draft,
-                Origin = ApplicationOrigins.SelfService,
-                CreatedAt = now,
-                UpdatedAt = now,
-            };
-            db.Applications.Add(created);
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(new StartOrResumeDraftWire(
-                await DraftWireAsync(db, created, ct), Resumed: false, null, null));
+            return await StartDraftAsync(db, actor.UserId, nominatedBy: null, ct);
         }).WithName("StartOrResumeDraft");
 
         me.MapPost("/draft", async (
@@ -319,20 +266,8 @@ public static class ApplicationEndpoints
             CancellationToken ct) =>
         {
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
-            var draft = await db.Applications.FirstOrDefaultAsync(
-                a => a.ApplicantUserId == actor.UserId && a.Status == ApplicationStatuses.Draft, ct);
-            if (draft is null)
-            {
-                return Results.Problem(statusCode: 409, detail: "No draft to save.");
-            }
-            var invalid = await ApplyDraftInputAsync(db, draft, input, ct);
-            if (invalid is not null)
-            {
-                return invalid;
-            }
-            draft.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(await DraftWireAsync(db, draft, ct));
+            return await SaveDraftAsync(
+                db, await FindDraftAsync(db, actor.UserId, ApplicationOrigins.SelfService, ct), input, ct);
         }).WithName("SaveDraft");
 
         /*
@@ -379,7 +314,14 @@ public static class ApplicationEndpoints
             }
 
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
-            var isOwner = attachment.UploadedBy == actor.UserId;
+            // J-02 — staff upload a nominee's files, so the file is also the
+            // applicant's when it sits on their own application.
+            var isOwner = attachment.UploadedBy == actor.UserId
+                || await db.ApplicationAttachments.AnyAsync(
+                    aa => aa.AttachmentId == attachmentId
+                        && db.Applications.Any(a => a.ApplicationId == aa.ApplicationId
+                            && a.ApplicantUserId == actor.UserId),
+                    ct);
             /*
              * ⚠️ The session's `internal` role, NOT `APP_USER.is_employee`.
              *
@@ -426,112 +368,11 @@ public static class ApplicationEndpoints
             IUploadScanner scanner,
             CancellationToken ct) =>
         {
-            if (!request.HasFormContentType)
-            {
-                return Results.Problem(statusCode: 415, detail: "Expected a multipart upload.");
-            }
-            var form = await request.ReadFormAsync(ct);
-            var file = form.Files.GetFile("file");
-            var ruleId = form["ruleId"].ToString();
-            if (file is null || file.Length == 0 || string.IsNullOrWhiteSpace(ruleId))
-            {
-                return Results.Problem(statusCode: 400, detail: "A file and a ruleId are required.");
-            }
-
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
-            var draft = await db.Applications.FirstOrDefaultAsync(
-                a => a.ApplicantUserId == actor.UserId && a.Status == ApplicationStatuses.Draft, ct);
-            if (draft is null)
-            {
-                return Results.Problem(statusCode: 409, detail: "No draft to attach to.");
-            }
-
-            // ⚠️ The form schema serves each rule's `id` as its CODE (`cv`,
-            // `qualification`) — see the schema endpoint — so that is what the
-            // browser sends back, and that is what `APPLICATION_ATTACHMENT`
-            // stores. Parsing it as the internal GUID refused every upload.
-            var rule = await db.AttachmentRules.FirstOrDefaultAsync(
-                r => r.RuleCode == ruleId && r.SchemaVersion == draft.SchemaVersion, ct);
-            if (rule is null)
-            {
-                return Results.Problem(statusCode: 400, detail: "Unknown attachment rule.");
-            }
-
-            var extension = Path.GetExtension(file.FileName).TrimStart('.').ToLowerInvariant();
-            // `ATTACHMENT_RULE.accepted_formats` is stored as the JSON array the
-            // owner's field matrix supplies, and read as one — not split on
-            // commas, which would keep the brackets and quotes.
-            var accepted = (JsonSerializer.Deserialize<string[]>(rule.AcceptedFormats) ?? [])
-                .Select(f => f.TrimStart('.').ToLowerInvariant())
-                .ToList();
-            if (!accepted.Contains(extension))
-            {
-                return Results.Problem(
-                    statusCode: 422,
-                    detail: $"'{extension}' is not an accepted format for this document.",
-                    extensions: new Dictionary<string, object?> { ["reason"] = "format" });
-            }
-            if (file.Length > (long)rule.MaxSizeMb * 1024 * 1024)
-            {
-                return Results.Problem(
-                    statusCode: 422,
-                    detail: $"The file is larger than {rule.MaxSizeMb} MB.",
-                    extensions: new Dictionary<string, object?> { ["reason"] = "size" });
-            }
-
-            var already = await db.ApplicationAttachments.CountAsync(
-                a => a.ApplicationId == draft.ApplicationId && a.RuleCode == rule.RuleCode, ct);
-            if (already >= rule.MaxCount)
-            {
-                return Results.Problem(
-                    statusCode: 422,
-                    detail: $"This document accepts {rule.MaxCount} file(s).",
-                    extensions: new Dictionary<string, object?> { ["reason"] = "count" });
-            }
-
-            byte[] content;
-            using (var buffer = new MemoryStream())
-            {
-                await file.CopyToAsync(buffer, ct);
-                content = buffer.ToArray();
-            }
-
-            var now = DateTime.UtcNow;
-            var attachment = new Attachment
-            {
-                AttachmentId = Guid.NewGuid(),
-                FileName = Path.GetFileName(file.FileName),
-                MimeType = string.IsNullOrWhiteSpace(file.ContentType)
-                    ? "application/octet-stream"
-                    : file.ContentType,
-                SizeBytes = file.Length,
-                StorageRef = await store.PutAsync(content, file.FileName, file.ContentType, ct),
-                Checksum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(content)),
-                // ⚠️ `G27` — `not-scanned` is recorded as itself, never as `clean`.
-                ScanStatus = await scanner.ScanAsync(content, ct),
-                UploadedBy = actor.UserId,
-                UploadedAt = now,
-            };
-            db.Attachments.Add(attachment);
-            db.ApplicationAttachments.Add(new ApplicationAttachment
-            {
-                ApplicationAttachmentId = Guid.NewGuid(),
-                ApplicationId = draft.ApplicationId,
-                AttachmentId = attachment.AttachmentId,
-                RuleCode = rule.RuleCode,
-                FileName = attachment.FileName,
-                SizeBytes = attachment.SizeBytes,
-            });
-            draft.UpdatedAt = now;
-            await db.SaveChangesAsync(ct);
-
-            return Results.Ok(new DraftAttachmentWire(
-                attachment.AttachmentId.ToString(),
-                // The code again, so the page can file it under the rule it
-                // rendered — the same id it sent.
-                rule.RuleCode,
-                attachment.FileName,
-                attachment.SizeBytes));
+            return await UploadDraftAttachmentAsync(
+                request, db, store, scanner,
+                await FindDraftAsync(db, actor.UserId, ApplicationOrigins.SelfService, ct),
+                actor.UserId, ct);
         }).WithName("UploadDraftAttachment").DisableAntiforgery();
 
         me.MapPost("/draft/attachments/remove", async (
@@ -541,23 +382,8 @@ public static class ApplicationEndpoints
             CancellationToken ct) =>
         {
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
-            if (!Guid.TryParse(input.AttachmentId, out var id))
-            {
-                return Results.Problem(statusCode: 404, detail: "Attachment not found.");
-            }
-            var row = await db.ApplicationAttachments.FirstOrDefaultAsync(
-                a => a.ApplicationAttachmentId == id
-                    && db.Applications.Any(app => app.ApplicationId == a.ApplicationId
-                        && app.ApplicantUserId == actor.UserId
-                        && app.Status == ApplicationStatuses.Draft),
-                ct);
-            if (row is null)
-            {
-                return Results.Problem(statusCode: 404, detail: "Attachment not found.");
-            }
-            db.ApplicationAttachments.Remove(row);
-            await db.SaveChangesAsync(ct);
-            return Results.Ok((object?)null);
+            return await RemoveDraftAttachmentAsync(
+                db, await FindDraftAsync(db, actor.UserId, ApplicationOrigins.SelfService, ct), input, ct);
         }).WithName("RemoveDraftAttachment");
 
         me.MapPost("/submit", async (
@@ -569,103 +395,9 @@ public static class ApplicationEndpoints
             CancellationToken ct) =>
         {
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
-            var draft = await db.Applications.FirstOrDefaultAsync(
-                a => a.ApplicantUserId == actor.UserId && a.Status == ApplicationStatuses.Draft, ct);
-            if (draft is null)
-            {
-                return Results.Problem(statusCode: 409, detail: "No draft to submit.");
-            }
-            var invalid = await ApplyDraftInputAsync(db, draft, input, ct);
-            if (invalid is not null)
-            {
-                return invalid;
-            }
-
-            // BR-0105 — completeness, against the same schema rows the form
-            // renders. The frontend's validation is UX; this is the gate.
-            // Judged on the SUBMITTED values (the rows staged above are not
-            // yet saved — and must not be until the gate passes).
-            var services = input.Services ?? [];
-            var values = input.Values ?? new Dictionary<string, JsonElement>();
-            var fields = (await db.FormFields
-                    .Where(f => f.SchemaVersion == draft.SchemaVersion)
-                    .OrderBy(f => f.OrderIndex)
-                    .ToListAsync(ct))
-                .Select(f => ApplicationFormLogic.Parse(f.Definition))
-                .ToList();
-            var rules = (await db.AttachmentRules
-                    .Where(r => r.SchemaVersion == draft.SchemaVersion)
-                    .ToListAsync(ct))
-                .Select(r => new AttachmentRequirement(
-                    r.RuleCode,
-                    JsonSerializer.Deserialize<string[]>(r.RequiredFor) ?? [],
-                    r.PerEntryOf))
-                .ToList();
-            var present = await db.ApplicationAttachments
-                .Where(a => a.ApplicationId == draft.ApplicationId)
-                .Select(a => a.RuleCode)
-                .ToListAsync(ct);
-
-            // The repeatable sections' answers travel in `entries`, never in
-            // the flat values — so they are judged per entry, as the form does.
-            var minEntriesBySection = (await db.FormSections
-                    .Where(s => s.SchemaVersion == draft.SchemaVersion && s.Repeatable != null)
-                    .ToListAsync(ct))
-                .ToDictionary(s => s.SectionCode, s => MinEntries(s.Repeatable!), StringComparer.Ordinal);
-            var entries = ApplicationFormLogic.NormalizeEntries(
-                fields,
-                minEntriesBySection,
-                values,
-                input.Entries?.ToDictionary(
-                    pair => pair.Key,
-                    pair => (IReadOnlyList<FormEntry>)pair.Value
-                        .Select(e => new FormEntry(
-                            e.EntryId, e.Values ?? new Dictionary<string, JsonElement>()))
-                        .ToList(),
-                    StringComparer.Ordinal));
-
-            var failedFields = ApplicationFormLogic.MissingOrInvalidFields(fields, services, values, entries);
-            var missingRules = ApplicationFormLogic.MissingAttachmentRules(rules, services, present, entries);
-            if (services.Count == 0 || failedFields.Count > 0 || missingRules.Count > 0)
-            {
-                return Results.Problem(
-                    statusCode: 400,
-                    detail: "Application is incomplete.",
-                    extensions: new Dictionary<string, object?>
-                    {
-                        ["fieldErrors"] = failedFields,
-                        ["missingAttachmentRuleIds"] = missingRules,
-                    });
-            }
-
-            var now = DateTime.UtcNow;
-            draft.Reference = await NextReferenceAsync(db, now, ct);
-            draft.Status = ApplicationStatuses.Submitted;
-            draft.SubmittedAt = now;
-            draft.UpdatedAt = now;
-            // The per-service rows were staged by ApplyDraftInputAsync above,
-            // outcome `pending` (BR-0403) — nothing to add twice here.
-
-            // J-01 user flow 7 — the submission confirmation, raised through
-            // CAP-07 in the SAME transaction: a notification can never
-            // describe a submission that failed to commit.
-            await dispatcher.RaiseAsync(
-                "EV-0101",
-                new NotificationEventContext(
-                    SourceEntityId: draft.ApplicationId,
-                    RecordSubjectUserId: actor.UserId),
-                new Dictionary<string, string> { ["referenceNumber"] = draft.Reference },
-                ct);
-
-            // INT-06 (`08` §4.1 — trigger: application submitted). Staged in
-            // the SAME transaction, so the provider is never asked about a
-            // submission that failed to commit, and the request rides the
-            // outbox so a slow model never holds this one open.
-            await QueueAiAnalysisAsync(db, hub, draft, ct);
-
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(new SubmitApplicationWire(
-                draft.ApplicationId.ToString(), draft.Reference, Iso(now)));
+            return await SubmitDraftAsync(
+                db, dispatcher, hub,
+                await FindDraftAsync(db, actor.UserId, ApplicationOrigins.SelfService, ct), input, ct);
         }).WithName("SubmitApplication");
 
         me.MapGet("/{id}", async (
@@ -922,6 +654,359 @@ public static class ApplicationEndpoints
     /* ── shared assembly ───────────────────────────────────────────────────── */
 
     /// <summary>The published schema, or the named <paramref name="version"/>.</summary>
+    /// <summary>
+    /// The draft of <paramref name="applicantUserId"/> from one origin: the
+    /// applicant's own (`self_service`), or the one staff are filling for them
+    /// (`internal_nomination`, J-02). Neither side edits the other's draft.
+    /// </summary>
+    internal static Task<Application?> FindDraftAsync(
+        ExpertHubDbContext db, Guid applicantUserId, string origin, CancellationToken ct) =>
+        db.Applications.FirstOrDefaultAsync(
+            a => a.ApplicantUserId == applicantUserId
+                && a.Status == ApplicationStatuses.Draft
+                && a.Origin == origin,
+            ct);
+
+    /// <summary>
+    /// Resume the applicant's draft, start a fresh one, or report the block.
+    /// <paramref name="nominatedBy"/> set = J-02: a staff member filling the
+    /// form for <paramref name="applicantUserId"/>.
+    /// </summary>
+    internal static async Task<IResult> StartDraftAsync(
+        ExpertHubDbContext db, Guid applicantUserId, Guid? nominatedBy, CancellationToken ct)
+    {
+        var origin = nominatedBy is null
+            ? ApplicationOrigins.SelfService
+            : ApplicationOrigins.InternalNomination;
+
+        // J-01/F3/AC-4 — an accredited trainer is sent to add-service, not
+        // to a second full application.
+        // The accredited application is returned so the page links straight
+        // to its add-service form; null for a trainer accredited outside it.
+        if (await ActorResolution.HoldsRoleAsync(db, applicantUserId, RoleCode.Trainer, ct))
+        {
+            var accredited = await db.Applications
+                .Where(a => a.ApplicantUserId == applicantUserId
+                    && (a.Status == ApplicationStatuses.Approved
+                        || a.Status == ApplicationStatuses.Active))
+                .OrderByDescending(a => a.UpdatedAt)
+                .Select(a => (Guid?)a.ApplicationId)
+                .FirstOrDefaultAsync(ct);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new StartOrResumeDraftWire(
+                null, false, "approved-trainer", accredited?.ToString()));
+        }
+
+        var mine = await db.Applications
+            .Where(a => a.ApplicantUserId == applicantUserId)
+            .ToListAsync(ct);
+        var draft = mine.FirstOrDefault(a => a.Status == ApplicationStatuses.Draft && a.Origin == origin);
+        if (draft is not null)
+        {
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new StartOrResumeDraftWire(
+                await DraftWireAsync(db, draft, ct), Resumed: true, null, null));
+        }
+
+        // BR-0101 / J-01/F3/AC-3 — one un-decided application at a time,
+        // whoever started it.
+        var open = mine.FirstOrDefault(a => ApplicationStatuses.Undecided.Contains(a.Status));
+        if (open is not null)
+        {
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new StartOrResumeDraftWire(
+                null, false, "open-application", open.ApplicationId.ToString()));
+        }
+
+        var now = DateTime.UtcNow;
+        var created = new Application
+        {
+            ApplicationId = Guid.NewGuid(),
+            ApplicantUserId = applicantUserId,
+            SchemaVersion = FormSchemaVersions.Current,
+            Status = ApplicationStatuses.Draft,
+            Origin = origin,
+            NominatedBy = nominatedBy,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        db.Applications.Add(created);
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(new StartOrResumeDraftWire(
+            await DraftWireAsync(db, created, ct), Resumed: false, null, null));
+    }
+
+    /// <summary>Explicit draft save — never issues a reference (`BR-0107`).</summary>
+    internal static async Task<IResult> SaveDraftAsync(
+        ExpertHubDbContext db, Application? draft, SaveDraftInputWire input, CancellationToken ct)
+    {
+        if (draft is null)
+        {
+            return Results.Problem(statusCode: 409, detail: "No draft to save.");
+        }
+        var invalid = await ApplyDraftInputAsync(db, draft, input, ct);
+        if (invalid is not null)
+        {
+            return invalid;
+        }
+        draft.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(await DraftWireAsync(db, draft, ct));
+    }
+
+    /// <summary>Removes one attachment from <paramref name="draft"/>.</summary>
+    internal static async Task<IResult> RemoveDraftAttachmentAsync(
+        ExpertHubDbContext db, Application? draft, RemoveAttachmentInputWire input, CancellationToken ct)
+    {
+        if (draft is null || !Guid.TryParse(input.AttachmentId, out var id))
+        {
+            return Results.Problem(statusCode: 404, detail: "Attachment not found.");
+        }
+        var row = await db.ApplicationAttachments.FirstOrDefaultAsync(
+            a => a.ApplicationAttachmentId == id && a.ApplicationId == draft.ApplicationId, ct);
+        if (row is null)
+        {
+            return Results.Problem(statusCode: 404, detail: "Attachment not found.");
+        }
+        db.ApplicationAttachments.Remove(row);
+        await db.SaveChangesAsync(ct);
+        return Results.Ok((object?)null);
+    }
+
+    /// <summary>
+    /// EH-TP-05's upload into <paramref name="draft"/> — the applicant's own,
+    /// or one a staff member is filling for a nominee (J-02), in which case
+    /// <paramref name="uploadedBy"/> is the staff member.
+    /// </summary>
+    internal static async Task<IResult> UploadDraftAttachmentAsync(
+        HttpRequest request,
+        ExpertHubDbContext db,
+        IDocumentStore store,
+        IUploadScanner scanner,
+        Application? draft,
+        Guid uploadedBy,
+        CancellationToken ct)
+    {
+        if (!request.HasFormContentType)
+        {
+            return Results.Problem(statusCode: 415, detail: "Expected a multipart upload.");
+        }
+        var form = await request.ReadFormAsync(ct);
+        var file = form.Files.GetFile("file");
+        var ruleId = form["ruleId"].ToString();
+        if (file is null || file.Length == 0 || string.IsNullOrWhiteSpace(ruleId))
+        {
+            return Results.Problem(statusCode: 400, detail: "A file and a ruleId are required.");
+        }
+
+        if (draft is null)
+        {
+            return Results.Problem(statusCode: 409, detail: "No draft to attach to.");
+        }
+
+        // ⚠️ The form schema serves each rule's `id` as its CODE (`cv`,
+        // `qualification`) — see the schema endpoint — so that is what the
+        // browser sends back, and that is what `APPLICATION_ATTACHMENT`
+        // stores. Parsing it as the internal GUID refused every upload.
+        var rule = await db.AttachmentRules.FirstOrDefaultAsync(
+            r => r.RuleCode == ruleId && r.SchemaVersion == draft.SchemaVersion, ct);
+        if (rule is null)
+        {
+            return Results.Problem(statusCode: 400, detail: "Unknown attachment rule.");
+        }
+
+        var extension = Path.GetExtension(file.FileName).TrimStart('.').ToLowerInvariant();
+        // `ATTACHMENT_RULE.accepted_formats` is stored as the JSON array the
+        // owner's field matrix supplies, and read as one — not split on
+        // commas, which would keep the brackets and quotes.
+        var accepted = (JsonSerializer.Deserialize<string[]>(rule.AcceptedFormats) ?? [])
+            .Select(f => f.TrimStart('.').ToLowerInvariant())
+            .ToList();
+        if (!accepted.Contains(extension))
+        {
+            return Results.Problem(
+                statusCode: 422,
+                detail: $"'{extension}' is not an accepted format for this document.",
+                extensions: new Dictionary<string, object?> { ["reason"] = "format" });
+        }
+        if (file.Length > (long)rule.MaxSizeMb * 1024 * 1024)
+        {
+            return Results.Problem(
+                statusCode: 422,
+                detail: $"The file is larger than {rule.MaxSizeMb} MB.",
+                extensions: new Dictionary<string, object?> { ["reason"] = "size" });
+        }
+
+        var already = await db.ApplicationAttachments.CountAsync(
+            a => a.ApplicationId == draft.ApplicationId && a.RuleCode == rule.RuleCode, ct);
+        if (already >= rule.MaxCount)
+        {
+            return Results.Problem(
+                statusCode: 422,
+                detail: $"This document accepts {rule.MaxCount} file(s).",
+                extensions: new Dictionary<string, object?> { ["reason"] = "count" });
+        }
+
+        byte[] content;
+        using (var buffer = new MemoryStream())
+        {
+            await file.CopyToAsync(buffer, ct);
+            content = buffer.ToArray();
+        }
+
+        var now = DateTime.UtcNow;
+        var attachment = new Attachment
+        {
+            AttachmentId = Guid.NewGuid(),
+            FileName = Path.GetFileName(file.FileName),
+            MimeType = string.IsNullOrWhiteSpace(file.ContentType)
+                ? "application/octet-stream"
+                : file.ContentType,
+            SizeBytes = file.Length,
+            StorageRef = await store.PutAsync(content, file.FileName, file.ContentType, ct),
+            Checksum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(content)),
+            // ⚠️ `G27` — `not-scanned` is recorded as itself, never as `clean`.
+            ScanStatus = await scanner.ScanAsync(content, ct),
+            UploadedBy = uploadedBy,
+            UploadedAt = now,
+        };
+        db.Attachments.Add(attachment);
+        db.ApplicationAttachments.Add(new ApplicationAttachment
+        {
+            ApplicationAttachmentId = Guid.NewGuid(),
+            ApplicationId = draft.ApplicationId,
+            AttachmentId = attachment.AttachmentId,
+            RuleCode = rule.RuleCode,
+            FileName = attachment.FileName,
+            SizeBytes = attachment.SizeBytes,
+        });
+        draft.UpdatedAt = now;
+        await db.SaveChangesAsync(ct);
+
+        return Results.Ok(new DraftAttachmentWire(
+            attachment.AttachmentId.ToString(),
+            // The code again, so the page can file it under the rule it
+            // rendered — the same id it sent.
+            rule.RuleCode,
+            attachment.FileName,
+            attachment.SizeBytes));
+    }
+
+    /// <summary>
+    /// EH-TP-05's submission of <paramref name="draft"/> — completeness
+    /// (`BR-0105`), the reference (`BR-0107`), the notification and the AI
+    /// request, in one transaction. Shared by the applicant and by J-02.
+    /// </summary>
+    internal static async Task<IResult> SubmitDraftAsync(
+        ExpertHubDbContext db,
+        NotificationDispatcher dispatcher,
+        IntegrationHub hub,
+        Application? draft,
+        SaveDraftInputWire input,
+        CancellationToken ct)
+    {
+        if (draft is null)
+        {
+            return Results.Problem(statusCode: 409, detail: "No draft to submit.");
+        }
+        var invalid = await ApplyDraftInputAsync(db, draft, input, ct);
+        if (invalid is not null)
+        {
+            return invalid;
+        }
+
+        // BR-0105 — completeness, against the same schema rows the form
+        // renders. The frontend's validation is UX; this is the gate.
+        // Judged on the SUBMITTED values (the rows staged above are not
+        // yet saved — and must not be until the gate passes).
+        var services = input.Services ?? [];
+        var values = input.Values ?? new Dictionary<string, JsonElement>();
+        var fields = (await db.FormFields
+                .Where(f => f.SchemaVersion == draft.SchemaVersion)
+                .OrderBy(f => f.OrderIndex)
+                .ToListAsync(ct))
+            .Select(f => ApplicationFormLogic.Parse(f.Definition))
+            .ToList();
+        var rules = (await db.AttachmentRules
+                .Where(r => r.SchemaVersion == draft.SchemaVersion)
+                .ToListAsync(ct))
+            .Select(r => new AttachmentRequirement(
+                r.RuleCode,
+                JsonSerializer.Deserialize<string[]>(r.RequiredFor) ?? [],
+                r.PerEntryOf))
+            .ToList();
+        var present = await db.ApplicationAttachments
+            .Where(a => a.ApplicationId == draft.ApplicationId)
+            .Select(a => a.RuleCode)
+            .ToListAsync(ct);
+
+        // The repeatable sections' answers travel in `entries`, never in
+        // the flat values — so they are judged per entry, as the form does.
+        var minEntriesBySection = (await db.FormSections
+                .Where(s => s.SchemaVersion == draft.SchemaVersion && s.Repeatable != null)
+                .ToListAsync(ct))
+            .ToDictionary(s => s.SectionCode, s => MinEntries(s.Repeatable!), StringComparer.Ordinal);
+        var entries = ApplicationFormLogic.NormalizeEntries(
+            fields,
+            minEntriesBySection,
+            values,
+            input.Entries?.ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyList<FormEntry>)pair.Value
+                    .Select(e => new FormEntry(
+                        e.EntryId, e.Values ?? new Dictionary<string, JsonElement>()))
+                    .ToList(),
+                StringComparer.Ordinal));
+
+        var failedFields = ApplicationFormLogic.MissingOrInvalidFields(fields, services, values, entries);
+        var missingRules = ApplicationFormLogic.MissingAttachmentRules(rules, services, present, entries);
+        if (services.Count == 0 || failedFields.Count > 0 || missingRules.Count > 0)
+        {
+            return Results.Problem(
+                statusCode: 400,
+                detail: "Application is incomplete.",
+                extensions: new Dictionary<string, object?>
+                {
+                    ["fieldErrors"] = failedFields,
+                    ["missingAttachmentRuleIds"] = missingRules,
+                });
+        }
+
+        var now = DateTime.UtcNow;
+        draft.Reference = await NextReferenceAsync(db, now, ct);
+        draft.Status = ApplicationStatuses.Submitted;
+        draft.SubmittedAt = now;
+        draft.UpdatedAt = now;
+        // The per-service rows were staged by ApplyDraftInputAsync above,
+        // outcome `pending` (BR-0403) — nothing to add twice here.
+
+        // J-01 user flow 7 — the submission confirmation, raised through
+        // CAP-07 in the SAME transaction: a notification can never
+        // describe a submission that failed to commit.
+        // J-02/F3 — a nominee is told an application was submitted on their
+        // behalf, with its own template (EV-0102), not the self-service
+        // confirmation.
+        var nominated = draft.Origin == ApplicationOrigins.InternalNomination;
+        await dispatcher.RaiseAsync(
+            nominated ? "EV-0102" : "EV-0101",
+            new NotificationEventContext(
+                SourceEntityId: draft.ApplicationId,
+                RecordSubjectUserId: draft.ApplicantUserId,
+                ActingStaffUserId: nominated ? draft.NominatedBy : null),
+            new Dictionary<string, string> { ["referenceNumber"] = draft.Reference },
+            ct);
+
+        // INT-06 (`08` §4.1 — trigger: application submitted). Staged in
+        // the SAME transaction, so the provider is never asked about a
+        // submission that failed to commit, and the request rides the
+        // outbox so a slow model never holds this one open.
+        await QueueAiAnalysisAsync(db, hub, draft, ct);
+
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(new SubmitApplicationWire(
+            draft.ApplicationId.ToString(), draft.Reference, Iso(now)));
+    }
+
     internal static async Task<object> BuildSchemaWireAsync(
         ExpertHubDbContext db, CancellationToken ct, string? version = null)
     {

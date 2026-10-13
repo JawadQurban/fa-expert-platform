@@ -713,6 +713,70 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public async Task Staff_nominate_an_existing_user_by_id_and_the_application_is_the_nominees()
+    {
+        // J-02 — owner ruling 2026-10-13: «build it back and the internal
+        // staff should be able to link it with user id».
+        await SignInApplicantAsync();
+        using var staff = TestOidc.CreateClient(_configured!);
+        await TestOidc.SignInAsync(staff, _tokenEndpoint, "fa-staff", subject: "nominator-1", displayName: "موظفة الترشيح");
+        await GrantAsync("nominator-1", RoleCode.Staff);
+        Guid nomineeId, staffId;
+        await using (var db = _database.CreateContext())
+        {
+            nomineeId = (await db.Users.SingleAsync(u => u.ExternalIdentityId == TestOidc.Subject)).UserId;
+            staffId = (await db.Users.SingleAsync(u => u.ExternalIdentityId == "nominator-1")).UserId;
+        }
+
+        // Linked by the user's id; the staff member never nominates themselves.
+        var candidates = await (await staff.GetAsync($"/api/v1/internal/nominations/candidates?q={nomineeId}"))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        var candidate = candidates.EnumerateArray().Single();
+        Assert.Equal(JsonValueKind.Null, candidate.GetProperty("blocked").ValueKind);
+        Assert.Equal(HttpStatusCode.Conflict,
+            (await staff.PostAsync($"/api/v1/internal/nominations/{staffId}/draft/start", null)).StatusCode);
+        // An applicant holds no F-0102.
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await _client.GetAsync($"/api/v1/internal/nominations/candidates?q={nomineeId}")).StatusCode);
+
+        var started = await (await staff.PostAsync($"/api/v1/internal/nominations/{nomineeId}/draft/start", null))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(JsonValueKind.Object, started.GetProperty("draft").ValueKind);
+        // The nominee cannot open a second application meanwhile (BR-0101).
+        var own = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        Assert.Equal("open-application", own.GetProperty("blockReason").GetString());
+
+        await SeedRoutedEventAsync("EV-0102");
+        var values = await CompleteValuesForAsync("trainer");
+        await SeedAllAttachmentsAsync();
+        var submit = await staff.PostAsJsonAsync($"/api/v1/internal/nominations/{nomineeId}/submit", new
+        {
+            services = new[] { "trainer" },
+            values,
+        });
+        Assert.Equal(HttpStatusCode.OK, submit.StatusCode);
+        var reference = (await submit.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("reference").GetString();
+
+        await using (var db = _database.CreateContext())
+        {
+            var application = await db.Applications.SingleAsync(a => a.Reference == reference);
+            Assert.Equal(nomineeId, application.ApplicantUserId);
+            Assert.Equal(ApplicationOrigins.InternalNomination, application.Origin);
+            Assert.Equal(staffId, application.NominatedBy);
+            Assert.Equal("submitted", application.Status);
+            // The nominee is told with EV-0102, not the self-service EV-0101.
+            var raised = await db.NotificationOccurrences
+                .Where(o => o.SourceEntityId == application.ApplicationId)
+                .Select(o => o.EventCode)
+                .ToListAsync();
+            Assert.Equal(["EV-0102"], raised);
+        }
+        // …and it is in the nominee's own list.
+        var mine = await GetJsonAsync("/api/v1/me/applications?page=1&pageSize=10");
+        Assert.Equal(reference, mine.GetProperty("items")[0].GetProperty("reference").GetString());
+    }
+
+    [Fact]
     public async Task With_no_active_agreement_a_service_request_is_rejected_automatically_and_cannot_be_approved()
     {
         // RB-03 (Notion, 2026-09-20): «automatically rejected with a dedicated

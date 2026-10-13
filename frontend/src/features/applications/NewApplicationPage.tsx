@@ -43,7 +43,11 @@ import { useExpertHubAuth } from '../../app/auth/AuthProvider';
 import { IdentityGate } from '../identity/IdentityGate';
 import { getIdentityContent } from '../identity/identity.content';
 import type { IdentitySessionDto } from '../identity/identity.types';
-import { getApplicationsService } from './applicationsService';
+import {
+  getApplicationsService,
+  getNominationService,
+  type ApplicationFormService,
+} from './applicationsService';
 import { getMyApplicationsContent } from './myApplications.content';
 import { getNewApplicationContent, type NewApplicationContent } from './newApplication.content';
 import { focusFieldTarget } from './focusField';
@@ -115,10 +119,23 @@ function loadErrorCopy(error: ExpertHubApiError, locale: Locale, content: NewApp
   return { title: content.errors.loadFailedTitle, body: content.errors.loadFailedBody };
 }
 
-export default function NewApplicationPage() {
+/** J-02 — the existing user a staff member is filling the form for. */
+export interface Nominee {
+  readonly userId: string;
+  readonly name: string;
+}
+
+export default function NewApplicationPage({ nominee }: { readonly nominee?: Nominee } = {}) {
   const { locale } = useLocale();
   const content = useMemo(() => getNewApplicationContent(locale), [locale]);
-  const service = getApplicationsService();
+  const nomineeId = nominee?.userId;
+  // J-02: the same form, on `/internal/nominations/{userId}` — the draft and
+  // the application are the nominee's, never the staff member's.
+  const service = useMemo<ApplicationFormService>(
+    () =>
+      nomineeId == null ? getApplicationsService() : getNominationService().formFor(nomineeId),
+    [nomineeId]
+  );
 
   /**
    * **J-01 Identity Linking** — the prerequisite layer. An authenticated
@@ -172,9 +189,11 @@ export default function NewApplicationPage() {
   const [liveMessage, setLiveMessage] = useState('');
   const localFileCounter = useRef(0);
 
+  const documentTitle =
+    nominee == null ? content.documentTitle : content.nomination.search.documentTitle;
   useEffect(() => {
-    document.title = content.documentTitle;
-  }, [content.documentTitle]);
+    document.title = documentTitle;
+  }, [documentTitle]);
 
   /* ── load: schema + start/resume draft ─────────────────────────────────── */
   useEffect(() => {
@@ -408,6 +427,40 @@ export default function NewApplicationPage() {
     );
   }
 
+  if (phase === 'blocked' && nominee != null) {
+    const nomination = content.nomination;
+    return (
+      <Section aria-labelledby="eh-new-application-blocked-title">
+        <Container size="prose">
+          <div className={styles.blocked}>
+            <Typography as="h1" id="eh-new-application-blocked-title" variant="display-md">
+              {nomination.blockedTitle}
+            </Typography>
+            <Alert tone="info" role="note">
+              {blockReason === 'approved-trainer'
+                ? nomination.blockedTrainer(nominee.name)
+                : nomination.blockedOpen(nominee.name)}
+            </Alert>
+            <div className={styles.blockedActions}>
+              {blockReason === 'open-application' && blockedBy != null && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  href={expertHubPaths.internalApplicationDetail(blockedBy)}
+                >
+                  {content.blocked.viewCurrent}
+                </Button>
+              )}
+              <Button variant="secondary" size="md" href={expertHubPaths.internalNominations}>
+                {nomination.backToSearch}
+              </Button>
+            </div>
+          </div>
+        </Container>
+      </Section>
+    );
+  }
+
   if (phase === 'blocked') {
     // J-01 blocks for two reasons with two different exits: an open application
     // is *tracked*, whereas an already-accredited trainer is sent to add a
@@ -453,10 +506,12 @@ export default function NewApplicationPage() {
         <Container size="prose">
           <div className={styles.success}>
             <Typography as="h1" id="eh-new-application-success-title" variant="display-md">
-              {content.success.title}
+              {nominee == null ? content.success.title : content.nomination.successTitle}
             </Typography>
             <Typography as="p" variant="text-lg" color="muted">
-              {content.success.body}
+              {nominee == null
+                ? content.success.body
+                : content.nomination.successBody(nominee.name)}
             </Typography>
             <div className={styles.reference}>
               <Typography as="p" variant="text-sm" color="muted">
@@ -466,18 +521,33 @@ export default function NewApplicationPage() {
                 <bdi>{submitResult.reference}</bdi>
               </Typography>
             </div>
-            <div className={styles.successActions}>
-              <Button variant="primary" size="md" href={expertHubPaths.applications}>
-                {content.actions.goToApplications}
-              </Button>
-              <Button
-                variant="secondary"
-                size="md"
-                href={expertHubPaths.applicationDetail(submitResult.applicationId)}
-              >
-                {content.actions.viewDetails}
-              </Button>
-            </div>
+            {nominee == null ? (
+              <div className={styles.successActions}>
+                <Button variant="primary" size="md" href={expertHubPaths.applications}>
+                  {content.actions.goToApplications}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  href={expertHubPaths.applicationDetail(submitResult.applicationId)}
+                >
+                  {content.actions.viewDetails}
+                </Button>
+              </div>
+            ) : (
+              <div className={styles.successActions}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  href={expertHubPaths.internalApplicationDetail(submitResult.applicationId)}
+                >
+                  {content.actions.viewDetails}
+                </Button>
+                <Button variant="secondary" size="md" href={expertHubPaths.internalNominations}>
+                  {content.nomination.backToSearch}
+                </Button>
+              </div>
+            )}
           </div>
         </Container>
       </Section>
@@ -895,20 +965,40 @@ export default function NewApplicationPage() {
     <Section aria-labelledby="eh-new-application-title">
       <Container>
         <Breadcrumbs
-          items={[
-            { label: content.breadcrumbApplications, href: expertHubPaths.applications },
-            { label: content.title },
-          ]}
+          items={
+            nominee == null
+              ? [
+                  { label: content.breadcrumbApplications, href: expertHubPaths.applications },
+                  { label: content.title },
+                ]
+              : [
+                  {
+                    label: content.nomination.breadcrumbRoot,
+                    href: expertHubPaths.internalApplications,
+                  },
+                  {
+                    label: content.nomination.breadcrumbList,
+                    href: expertHubPaths.internalNominations,
+                  },
+                  { label: nominee.name },
+                ]
+          }
           label={content.breadcrumbLabel}
         />
 
         <div className={styles.header}>
           <Typography as="h1" id="eh-new-application-title" variant="display-md" tabIndex={-1}>
-            {content.title}
+            {nominee == null ? content.title : content.nomination.title}
           </Typography>
-          <Typography as="p" variant="text-md" color="muted" className={styles.intro}>
-            {content.intro}
-          </Typography>
+          {nominee == null ? (
+            <Typography as="p" variant="text-md" color="muted" className={styles.intro}>
+              {content.intro}
+            </Typography>
+          ) : (
+            <Alert tone="info" surface="tinted" role="note">
+              {content.nomination.onBehalf(nominee.name)}
+            </Alert>
+          )}
           {resumed && (
             <Alert tone="info" role="note">
               {content.draft.resumedNotice}

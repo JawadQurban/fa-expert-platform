@@ -41,6 +41,8 @@ export const expertHubRouteSegments = {
   entitlements: 'entitlements',
   internal: 'internal',
   internalApplications: 'internal/applications',
+  internalNominations: 'internal/nominations',
+  internalNomination: 'internal/nominations/:userId',
   internalApplicationDetail: 'internal/applications/:id',
   internalApplicationInterview: 'internal/applications/:id/interview',
   internalApplicationCommittee: 'internal/applications/:id/committee',
@@ -176,6 +178,10 @@ export const expertHubPaths = {
    *  speakers the Academy hosts, searched by name and title (owner ruling).
    *  `BR-0113`: no portal route reaches it. */
   internalSpeakers: abs('internal/speakers'),
+  /** EH-INT-12 — J-02: find an existing user by user id, name or email (`F-0102`). */
+  internalNominations: abs('internal/nominations'),
+  /** EH-INT-12 — fill the application form on that user's behalf. */
+  internalNomination: (userId = ':userId') => abs(`internal/nominations/${userId}`),
   /** EH-INT-11 — create a speaker record (J-04/F1, `F-0105`). */
   internalSpeakerNew: abs('internal/speakers/new'),
   /** EH-INT-11 detail — one record, with the FAST-sourced email and the

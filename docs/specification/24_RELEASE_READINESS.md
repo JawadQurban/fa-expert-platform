@@ -29,7 +29,7 @@ at runtime. A contract test per feature would have caught each one.
 | Journey | Status | Blocker |
 |---|---|---|
 | J-01 Onboarding & application submission | READY_WITH_EXTERNAL_DEPENDENCY | NO |
-| J-02 Internal nomination | NOT_IMPLEMENTED | **YES** (RB-02) |
+| J-02 Internal nomination | IMPLEMENTED — existing users only (`P-350`) | NO |
 | J-03 Add service to approved trainer | PARTIALLY_IMPLEMENTED | **YES** (RB-03) |
 | J-04 Speaker record | PARTIALLY_IMPLEMENTED (2026-10-13, `P-346`–`P-349`): F1 create/edit and F2 search built; the creation email (F1/AC-4) and the participation history (F3) wait on FAST (B-16, B-17) | NO |
 | J-05 Screening & initial decision | READY_WITH_BUSINESS_DECISION_PENDING | NO |
@@ -121,7 +121,7 @@ Decisions P-277 … P-290 (`DECISIONS.md`). Migrations M29 … M33, all additive
 | ID | Journey | Status | What changed | What remains |
 |---|---|---|---|---|
 | RB-01 | SSO / J-01 guest | PARTIALLY_RESOLVED_EXTERNAL | Identity fails CLOSED outside explicit mock mode (no API base URL, or `EXPERT_HUB_DATA_MODE=mock`): no fake Yaqeen result; guest and activation screens say sign-in is required | FAST STS client + redirect URI (Q38); UAT/production `EXPERT_HUB_API_BASE_URL` + OIDC client; a real identity (Yaqeen) backend |
-| RB-02 | J-02 | PARTIALLY_RESOLVED_BUSINESS | The «ترشيح» action that created an application under the staff member's identity is removed everywhere | How an unverified nominee account links to the SSO identity at activation (security) + Yaqeen |
+| RB-02 | J-02 | RESOLVED (`P-350`, 2026-10-13) | Staff nominate an existing user by user id; the application is the nominee's, `NominatedBy` records the staff member, and self-nomination is refused | A nominee who has never signed in (needs Yaqeen account creation, B-02) · barring the nominator from screening their own nomination |
 | RB-03 | J-03 | RESOLVED (2026-10-08, `P-345`) | The addendum is an uploaded, stored document (id); a name alone is refused; the decision links to it. With no active agreement the request is rejected automatically (`no-active-agreement`), on submission or on review, and the decision-maker cannot approve it | — |
 | RB-04 | J-06 | RESOLVED | Staff see the applicant's reschedule request (+ note); malformed/past slots refused; the Teams invite goes to the J-05 interview panel | Teams credentials (booking is best-effort; internal state works without them) |
 | RB-05 | J-10 | PARTIALLY_RESOLVED_BUSINESS | Every reader sees the complete, versioned document; re-preparation voids and keeps signatures; creator can correct during an internal modification request; only the creator prepares | Legal approval of the legal text and of internal acceptance, or an e-signature provider |
@@ -136,7 +136,7 @@ Decisions P-277 … P-290 (`DECISIONS.md`). Migrations M29 … M33, all additive
 
 **Also fixed:** J-07/J-08 exempted services stay eligible; evaluation needs a scheduled interview · J-09 and J-10 creator-only formation/preparation (BR-0215) · J-14 certificate upload · J-15/J-24 filters with no data refused and removed · J-17 full rejection is a decision · J-23/J-24 suspended/expired trainers hidden publicly.
 
-**Business decisions required:** J-17 nominate/approve segregation (none defined) · J-02 identity linking · J-03 approval without an active agreement · J-17 automatic new pool vs staff re-run · J-26 feature codes for the centre list, agreement-template read, integration status and reference data (reads remain internal-role only).
+**Business decisions required:** J-17 nominate/approve segregation (none defined) · J-03 approval without an active agreement · J-17 automatic new pool vs staff re-run · J-26 feature codes for the centre list, agreement-template read, integration status and reference data (reads remain internal-role only).
 
 RELEASE_READY: **NO** — the remaining items above are external or business/legal, not code.
 
