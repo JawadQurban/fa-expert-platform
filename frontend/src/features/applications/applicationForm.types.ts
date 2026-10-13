@@ -21,13 +21,7 @@ import type { ApplicationService } from './application.types';
  * string), bounded by `validation.min`/`max`.
  */
 export type ApplicationFieldType =
-  | 'text'
-  | 'textarea'
-  | 'select'
-  | 'checkbox'
-  | 'date'
-  | 'multi-select'
-  | 'number';
+  'text' | 'textarea' | 'select' | 'checkbox' | 'date' | 'multi-select' | 'number';
 
 /** Who owns a field's value (`02C` ownership model). Pre-accreditation the
  *  application data is Expert-Hub-owned; SSO-sourced identity fields are
