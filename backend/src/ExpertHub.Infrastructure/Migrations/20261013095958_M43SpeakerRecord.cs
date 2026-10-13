@@ -77,14 +77,19 @@ namespace ExpertHub.Infrastructure.Migrations
                 columns: new[] { "label_needs_verification", "name_ar", "name_en" },
                 values: new object[] { false, "إدارة سجل المتحدث", "Manage a speaker record" });
 
-            migrationBuilder.InsertData(
-                table: "ROLE_PERMISSION",
-                columns: new[] { "permission_id", "role_id", "data_scope" },
-                values: new object[,]
-                {
-                    { 4, 2, "all" },
-                    { 4, 3, "all" }
-                });
+            // The access matrix is edited at runtime (CAP-08), so a server may
+            // already hold one of these grants — on FA-QIYAS, role 2 had F-0105
+            // and a plain InsertData failed the whole migration. Insert only
+            // what is missing; an existing grant keeps its scope.
+            migrationBuilder.Sql(
+                """
+                INSERT INTO [ROLE_PERMISSION] ([permission_id], [role_id], [data_scope])
+                SELECT g.[permission_id], g.[role_id], g.[data_scope]
+                FROM (VALUES (4, 2, N'all'), (4, 3, N'all')) AS g ([permission_id], [role_id], [data_scope])
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM [ROLE_PERMISSION] rp
+                    WHERE rp.[permission_id] = g.[permission_id] AND rp.[role_id] = g.[role_id]);
+                """);
 
             migrationBuilder.CreateIndex(
                 name: "IX_SPEAKER_RECORD_created_at",
