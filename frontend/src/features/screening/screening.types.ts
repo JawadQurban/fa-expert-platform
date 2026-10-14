@@ -265,6 +265,9 @@ export interface ScreeningDetailDto {
   readonly committeePool: readonly CommitteeMemberDto[];
   /** False once decided — the decision panel renders its recorded outcome. */
   readonly decisionPending: boolean;
+  /** The J-09 committee concluded with approval — the application is in J-10
+   *  even though its status is still `approval-in-progress`. */
+  readonly committeeApproved: boolean;
   readonly decision: ScreeningDecisionSummaryDto | null;
 }
 

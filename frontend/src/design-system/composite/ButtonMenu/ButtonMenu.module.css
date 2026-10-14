@@ -26,5 +26,8 @@
    Select/DatePicker. */
 .panel {
   position: fixed;
-  z-index: 50;
+  /* The modal layer, not the dropdown one: the panel is portaled to <body>
+     after any open Modal, so at equal z-index it paints above the dialog
+     it was opened from. Below it, a Select in a Modal opened behind it. */
+  z-index: var(--fads-sys-z-modal);
 }

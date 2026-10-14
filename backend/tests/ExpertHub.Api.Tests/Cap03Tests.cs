@@ -56,6 +56,14 @@ public sealed class Cap03Tests
         Assert.False(beforeBank.GetProperty("gate").GetProperty("bankDataComplete").GetBoolean());
         Assert.Equal("blocked", beforeBank.GetProperty("stage").GetString());
 
+        // The status stays `approval-in-progress` through J-10, so the screening
+        // page needs this flag to hand signers on to the agreement rather than
+        // to the committee page, which a staff signer cannot open (F-0204).
+        var screening = await GetAsync(world.Creator,
+            $"/api/v1/internal/applications/{world.ApplicationId}/screening");
+        Assert.Equal("approval-in-progress", screening.GetProperty("status").GetString());
+        Assert.True(screening.GetProperty("committeeApproved").GetBoolean());
+
         var early = await world.Creator.PostAsJsonAsync(
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
             new { values = new Dictionary<string, string>() });

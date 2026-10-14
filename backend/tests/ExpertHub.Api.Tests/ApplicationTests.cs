@@ -442,17 +442,16 @@ public sealed class ApplicationTests
             await db.SaveChangesAsync();
         }
 
-        var blocked = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
-        Assert.Equal("approved-trainer", blocked.GetProperty("blockReason").GetString());
-        Assert.Equal(JsonValueKind.Null, blocked.GetProperty("draft").ValueKind);
-        // Accredited outside Expert Hub: no application to add a service to.
-        Assert.Equal(JsonValueKind.Null, blocked.GetProperty("blockedByApplicationId").ValueKind);
+        // The role alone (FAST-granted, `P-234`) is not accreditation here:
+        // add-service would auto-reject them (no agreement), so they apply.
+        var started = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        Assert.Equal(JsonValueKind.Null, started.GetProperty("blockReason").ValueKind);
+        Assert.NotEqual(JsonValueKind.Null, started.GetProperty("draft").ValueKind);
 
         Guid approvedId;
         await using (var db = _database.CreateContext())
         {
-            var user = await db.Users.SingleAsync(u => u.ExternalIdentityId == TestOidc.Subject);
-            var approved = new Application
+            var user = await db.Users.SingleAsync(u => u.ExternalIdentityId == TestOidc.Subject);            var approved = new Application
             {
                 ApplicationId = Guid.NewGuid(),
                 ApplicantUserId = user.UserId,

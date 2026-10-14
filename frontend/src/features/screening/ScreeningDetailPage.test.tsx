@@ -154,6 +154,44 @@ describe('EH-INT-03 — Screening & Initial Decision', () => {
     expect(onward.getAttribute('href')).toContain('/committee');
   });
 
+  it('sends a signer to the agreement, not the committee, once the committee approved (J-10)', async () => {
+    // Reported from the testing server: the application stays
+    // `approval-in-progress` while the agreement is signed, so every signer was
+    // pointed at the committee page — which a staff signer cannot open (F-0204).
+    const mock = createMockScreeningProvider({ latencyMs: 0 });
+    setScreeningServiceForTesting({
+      ...mock,
+      getScreeningDetail: async (id) => {
+        const result = await mock.getScreeningDetail(id);
+        return result.ok
+          ? {
+              ok: true,
+              value: {
+                ...result.value,
+                status: 'approval-in-progress',
+                committeeApproved: true,
+                decisionPending: false,
+                decision: {
+                  kind: 'accept',
+                  decidedAt: '2026-10-01T09:00:00Z',
+                  decidedByName: 'موظف',
+                  acceptedServices: ['trainer'],
+                  autoRejectedServices: [],
+                  exemptedServices: [],
+                  rejectionReason: null,
+                },
+              },
+            }
+          : result;
+      },
+    });
+    await renderScreening();
+
+    const onward = await screen.findByRole('link', { name: content.goToAgreement });
+    expect(onward.getAttribute('href')).toContain('/agreement');
+    expect(screen.queryByRole('link', { name: content.goToCommittee })).not.toBeInTheDocument();
+  });
+
   it('warns that rejection covers the whole application and requires a reason (F5/AC-7, AC-8)', async () => {
     const { user } = await renderScreening();
 

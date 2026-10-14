@@ -680,9 +680,12 @@ public static class ApplicationEndpoints
             : ApplicationOrigins.InternalNomination;
 
         // J-01/F3/AC-4 — an accredited trainer is sent to add-service, not
-        // to a second full application.
-        // The accredited application is returned so the page links straight
-        // to its add-service form; null for a trainer accredited outside it.
+        // to a second full application. The accredited application is
+        // returned so the page links straight to its add-service form.
+        // ⚠️ Accredited HERE, not merely holding the role: a trainer the role
+        // came to from FAST (`P-234`) has no application, profile or agreement
+        // in Expert Hub, so add-service auto-rejects them (no active agreement)
+        // and blocking the application left them nowhere to go.
         if (await ActorResolution.HoldsRoleAsync(db, applicantUserId, RoleCode.Trainer, ct))
         {
             var accredited = await db.Applications
@@ -692,9 +695,12 @@ public static class ApplicationEndpoints
                 .OrderByDescending(a => a.UpdatedAt)
                 .Select(a => (Guid?)a.ApplicationId)
                 .FirstOrDefaultAsync(ct);
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(new StartOrResumeDraftWire(
-                null, false, "approved-trainer", accredited?.ToString()));
+            if (accredited is not null)
+            {
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(new StartOrResumeDraftWire(
+                    null, false, "approved-trainer", accredited.ToString()));
+            }
         }
 
         var mine = await db.Applications

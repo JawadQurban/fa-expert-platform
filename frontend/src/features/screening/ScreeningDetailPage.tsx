@@ -178,7 +178,15 @@ export default function ScreeningDetailPage() {
           href: expertHubPaths.internalApplicationInterview(detail.id),
           label: content.goToInterview,
         };
+      // Once the committee approved, the agreement is the live stage: its
+      // signers need not hold the committee feature (F-0204) to reach it.
       case 'approval-in-progress':
+        if (detail.committeeApproved) {
+          return {
+            href: expertHubPaths.internalApplicationAgreement(detail.id),
+            label: content.goToAgreement,
+          };
+        }
         return {
           href: expertHubPaths.internalApplicationCommittee(detail.id),
           label: content.goToCommittee,

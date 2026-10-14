@@ -98,7 +98,8 @@ internal sealed record ScreeningDetailWire(
     IReadOnlyList<ScreeningAttachmentWire> Attachments,
     IReadOnlyList<PoolMemberWire> CommitteePool,
     bool DecisionPending,
-    ScreeningDecisionSummaryWire? Decision);
+    ScreeningDecisionSummaryWire? Decision,
+    bool CommitteeApproved);
 
 internal sealed record AcceptedServiceDecisionWire(
     string? Service, string? Path, IReadOnlyList<string>? Slots,
@@ -703,7 +704,14 @@ public static class ScreeningEndpoints
             })],
             pool,
             DecisionPending: results.Count == 0,
-            decisionSummary);
+            decisionSummary,
+            // The application stays `approval-in-progress` through the agreement's
+            // internal run (J-10), so the status alone cannot say the committee is
+            // over. Without this the onward link pointed every signer at the
+            // committee page — F-0204, which a staff signer does not hold.
+            CommitteeApproved: await db.CommitteeSequences.AnyAsync(
+                s => s.ApplicationId == application.ApplicationId
+                    && s.Status == CommitteeSequenceStatuses.Approved, ct));
     }
 
     /// <summary>`SLA-0202` — null while its duration is undefined (`DM-GAP-10`,

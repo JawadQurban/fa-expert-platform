@@ -84,7 +84,10 @@
      `document.body`, so it is no longer a positioned descendant of
      `.datePicker` and can't rely on that ancestor for anchoring. */
   position: fixed;
-  z-index: var(--fads-sys-z-drawer);
+  /* The modal layer, not the dropdown one: the panel is portaled to <body>
+     after any open Modal, so at equal z-index it paints above the dialog
+     it was opened from. Below it, a Select in a Modal opened behind it. */
+  z-index: var(--fads-sys-z-modal);
   border-radius: var(--fads-sys-datepicker-popover-radius);
   background-color: var(--fads-sys-color-surface-raised);
   box-shadow: var(--fads-sys-datepicker-popover-shadow);

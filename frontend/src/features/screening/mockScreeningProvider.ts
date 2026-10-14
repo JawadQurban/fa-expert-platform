@@ -343,6 +343,7 @@ export function createMockScreeningProvider(
           attachments: MOCK_ATTACHMENTS,
           committeePool: MOCK_COMMITTEE_POOL,
           decisionPending: PENDING_STATUSES.has(row.status),
+          committeeApproved: false,
           decision: null,
         },
       };

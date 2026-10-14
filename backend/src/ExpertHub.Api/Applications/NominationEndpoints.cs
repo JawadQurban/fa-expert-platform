@@ -62,7 +62,12 @@ internal static class NominationEndpoints
             var ids = users.Select(u => u.UserId).ToList();
             var trainers = await db.UserRoles
                 .Join(db.Roles, ur => ur.RoleId, r => r.RoleId, (ur, r) => new { ur.UserId, r.Code })
-                .Where(x => ids.Contains(x.UserId) && x.Code == RoleCode.Trainer)
+                // Accredited here, as StartDraftAsync decides: a FAST-granted
+                // trainer (`P-234`) with no accreditation can still be nominated.
+                .Where(x => ids.Contains(x.UserId) && x.Code == RoleCode.Trainer
+                    && db.Applications.Any(a => a.ApplicantUserId == x.UserId
+                        && (a.Status == ApplicationStatuses.Approved
+                            || a.Status == ApplicationStatuses.Active)))
                 .Select(x => x.UserId)
                 .ToListAsync(ct);
             var open = (await db.Applications
