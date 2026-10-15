@@ -276,7 +276,7 @@ open again.
 | **Frontend route** | `internal/assignments/new` |
 | **Primary APIs** | `POST /v1/internal/assignment-requests/` · `GET …/lookups/centres` · `…/lookups/nominees?service=` · `POST /v1/internal/attachments` |
 | **Persistence** | `ASSIGNMENT_REQUEST` (+ `FormValues`), `ASSIGNMENT_SLOT` × headcount, `CANDIDATE_POOL`/`POOL_MEMBER` when nominees are named |
-| **Authorization** | `InternalPolicy` + `F-0501`. **No centre scope is enforced** (per `P-276`, centres are an operational list, not access scope) |
+| **Authorization** | `InternalPolicy` + `F-0501`. **Centre scope is enforced** (`P-351`, superseding `P-276`): a coordinator sees and raises requests for their own assignment centre only; another centre's request is a 404 |
 | **Negative paths** | Unknown/inactive centre → 400 · unknown request type → 400 · `dateTo < dateFrom` → 400 · brochure missing/unknown → 400 · headcount < 1 → 400 · **duplicate nominee → 400** · **nominees > headcount → 400** · **per-expert eligibility, each checked separately, whole request refused on first failure → 400** |
 | **External dep** | EXT-03 FAST Programme/Plan — non-blocking, fields typed by hand |
 | **Business dep** | None outstanding. **RB-07 verified resolved** — the five approved centres are seeded via `M31` |

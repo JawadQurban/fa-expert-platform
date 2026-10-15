@@ -162,6 +162,14 @@ export default function NewAssignmentRequestPage() {
   const set = (key: string, value: string) =>
     setValues((current) => ({ ...current, [key]: value }));
 
+  // P-351 — a centre coordinator is served only their own centre and only
+  // themselves as requester: a single served option is THE value, shown
+  // read-only, so the form takes the centre and the user from who is asking.
+  const lockedCentre = centres.length === 1 ? centres[0].value : null;
+  const lockedRequester = employees.length === 1 ? employees[0].value : null;
+  const effectiveCentre = lockedCentre ?? centreId;
+  const effectiveResponsible = lockedRequester ?? responsible;
+
   const lookupLabel = (option: RequestLookupOptionDto) =>
     locale === 'en' ? option.labelEn : option.labelAr;
 
@@ -255,10 +263,10 @@ export default function NewAssignmentRequestPage() {
         : copy.fields.brochure;
 
   const buildInput = (): Partial<CreateCentreRequestInput> => ({
-    centreId,
+    centreId: effectiveCentre,
     requestType: requestType === '' ? undefined : requestType,
     serviceType: requestService ?? undefined,
-    responsibleEmployee: responsible,
+    responsibleEmployee: effectiveResponsible,
     programName: values.programName,
     daysCount:
       values.daysCount == null || values.daysCount === '' || values.daysCount === DAYS_OTHER
@@ -501,8 +509,9 @@ export default function NewAssignmentRequestPage() {
           <Select
             label={copy.centreLabel}
             options={centres.map((option) => ({ value: option.value, label: lookupLabel(option) }))}
-            value={centreId === '' ? undefined : centreId}
+            value={effectiveCentre === '' ? undefined : effectiveCentre}
             onValueChange={setCentreId}
+            readOnly={lockedCentre !== null}
             requiredField
             errorText={errorFor('centre-required')}
           />
@@ -542,8 +551,9 @@ export default function NewAssignmentRequestPage() {
               value: option.value,
               label: lookupLabel(option),
             }))}
-            value={responsible === '' ? undefined : responsible}
+            value={effectiveResponsible === '' ? undefined : effectiveResponsible}
             onValueChange={setResponsible}
+            readOnly={lockedRequester !== null}
             requiredField
             errorText={errorFor('responsible-required')}
           />

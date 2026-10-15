@@ -470,6 +470,11 @@ public sealed class AccessEndpointsTests
             new { roleCode = "manager", scopeRef = Guid.NewGuid().ToString() });
         Assert.Equal(HttpStatusCode.BadRequest, strayScope.StatusCode);
 
+        // …and the centre must be an operational assignment centre (P-351).
+        var unknownCentre = await _client.PostAsJsonAsync($"/api/v1/internal/access/users/{myId}/roles",
+            new { roleCode = "centre_coordinator", scopeRef = Guid.NewGuid().ToString() });
+        Assert.Equal(HttpStatusCode.BadRequest, unknownCentre.StatusCode);
+
         // With a real centre, the coordinator lands with its bilingual name.
         var centreId = await InsertCentreAsync("مركز الرياض", "Riyadh centre");
         var coordinator = await PostJsonAsync($"/api/v1/internal/access/users/{myId}/roles",
@@ -528,7 +533,8 @@ public sealed class AccessEndpointsTests
         var value = new ReferenceValue
         {
             ValueId = Guid.NewGuid(),
-            ListCode = "centre", // the list itself is seeded, its values are not
+            // P-351 — a coordinator's centre is an operational assignment centre.
+            ListCode = AssignmentCentres.ListCode,
             Code = $"ctr-{Guid.NewGuid():N}",
             LabelAr = nameAr,
             LabelEn = nameEn,

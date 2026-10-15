@@ -39,6 +39,11 @@ The history before this repository existed is in
 
 ### Changed
 
+- **A centre coordinator works within their own centre (`P-351`).** The
+  coordinator's centre is now one of the five assignment centres, chosen in
+  access management. They see only their centre's assignment requests, and the
+  request form fills in their centre and themselves as the requester, read-only.
+  Staff and managers still see every centre.
 - **Assignment routing follows Notion's 2026-09-29 update** (`P-341`). A
   «عروض فنية / محاور البرامج» request now asks for «الفئة المطلوبة» — content
   developer or trainer — and is matched against the category picked. The API

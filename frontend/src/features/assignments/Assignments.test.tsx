@@ -6,6 +6,7 @@ import {
   renderExpertHubAt,
   screen,
   seedExpertHubSession,
+  waitFor,
   within,
 } from '../../test/renderExpertHub';
 import { expertHubPaths } from '../../app/router/paths';
@@ -146,6 +147,31 @@ describe('EH-INT-09 — the centre request form (طلب تقديم البرنا�
     // No details card, no submit, until the type decides the field set.
     expect(screen.queryByText(form.detailsHeading)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: form.submit })).not.toBeInTheDocument();
+  });
+
+  it('P-351: a coordinator served one centre and only themselves gets both preset and read-only', async () => {
+    const provider = createMockAssignmentProvider({ latencyMs: 0 });
+    const served = await provider.listCentres();
+    const centre = served.ok ? served.value[0] : null;
+    setAssignmentServiceForTesting({
+      ...provider,
+      listCentres: async () => {
+        const result = await provider.listCentres();
+        return result.ok ? { ...result, value: result.value.slice(0, 1) } : result;
+      },
+      listResponsibleEmployees: async () => {
+        const result = await provider.listResponsibleEmployees();
+        return result.ok ? { ...result, value: result.value.slice(0, 1) } : result;
+      },
+    });
+    await renderForm();
+    const centreField = screen.getByRole('combobox', { name: form.centreLabel });
+    await waitFor(() => expect(centreField).toHaveAttribute('aria-readonly', 'true'));
+    expect(centreField).toHaveTextContent(centre!.labelAr);
+    expect(screen.getByRole('combobox', { name: form.responsibleLabel })).toHaveAttribute(
+      'aria-readonly',
+      'true'
+    );
   });
 
   it('offers exactly the matrix’s ten request types, in its order', async () => {

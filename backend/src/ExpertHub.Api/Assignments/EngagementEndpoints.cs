@@ -361,7 +361,9 @@ public static class EngagementEndpoints
             }));
         })
             .WithName("RequestSlots")
-            .RequireFeature("F-0505");
+            .RequireFeature("F-0505")
+            // P-351 — another centre's request does not exist for a coordinator.
+            .AddEndpointFilter(AssignmentEndpoints.CentreScopeFilterAsync);
 
         internalGroup.MapPost("/engagements/{engagementId}/delink", async (
             string engagementId,

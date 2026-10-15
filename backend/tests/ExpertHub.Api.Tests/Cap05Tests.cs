@@ -801,17 +801,16 @@ public sealed class Cap05Tests
     public async Task A_request_names_an_approved_centre_and_its_dates_never_run_backwards()
     {
         using var centre = await SignInAsync("cap05-ctr-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var staff = await SignInAsync("cap05-ctr-staff", "موظف", RoleCode.Manager);
 
-        // The five operational centres of the approved Assignment Matrix.
-        var centres = await GetAsync(centre, "/api/v1/internal/assignment-requests/lookups/centres");
+        // The five operational centres of the approved Assignment Matrix…
+        var centres = await GetAsync(staff, "/api/v1/internal/assignment-requests/lookups/centres");
         Assert.Equal(
             ["البنوك والتمويل", "الأوراق المالية", "التامين", "البرامج الخاصة", "القيادات"],
             centres.EnumerateArray().Select(c => c.GetProperty("labelAr").GetString()));
-        // …and none of them became access scope.
-        await using (var db = _database.CreateContext())
-        {
-            Assert.False(await db.ReferenceValues.AnyAsync(v => v.ListCode == "centre"));
-        }
+        // …of which a coordinator is offered only their own (P-351).
+        var own = await GetAsync(centre, "/api/v1/internal/assignment-requests/lookups/centres");
+        Assert.Equal(["البنوك والتمويل"], own.EnumerateArray().Select(c => c.GetProperty("labelAr").GetString()));
 
         var unknownCentre = GeneralProgramRequest();
         unknownCentre["centreId"] = "centre-riyadh";
@@ -1095,6 +1094,60 @@ public sealed class Cap05Tests
         var row = list.EnumerateArray().Single();
         Assert.Equal("ورشة سابقة", row.GetProperty("programName").GetProperty("ar").GetString());
         Assert.Equal("trainer", row.GetProperty("serviceType").GetString());
+    }
+
+    [Fact]
+    public async Task A_coordinator_sees_and_raises_requests_for_their_own_centre_only()
+    {
+        // P-351 — owner ruling 2026-10-15: «each center should only see the
+        // request for his center and in the form it shuold take the center and
+        // user which is the user he is submiting the assignmet request».
+        using var centre = await SignInAsync("cap05-scope-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var staff = await SignInAsync("cap05-scope-staff", "موظف", RoleCode.Manager);
+
+        // Blank centre and requester: both come from who is submitting.
+        var blank = GeneralProgramRequest();
+        blank.Remove("centreId");
+        var own = await PostAsync(centre, "/api/v1/internal/assignment-requests/", blank);
+        var ownId = own.GetProperty("requestId").GetString()!;
+        var other = await PostAsync(centre, "/api/v1/internal/assignment-requests/", GeneralProgramRequest());
+        var otherId = other.GetProperty("requestId").GetString()!;
+        await using (var db = _database.CreateContext())
+        {
+            var coordinatorId = (await db.Users.SingleAsync(u => u.ExternalIdentityId == "cap05-scope-centre")).UserId;
+            var saved = await db.AssignmentRequests.SingleAsync(r => r.RequestId == Guid.Parse(ownId));
+            Assert.Equal(CentreA, Guid.Parse(saved.CentreId));
+            Assert.Equal(coordinatorId.ToString(), saved.ResponsibleEmployee);
+            // As if another centre had raised the second one.
+            var moved = await db.AssignmentRequests.SingleAsync(r => r.RequestId == Guid.Parse(otherId));
+            moved.CentreId = CentreB.ToString();
+            await db.SaveChangesAsync();
+        }
+
+        // Another centre is refused on the way in…
+        var forB = GeneralProgramRequest();
+        forB["centreId"] = CentreB.ToString();
+        var refused = await centre.PostAsJsonAsync("/api/v1/internal/assignment-requests/", forB);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("centreId", await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        // …and its requests do not exist for this coordinator.
+        var mine = await GetAsync(centre, "/api/v1/internal/assignment-requests/");
+        Assert.Equal([ownId], mine.EnumerateArray().Select(r => r.GetProperty("requestId").GetString()));
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await centre.GetAsync($"/api/v1/internal/assignment-requests/{otherId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await centre.GetAsync($"/api/v1/internal/assignment-requests/{otherId}/matching")).StatusCode);
+        await GetAsync(centre, $"/api/v1/internal/assignment-requests/{ownId}");
+
+        // The requester lookup offers the coordinator only themselves.
+        var requesters = await GetAsync(centre, "/api/v1/internal/assignment-requests/lookups/responsible-employees");
+        Assert.Single(requesters.EnumerateArray());
+
+        // Staff are unaffected: every centre's requests.
+        var all = await GetAsync(staff, "/api/v1/internal/assignment-requests/");
+        Assert.Equal(2, all.GetArrayLength());
+        await GetAsync(staff, $"/api/v1/internal/assignment-requests/{otherId}");
     }
 
     /* ── helpers ───────────────────────────────────────────────────────────── */
@@ -1516,6 +1569,9 @@ public sealed class Cap05Tests
                 UserRoleId = Guid.NewGuid(),
                 UserId = user.UserId,
                 RoleId = roleRow.RoleId,
+                // P-140/P-351 — a coordinator carries their centre; here the
+                // one every request in this file names.
+                ScopeRef = granted == RoleCode.CentreCoordinator ? CentreA : null,
                 AssignedBy = user.UserId,
                 AssignedAt = DateTime.UtcNow,
             });
@@ -1523,6 +1579,10 @@ public sealed class Cap05Tests
         }
         return client;
     }
+
+    private static readonly Guid CentreA = new("ac000000-0000-0000-0000-000000000001");
+
+    private static readonly Guid CentreB = new("ac000000-0000-0000-0000-000000000002");
 
     private static async Task<JsonElement> GetAsync(HttpClient client, string path)
     {

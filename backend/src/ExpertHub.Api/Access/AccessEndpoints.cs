@@ -260,6 +260,15 @@ public static class AccessEndpoints
                 {
                     return Results.Problem(statusCode: 400, title: "scope-required");
                 }
+                // P-351 — ...and it is one of the operational assignment
+                // centres, the same list a request names (J-16).
+                if (!await db.ReferenceValues.AnyAsync(
+                        v => v.ValueId == parsedScope
+                            && v.ListCode == AssignmentCentres.ListCode
+                            && v.IsActive, ct))
+                {
+                    return Results.Problem(statusCode: 400, title: "scope-unknown");
+                }
                 scopeRef = parsedScope;
             }
             else if (!string.IsNullOrWhiteSpace(request.ScopeRef))
@@ -384,12 +393,13 @@ public static class AccessEndpoints
             .RequireFeature("F-0805");
 
         // Centres are reference data, not part of the access model — which is
-        // why the route is not under `/access` (P-144). The list ships with no
-        // rows: real centres are organizational data nobody has supplied.
+        // why the route is not under `/access` (P-144). P-351: a coordinator's
+        // centre IS an operational assignment centre (owner ruling 2026-10-15),
+        // so this serves that list, not the empty `centre` one.
         internalGroup.MapGet("/centres", async (ExpertHubDbContext db, CancellationToken ct) =>
         {
             var rows = await db.ReferenceValues.AsNoTracking()
-                .Where(v => v.ListCode == "centre" && v.IsActive)
+                .Where(v => v.ListCode == AssignmentCentres.ListCode && v.IsActive)
                 .OrderBy(v => v.SortOrder)
                 .ToListAsync(ct);
             // Mapped in memory: a Guid.ToString() translated into SQL comes
@@ -455,7 +465,7 @@ public static class AccessEndpoints
 
         var scopeIds = held.Where(h => h.ScopeRef.HasValue).Select(h => h.ScopeRef!.Value).Distinct().ToArray();
         var centreNames = await db.ReferenceValues.AsNoTracking()
-            .Where(v => v.ListCode == "centre" && scopeIds.Contains(v.ValueId))
+            .Where(v => v.ListCode == AssignmentCentres.ListCode && scopeIds.Contains(v.ValueId))
             .ToDictionaryAsync(v => v.ValueId, v => v.LabelAr, ct);
 
         return users.Select(user => new UserWire(

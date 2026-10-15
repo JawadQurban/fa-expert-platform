@@ -139,11 +139,17 @@ public static class AssignmentEndpoints
         var requests = v1.MapGroup("/internal/assignment-requests")
             .RequireAuthorization(AuthenticationSetup.InternalPolicy);
 
+        // P-351 — every `/{requestId}…` route, once.
+        requests.AddEndpointFilter(CentreScopeFilterAsync);
+
         // F-0501 إنشاء طلب الإسناد — the centre coordinator's own feature.
-        requests.MapGet("/", async (ExpertHubDbContext db, CancellationToken ct) =>
+        requests.MapGet("/", async (HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
         {
             var rows = await LoadRequestsAsync(db, ct);
-            return Results.Ok(rows.Select(r => r.Summary));
+            var centres = await CentreScopeAsync(http, db, ct);
+            return Results.Ok(rows
+                .Where(r => centres is null || InCentres(r.Request, centres))
+                .Select(r => r.Summary));
         })
             .WithName("AssignmentRequests")
             // Read by both of J-17's actors: the coordinator who raised the
@@ -156,6 +162,22 @@ public static class AssignmentEndpoints
             ExpertHubDbContext db,
             CancellationToken ct) =>
         {
+            // P-351 — a centre-scoped requester submits for their own centre,
+            // as themselves: the requester is always who they are, and a blank
+            // centre is their centre when they have one. Another centre is
+            // refused below.
+            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+            var scopedCentres = await CentreScopeAsync(http, db, ct);
+            if (scopedCentres is not null)
+            {
+                input = input with
+                {
+                    CentreId = string.IsNullOrWhiteSpace(input.CentreId) && scopedCentres.Count == 1
+                        ? scopedCentres.Single().ToString()
+                        : input.CentreId,
+                    ResponsibleEmployee = actor.UserId.ToString(),
+                };
+            }
             if (string.IsNullOrWhiteSpace(input.CentreId)
                 || string.IsNullOrWhiteSpace(input.RequestType)
                 || string.IsNullOrWhiteSpace(input.ResponsibleEmployee))
@@ -166,6 +188,7 @@ public static class AssignmentEndpoints
             // ten, and its form's required fields and values must hold.
             // «اسم المركز» — one of the approved operational centres, by id.
             if (!Guid.TryParse(input.CentreId, out var centreValueId)
+                || (scopedCentres is not null && !scopedCentres.Contains(centreValueId))
                 || !await db.ReferenceValues.AnyAsync(
                     v => v.ValueId == centreValueId
                         && v.ListCode == AssignmentCentres.ListCode
@@ -253,7 +276,6 @@ public static class AssignmentEndpoints
                     detail: "nominees-exceed-headcount",
                     extensions: new Dictionary<string, object?> { ["fields"] = SpecificNomineeField });
             }
-            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
             var now = DateTime.UtcNow;
             var request = new AssignmentRequest
             {
@@ -387,23 +409,32 @@ public static class AssignmentEndpoints
 
         // «اسم المركز» — the approved operational centres (Assignment Matrix).
         // Not `/internal/centres`: that list is access scope, and empty (`P-276`).
-        requests.MapGet("/lookups/centres", async (ExpertHubDbContext db, CancellationToken ct) =>
+        requests.MapGet("/lookups/centres", async (
+            HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
         {
+            // P-351 — a centre-scoped requester is offered their own centre only.
+            var scope = await CentreScopeAsync(http, db, ct);
             var centres = await db.ReferenceValues.AsNoTracking()
                 .Where(v => v.ListCode == AssignmentCentres.ListCode && v.IsActive)
                 .OrderBy(v => v.SortOrder)
                 .ToListAsync(ct);
-            return Results.Ok(centres.Select(v => new LookupOptionWire(
+            return Results.Ok(centres
+                .Where(v => scope is null || scope.Contains(v.ValueId))
+                .Select(v => new LookupOptionWire(
                 v.ValueId.ToString(), v.LabelAr, v.LabelEn)));
         })
             .WithName("AssignmentCentreLookup")
             .RequireAnyFeature("F-0501", "F-0503");
 
         requests.MapGet("/lookups/responsible-employees", async (
-            ExpertHubDbContext db, CancellationToken ct) =>
+            HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
         {
+            // P-351 — a centre-scoped requester is the requester: only themselves.
+            var self = await CentreScopeAsync(http, db, ct) is null
+                ? (Guid?)null
+                : (await ActorResolution.ResolveActorAsync(http, db, ct)).UserId;
             var staff = await db.Users
-                .Where(u => u.IsEmployee && u.IsActive)
+                .Where(u => u.IsEmployee && u.IsActive && (self == null || u.UserId == self))
                 .OrderBy(u => u.FullNameAr)
                 .ToListAsync(ct);
             return Results.Ok(staff.Select(u => new LookupOptionWire(
@@ -989,6 +1020,57 @@ public static class AssignmentEndpoints
     /* ── shared reads ──────────────────────────────────────────────────────── */
 
     internal static readonly JsonSerializerOptions WireJson = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// `P-351` — the centres a caller may see, or null when unrestricted. A
+    /// holder whose widest scope on J-16/J-17's two features is `centre` (the
+    /// centre coordinator, M08) sees only the requests of the centre(s) their
+    /// role carries; any `all` grant lifts it. A coordinator with no centre
+    /// sees nothing — fail closed.
+    /// </summary>
+    private static async Task<HashSet<Guid>?> CentreScopeAsync(
+        HttpContext http, ExpertHubDbContext db, CancellationToken ct)
+    {
+        var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+        var raise = await FeatureAuthorization.WidestScopeAsync(db, actor.UserId, "F-0501", ct);
+        var match = await FeatureAuthorization.WidestScopeAsync(db, actor.UserId, "F-0503", ct);
+        if (raise == DataScope.All || match == DataScope.All
+            || (raise != DataScope.Centre && match != DataScope.Centre))
+        {
+            return null;
+        }
+        return [.. await db.UserRoles
+            .Where(ur => ur.UserId == actor.UserId && ur.ScopeRef != null)
+            .Select(ur => ur.ScopeRef!.Value)
+            .ToListAsync(ct)];
+    }
+
+    /// <summary>
+    /// `P-351` — on any route carrying a `{requestId}`: another centre's
+    /// request does not exist for a centre-scoped caller (404, not 403, so its
+    /// existence does not leak). Shared with the slots read in
+    /// <c>EngagementEndpoints</c>, which lives on another group.
+    /// </summary>
+    internal static async ValueTask<object?> CentreScopeFilterAsync(
+        EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var http = context.HttpContext;
+        if (http.Request.RouteValues.TryGetValue("requestId", out var raw)
+            && raw is string requestId)
+        {
+            var db = http.RequestServices.GetRequiredService<ExpertHubDbContext>();
+            var centres = await CentreScopeAsync(http, db, http.RequestAborted);
+            var request = centres is null ? null : await FindAsync(requestId, db, http.RequestAborted);
+            if (request is not null && !InCentres(request, centres!))
+            {
+                return Results.Problem(statusCode: 404, detail: "Assignment request not found.");
+            }
+        }
+        return await next(context);
+    }
+
+    private static bool InCentres(AssignmentRequest request, HashSet<Guid> centres) =>
+        Guid.TryParse(request.CentreId, out var centre) && centres.Contains(centre);
 
     private static async Task<AssignmentRequest?> FindAsync(
         string requestId, ExpertHubDbContext db, CancellationToken ct) =>
