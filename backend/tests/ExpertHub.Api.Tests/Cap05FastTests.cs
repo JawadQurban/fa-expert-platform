@@ -359,6 +359,43 @@ public sealed partial class Cap05Tests
         Assert.Equal(0, await SyncPlanStatusAsync());
     }
 
+    /* ── B-14 — what the trainer delivered with the Academy ───────────────── */
+
+    [Fact]
+    public async Task A_trainers_delivered_FAST_plans_become_their_Academy_record_once_each()
+    {
+        var fast = UseFakeFast();
+        using var trainers = await SeedTrainersAsync(1);
+        var trainerId = Guid.Parse(trainers.Clients.Keys.Single());
+        var fastUserId = await LinkFastUserAsync(trainerId.ToString());
+
+        Assert.Equal(2, await SyncDeliveredAsync());
+        // Again: nothing new, nothing duplicated.
+        Assert.Equal(0, await SyncDeliveredAsync());
+        // FAST renames a programme: the row follows, still one row.
+        fast.DeliveredName = "برنامج القيادة المالية المتقدم";
+        Assert.Equal(1, await SyncDeliveredAsync());
+
+        Assert.Contains(fast.Seen, c => c.Url.EndsWith(
+            $"/api/v1/Trainer/GetDeliveredPlans?trainerFastUserId={fastUserId}", StringComparison.Ordinal));
+        await using var db = _database.CreateContext();
+        var records = await db.TrainerRecords.Where(r => r.TrainerId == trainerId)
+            .OrderByDescending(r => r.DeliveredFrom).ToListAsync();
+        Assert.Equal(2, records.Count);
+        Assert.Equal("برنامج القيادة المالية المتقدم", records[0].ProgramNameAr);
+        Assert.Equal(FastDeliveredPlansSync.TrainerRole, records[0].Role);
+        Assert.Equal(new DateTime(2025, 3, 2), records[0].DeliveredFrom);
+        Assert.Null(records[1].DeliveredTo);
+    }
+
+    private async Task<int> SyncDeliveredAsync()
+    {
+        using var scope = _configured!.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<FastDeliveredPlansSync>().SyncAsync(
+            scope.ServiceProvider.GetRequiredService<ExpertHub.Infrastructure.Persistence.ExpertHubDbContext>(),
+            CancellationToken.None);
+    }
+
     /// <summary>A FAST-linked request, matched and confirmed: the trainer's
     /// client, the engagement and the request.</summary>
     private async Task<(HttpClient Trainer, string EngagementId, string RequestId)> ConfirmFastEngagementAsync(string tag)
@@ -507,6 +544,9 @@ public sealed partial class Cap05Tests
 
         public bool Down { get; set; }
 
+        /// <summary>The first delivered programme's Arabic name (B-14).</summary>
+        public string DeliveredName { get; set; } = "برنامج القيادة المالية";
+
         /// <summary>`Plan/GetPlanStatus` — open, on the plan's own dates, by default.</summary>
         public string PlanStatus { get; set; } = StatusJson("open", "2026-12-06", null);
 
@@ -621,6 +661,14 @@ public sealed partial class Cap05Tests
                         new { evaluationId = "e1", questionId = "q1", questionTextAr = "وضوح الشرح", value = 5, scaleLow = 1, scaleHigh = 5, receivedAt = "2026-12-08T10:00:00" },
                         new { evaluationId = "e2", questionId = "q1", questionTextAr = "وضوح الشرح", value = (int?)null, scaleLow = 1, scaleHigh = 5, receivedAt = "2026-12-08T10:00:00" },
                     },
+                }));
+            }
+            if (url.Contains("Trainer/GetDeliveredPlans", StringComparison.Ordinal))
+            {
+                return (HttpStatusCode.OK, FastTrainingApiTests.Envelope(new object[]
+                {
+                    new { programId = FastProgramId, nameAr = DeliveredName, nameEn = "Financial Leadership", planId = "11111111-0000-4000-8000-000000000001", planCode = "PL-2025-03", startDate = "2025-03-02T00:00:00", endDate = "2025-03-04T00:00:00", status = new { code = "final-closed" } },
+                    new { programId = FastProgramId, nameAr = "برنامج المخاطر", nameEn = "Risk", planId = "11111111-0000-4000-8000-000000000002", planCode = "PL-2024-11", startDate = "2024-11-10T00:00:00", endDate = (string?)null, status = new { code = "closed" } },
                 }));
             }
             if (url.Contains("Plan/TrainingMaterial", StringComparison.Ordinal))

@@ -345,6 +345,9 @@ public sealed partial class FastReferenceDataWorker : BackgroundService
                 using var scope = _scopes.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ExpertHubDbContext>();
                 await _sync.SyncAllAsync(db, DateTime.UtcNow, stoppingToken).ConfigureAwait(false);
+                // B-14 — once a day too: the programmes each trainer delivered.
+                await scope.ServiceProvider.GetRequiredService<FastDeliveredPlansSync>()
+                    .SyncAsync(db, stoppingToken).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not OperationCanceledException
                 || !stoppingToken.IsCancellationRequested)

@@ -179,6 +179,10 @@ public sealed class TrainerRecord
     public DateTime DeliveredFrom { get; set; }
 
     public DateTime? DeliveredTo { get; set; }
+
+    /// <summary>B-14 — the FAST plan this row was copied from
+    /// (`Trainer/GetDeliveredPlans`); null for a row entered any other way.</summary>
+    public string? FastPlanId { get; set; }
 }
 
 /// <summary>

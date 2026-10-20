@@ -115,7 +115,12 @@ public sealed class TrainerRecordConfiguration : IEntityTypeConfiguration<Traine
         builder.Property(r => r.Role).HasColumnName("role").HasMaxLength(100);
         builder.Property(r => r.DeliveredFrom).HasColumnName("delivered_from");
         builder.Property(r => r.DeliveredTo).HasColumnName("delivered_to");
+        builder.Property(r => r.FastPlanId).HasColumnName("fast_plan_id").HasMaxLength(64);
         builder.HasIndex(r => r.TrainerId);
+        // B-14 — one row per FAST plan per trainer, so the sync can never duplicate.
+        builder.HasIndex(r => new { r.TrainerId, r.FastPlanId })
+            .IsUnique()
+            .HasFilter("[fast_plan_id] IS NOT NULL");
         builder.HasOne<TrainerProfile>().WithMany().HasForeignKey(r => r.TrainerId)
             .OnDelete(DeleteBehavior.Cascade);
     }

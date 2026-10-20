@@ -200,6 +200,7 @@ public static class PersistenceServiceCollectionExtensions
         // FAST reference lists, copied into REFERENCE_VALUE on a schedule —
         // through the token provider only, never a signed-in user's token.
         services.AddSingleton<FastReferenceDataSync>();
+        services.AddSingleton<FastDeliveredPlansSync>();
         services.AddHostedService<FastReferenceDataWorker>();
         return services;
     }

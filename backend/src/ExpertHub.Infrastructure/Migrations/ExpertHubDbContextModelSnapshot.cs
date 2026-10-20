@@ -16192,6 +16192,11 @@ namespace ExpertHub.Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("delivered_to");
 
+                    b.Property<string>("FastPlanId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("fast_plan_id");
+
                     b.Property<string>("ProgramNameAr")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -16217,6 +16222,10 @@ namespace ExpertHub.Infrastructure.Migrations
                     b.HasKey("RecordId");
 
                     b.HasIndex("TrainerId");
+
+                    b.HasIndex("TrainerId", "FastPlanId")
+                        .IsUnique()
+                        .HasFilter("[fast_plan_id] IS NOT NULL");
 
                     b.ToTable("TRAINER_RECORD", (string)null);
                 });
