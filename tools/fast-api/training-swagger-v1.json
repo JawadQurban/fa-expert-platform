@@ -1,0 +1,2283 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Training API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "/training"
+    }
+  ],
+  "paths": {
+    "/api/v1/Lookup/GetSectors": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Sectors and sub-sectors (Competencies). A sub-sector's parentId is its sector.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetJobFamilies": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Job families (Competencies).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetTopics": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Programme topics.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetTraineeLevels": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Trainee levels (lookup.ProgramParticipantLevel).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetCancellationReasons": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Plan cancellation reasons.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetPlanStatuses": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Plan statuses; code is new | open | closed | final-closed | canceled.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetDeliveryModes": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Delivery modes (lookup.TrainingType); code is in-class | online | self-learning.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetVenueScopes": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Venue scopes (lookup.PlanLocation); code is inside-academy | outside-academy | client-site | online | unknown.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetTrainingMaterialStatuses": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Training material statuses; code is new | current | book | none | unknown.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetLanguages": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Training languages.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetProgramTypes": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Programme types.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetFoodServicePeriods": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Food service periods (full day / half day).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetProgramSkillTypes": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Programme skill types.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Lookup/GetTargetGenders": {
+      "get": {
+        "tags": [
+          "Lookup"
+        ],
+        "summary": "Target genders.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupItemDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Plan/AssignTrainer": {
+      "post": {
+        "tags": [
+          "Plan"
+        ],
+        "summary": "B-07: adds a trainer to a plan. Safe to retry: a trainer already on the plan returns the existing record\r\nwith alreadyAssigned = true. Other trainers on the plan are kept.",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTrainerRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTrainerRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTrainerRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTrainerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignTrainerResponseDtoApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The plan is closed or canceled, or the user is not an active FAST trainer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The plan does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Plan/UnassignTrainer": {
+      "post": {
+        "tags": [
+          "Plan"
+        ],
+        "summary": "B-08: removes a trainer from a plan. Safe to retry: a trainer who is not on the plan returns removed = false.",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnassignTrainerRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnassignTrainerRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnassignTrainerRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnassignTrainerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnassignTrainerResponseDtoApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The plan is closed; a delivered plan keeps its trainer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The plan does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Plan/TrainingMaterial": {
+      "post": {
+        "tags": [
+          "Plan"
+        ],
+        "summary": "B-09: sets the plan's training material status and, when a file is sent, replaces the material file (max 50 MB).",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "PlanId",
+                  "StatusCode"
+                ],
+                "type": "object",
+                "properties": {
+                  "PlanId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "StatusCode": {
+                    "type": "string",
+                    "description": "new | current | book | none | unknown (lookup.TrainingMaterialStatus)."
+                  },
+                  "File": {
+                    "type": "string",
+                    "description": "Optional: the approved material file. Omit to change only the status.",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "PlanId": {
+                  "style": "form"
+                },
+                "StatusCode": {
+                  "style": "form"
+                },
+                "File": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingMaterialDtoApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown status code, a rejected file, or the plan is final-closed or canceled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The plan does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Plan/{planId}/TrainingMaterial/File": {
+      "get": {
+        "tags": [
+          "Plan"
+        ],
+        "summary": "Downloads the plan's current training material file.",
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Plan/GetPlanTakers": {
+      "get": {
+        "tags": [
+          "Plan"
+        ],
+        "summary": "B-10: trainees with a confirmed registration on the plan (names only), with attendance per session.",
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanTakerDtoListApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Plan/GetPlanStatus": {
+      "get": {
+        "tags": [
+          "Plan"
+        ],
+        "summary": "B-11: status, schedule, Teams link and cancellation of one plan.",
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanStatusDtoApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Program/Search": {
+      "post": {
+        "tags": [
+          "Program"
+        ],
+        "summary": "B-03: searches approved programmes, paged.",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramSearchRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramSearchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramSearchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramListItemDtoPagedItemsDtoApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Program/GetProgramDetails": {
+      "get": {
+        "tags": [
+          "Program"
+        ],
+        "summary": "B-04: a programme's brief, sectors, job families, trainee level and prospectus.",
+        "parameters": [
+          {
+            "name": "programId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramDetailsDtoApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Program/GetPlansByProgramId": {
+      "get": {
+        "tags": [
+          "Program"
+        ],
+        "summary": "B-05: the plans of a programme.",
+        "parameters": [
+          {
+            "name": "programId",
+            "in": "query",
+            "description": "The programme.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "open (new or open plans), or one plan status code: new, open, closed, final-closed, canceled. Omit for all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "description": "Only plans starting on or after this date (yyyy-MM-dd).",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanListItemDtoListApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Program/GetPlanDetails": {
+      "get": {
+        "tags": [
+          "Program"
+        ],
+        "summary": "B-06: the full plan record: schedule, venue, language, delivery mode, training material and trainers.",
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetailsDtoApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Program/{programId}/Prospectus/File": {
+      "get": {
+        "tags": [
+          "Program"
+        ],
+        "summary": "Downloads the programme prospectus.",
+        "parameters": [
+          {
+            "name": "programId",
+            "in": "path",
+            "description": "The programme.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "ar (default) or en.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Survey/GetTrainerEvaluations": {
+      "get": {
+        "tags": [
+          "Survey"
+        ],
+        "summary": "B-12: the trainer's MTM rating on the plan, plus the plan's trainee survey answers.\r\nFAST does not link survey answers to a trainer, so the answers are the plan's.",
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "trainerFastUserId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainerEvaluationDtoApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The trainer is not on the plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Trainer/GetDeliveredPlans": {
+      "get": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "B-14: closed and final-closed plans the trainer delivered, newest first. An unknown trainer returns an empty list.",
+        "parameters": [
+          {
+            "name": "trainerFastUserId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveredPlanDtoListApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignTrainerRequest": {
+        "required": [
+          "planId",
+          "trainerFastUserId"
+        ],
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trainerFastUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isFreelance": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-07 request."
+      },
+      "AssignTrainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "planTrainerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "trainerFastUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "alreadyAssigned": {
+            "type": "boolean",
+            "description": "True when the trainer was already on the plan and nothing changed."
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignTrainerResponseDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/AssignTrainerResponseDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AttendanceDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sessionStartTime": {
+            "type": "string",
+            "format": "date-span",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "present | absent. FAST records no \"excused\" state.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "One row per session the trainee was marked for."
+      },
+      "DeliveredPlanDto": {
+        "type": "object",
+        "properties": {
+          "programId": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "planCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-14 row."
+      },
+      "DeliveredPlanDtoListApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveredPlanDto"
+            },
+            "nullable": true
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FileRefDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "downloadUrl": {
+            "type": "string",
+            "description": "Relative to the API base URL; call it with the same service token.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Item": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "value": {
+            "type": "string",
+            "nullable": true
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LookupItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable language-neutral code, where FAST has one (e.g. plan status \"open\"); otherwise null.",
+            "nullable": true
+          },
+          "nameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "False for retired values that stay readable on old records."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "The parent row: a city's country, a sub-sector's sector. Null when the list is flat.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "A row of a reference list."
+      },
+      "LookupItemDtoListApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LookupItemDto"
+            },
+            "nullable": true
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NamedRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable language-neutral code, where FAST has one (e.g. plan status \"open\"); otherwise null.",
+            "nullable": true
+          },
+          "nameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "A lookup value inside a record. All ids are strings: FAST mixes int and GUID keys."
+      },
+      "PlanCancellationDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "reasonOther": {
+            "type": "string",
+            "nullable": true
+          },
+          "canceledOn": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlanDetailsDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "planCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "programId": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "finalClosedOn": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "centre": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "numberOfDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfHours": {
+            "type": "number",
+            "format": "double"
+          },
+          "programFee": {
+            "type": "number",
+            "description": "Display only.",
+            "format": "double"
+          },
+          "language": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "deliveryMode": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "venueScope": {
+            "type": "string",
+            "description": "inside-academy | outside-academy | client-site | online | unknown (lookup.PlanLocation).",
+            "nullable": true
+          },
+          "country": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "city": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "period": {
+            "type": "string",
+            "description": "morning | evening, read from the first session's start time (before 12:00 is morning). FAST stores no such field.",
+            "nullable": true
+          },
+          "foodServicePeriod": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "clientOrganizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NamedRefDto"
+            },
+            "description": "The client organizations of a private plan; empty for public plans.",
+            "nullable": true
+          },
+          "teamsUrl": {
+            "type": "string",
+            "description": "Online plans only.",
+            "nullable": true
+          },
+          "scheduleDays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleDayDto"
+            },
+            "nullable": true
+          },
+          "trainingMaterial": {
+            "$ref": "#/components/schemas/TrainingMaterialDto"
+          },
+          "trainers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanTrainerDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-06."
+      },
+      "PlanDetailsDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/PlanDetailsDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlanListItemDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "planCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "city": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "deliveryMode": {
+            "type": "string",
+            "description": "in-class | online | self-learning.",
+            "nullable": true
+          },
+          "hasTrainer": {
+            "type": "boolean",
+            "description": "False means the plan still needs a trainer."
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-05 row."
+      },
+      "PlanListItemDtoListApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanListItemDto"
+            },
+            "nullable": true
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlanStatusDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "finalClosedOn": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "scheduleDays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleDayDto"
+            },
+            "nullable": true
+          },
+          "teamsUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "cancellation": {
+            "$ref": "#/components/schemas/PlanCancellationDto"
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-11."
+      },
+      "PlanStatusDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/PlanStatusDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlanTakerDto": {
+        "type": "object",
+        "properties": {
+          "nameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "attendance": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttendanceDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-10 row: names only."
+      },
+      "PlanTakerDtoListApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanTakerDto"
+            },
+            "nullable": true
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlanTrainerDto": {
+        "type": "object",
+        "properties": {
+          "trainerFastUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "isFreelance": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProgramDetailsDto": {
+        "type": "object",
+        "properties": {
+          "programId": {
+            "type": "string",
+            "nullable": true
+          },
+          "programCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "briefAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "briefEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "sectors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NamedRefDto"
+            },
+            "description": "A programme can belong to several sectors.",
+            "nullable": true
+          },
+          "subSectors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NamedRefDto"
+            },
+            "nullable": true
+          },
+          "jobFamilies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NamedRefDto"
+            },
+            "nullable": true
+          },
+          "traineeLevel": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "prospectus": {
+            "$ref": "#/components/schemas/FileRefDto"
+          },
+          "prospectusEn": {
+            "$ref": "#/components/schemas/FileRefDto"
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-04."
+      },
+      "ProgramDetailsDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/ProgramDetailsDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProgramListItemDto": {
+        "type": "object",
+        "properties": {
+          "programId": {
+            "type": "string",
+            "nullable": true
+          },
+          "programCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "active (published current version) | inactive (unpublished current version) | archived (superseded version).",
+            "nullable": true
+          },
+          "programType": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "isExecutive": {
+            "type": "boolean"
+          },
+          "isCustom": {
+            "type": "boolean",
+            "description": "A private (custom) programme built for one client."
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-03 row."
+      },
+      "ProgramListItemDtoPagedItemsDto": {
+        "type": "object",
+        "properties": {
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramListItemDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProgramListItemDtoPagedItemsDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/ProgramListItemDtoPagedItemsDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProgramSearchRequest": {
+        "type": "object",
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "1 to 200.",
+            "format": "int32"
+          },
+          "searchText": {
+            "type": "string",
+            "description": "Optional: matches the Arabic name, English name or programme code.",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "active | inactive | archived. Omit for active and inactive.",
+            "nullable": true
+          },
+          "hasUpcomingPlans": {
+            "type": "boolean",
+            "description": "Only programmes with a new or open plan that has not started yet."
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-03 request."
+      },
+      "ScheduleDayDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-span"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-span"
+          },
+          "isLatestSchedule": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SurveyResponseDto": {
+        "type": "object",
+        "properties": {
+          "evaluationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "questionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "questionTextAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "questionTextEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "value": {
+            "type": "integer",
+            "description": "1 (weak) to 5 (excellent); null when the trainee was marked absent.",
+            "format": "int32",
+            "nullable": true
+          },
+          "answerTextAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "answerTextEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "scaleLow": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scaleHigh": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrainerEvaluationDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "trainerFastUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "rating": {
+            "$ref": "#/components/schemas/TrainerRatingDto"
+          },
+          "planSurveyResponses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SurveyResponseDto"
+            },
+            "description": "Trainee survey answers for the whole plan. FAST does not record which trainer a survey answer is about,\r\nso on a plan with several trainers these are shared.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-12."
+      },
+      "TrainerEvaluationDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/TrainerEvaluationDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrainerRatingDto": {
+        "type": "object",
+        "properties": {
+          "overallRating": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "responseCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "oneRating": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "twoRating": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "threeRating": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "fourRating": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "fiveRating": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrainingMaterialDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/NamedRefDto"
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileRefDto"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrainingMaterialDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/TrainingMaterialDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UnassignTrainerRequest": {
+        "required": [
+          "planId",
+          "trainerFastUserId"
+        ],
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trainerFastUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reasonText": {
+            "maxLength": 1000,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "B-08 request."
+      },
+      "UnassignTrainerResponseDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "removed": {
+            "type": "boolean",
+            "description": "False when the trainer was not on the plan (for example a retry after a successful removal)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "UnassignTrainerResponseDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/UnassignTrainerResponseDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://testingauth.fa.gov.sa/identitymanagement.sts/connect/token",
+            "scopes": {
+              "ims_training_api": "ims_training_api"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "oauth2": [
+        "ims_training_api"
+      ]
+    }
+  ]
+}
