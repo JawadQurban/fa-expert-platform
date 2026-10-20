@@ -862,7 +862,8 @@ public sealed partial class Cap05Tests
         // attendance are UNAVAILABLE with the gap named, never zeroes that
         // would read as "nobody enrolled".
         Assert.False(detail.GetProperty("enrolment").GetProperty("available").GetBoolean());
-        Assert.Equal("Q20", detail.GetProperty("enrolment").GetProperty("reason").GetString());
+        // A request not linked to a FAST plan has no FAST source (B-10).
+        Assert.Equal("not-linked", detail.GetProperty("enrolment").GetProperty("reason").GetString());
         Assert.False(detail.GetProperty("attendance").GetProperty("available").GetBoolean());
         // J-21/F2 — the meeting link is FAST's; there is no feed, so null.
         Assert.Equal(JsonValueKind.Null,

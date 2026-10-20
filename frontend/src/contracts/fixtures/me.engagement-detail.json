@@ -19,18 +19,18 @@
   },
   "enrolment": {
     "available": false,
-    "reason": "Q20",
+    "reason": "not-linked",
     "takers": []
   },
   "attendance": {
     "available": false,
-    "reason": "Q20",
+    "reason": "not-linked",
     "days": []
   },
   "scheduleChangedAt": null,
   "evaluations": {
     "available": false,
-    "reason": "Q29",
+    "reason": "not-linked",
     "items": []
   },
   "termination": null

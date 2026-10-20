@@ -5,6 +5,7 @@ using System.Text.Json;
 using ExpertHub.Api.Assignments;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Fast;
+using ExpertHub.Infrastructure.Notifications;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -283,6 +284,137 @@ public sealed partial class Cap05Tests
         }
     }
 
+    /* ── B-10 / B-11 / B-12 — the engagement as FAST sees it ───────────────── */
+
+    [Fact]
+    public async Task A_FAST_linked_engagement_shows_its_trainees_attendance_Teams_link_and_evaluations()
+    {
+        UseFakeFast();
+        var (trainer, engagementId, _) = await ConfirmFastEngagementAsync("b10");
+
+        var detail = await GetAsync(trainer, $"/api/v1/me/engagements/{engagementId}");
+
+        ContractFixtures.Verify("me.engagement-detail.fast", detail);
+        var enrolment = detail.GetProperty("enrolment");
+        Assert.True(enrolment.GetProperty("available").GetBoolean());
+        // Names only (J-21/F3/AC-2) — nothing else about a trainee.
+        var taker = enrolment.GetProperty("takers")[0];
+        Assert.Equal("سارة", taker.GetProperty("nameAr").GetString());
+        Assert.Equal(["nameAr", "nameEn"], taker.EnumerateObject().Select(p => p.Name));
+        var days = detail.GetProperty("attendance").GetProperty("days");
+        Assert.Equal("2026-12-06", days[0].GetProperty("date").GetString());
+        Assert.Equal(2, days[0].GetProperty("present").GetInt32());
+        Assert.Equal(1, days[1].GetProperty("absent").GetInt32());
+        Assert.Equal("https://teams.example/meet/1",
+            detail.GetProperty("details").GetProperty("meetingUrl").GetString());
+        var evaluations = detail.GetProperty("evaluations");
+        Assert.Equal(4.5, evaluations.GetProperty("rating").GetProperty("overall").GetDouble());
+        // An absent trainee's answer has no value: it is left out, not zeroed.
+        var item = Assert.Single(evaluations.GetProperty("items").EnumerateArray());
+        Assert.Equal(5, item.GetProperty("rawValue").GetInt32());
+    }
+
+    [Fact]
+    public async Task FAST_moving_a_plans_dates_moves_the_engagement_and_says_so()
+    {
+        var fast = UseFakeFast();
+        var (_, engagementId, requestId) = await ConfirmFastEngagementAsync("b11-move");
+        fast.PlanStatus = StatusJson("open", "2026-12-13", null);
+
+        Assert.Equal(1, await SyncPlanStatusAsync());
+        // A second pass with nothing new changes nothing.
+        Assert.Equal(0, await SyncPlanStatusAsync());
+
+        await using var db = _database.CreateContext();
+        var form = JsonSerializer.Deserialize<JsonElement>(
+            (await db.AssignmentRequests.SingleAsync(r => r.RequestId == Guid.Parse(requestId))).FormValues);
+        Assert.Equal("2026-12-13", form.GetProperty("dateFrom").GetString());
+        Assert.Equal("2026-12-15", form.GetProperty("dateTo").GetString());
+        Assert.NotNull((await db.Engagements.SingleAsync(e => e.EngagementId == Guid.Parse(engagementId))).ScheduleChangedAt);
+    }
+
+    [Fact]
+    public async Task FAST_cancelling_a_plan_cancels_its_engagements_with_FASTs_reason()
+    {
+        var fast = UseFakeFast();
+        var (trainer, engagementId, requestId) = await ConfirmFastEngagementAsync("b11-cancel");
+        fast.PlanStatus = StatusJson("canceled", "2026-12-06", "PCR-014");
+
+        Assert.Equal(1, await SyncPlanStatusAsync());
+
+        await using (var db = _database.CreateContext())
+        {
+            var engagement = await db.Engagements.SingleAsync(e => e.EngagementId == Guid.Parse(engagementId));
+            Assert.Equal(EngagementStatuses.Cancelled, engagement.Status);
+            var termination = await db.EngagementTerminations.SingleAsync(t => t.EngagementId == engagement.EngagementId);
+            Assert.Equal("fast", termination.Actor);
+            Assert.Equal("عدم اكتمال النصاب", termination.Reason);
+            Assert.Equal("PCR-014", termination.FastCancelReasonCode);
+            Assert.Equal(AssignmentRequestStatuses.Closed,
+                (await db.AssignmentRequests.SingleAsync(r => r.RequestId == Guid.Parse(requestId))).Status);
+        }
+        var detail = await GetAsync(trainer, $"/api/v1/me/engagements/{engagementId}");
+        Assert.Equal("fast", detail.GetProperty("termination").GetProperty("actor").GetString());
+        // Nothing left to read: a cancelled engagement is not read again.
+        Assert.Equal(0, await SyncPlanStatusAsync());
+    }
+
+    /// <summary>A FAST-linked request, matched and confirmed: the trainer's
+    /// client, the engagement and the request.</summary>
+    private async Task<(HttpClient Trainer, string EngagementId, string RequestId)> ConfirmFastEngagementAsync(string tag)
+    {
+        var staff = await SignInAsync($"cap05-{tag}-staff", "موظف", RoleCode.Manager);
+        var centre = await SignInAsync($"cap05-{tag}-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        var trainers = await SeedTrainersAsync(3);
+        var body = GeneralProgramRequest();
+        body["fastPlanId"] = FastPlanId;
+        var requestId = (await PostAsync(centre, "/api/v1/internal/assignment-requests/", body))
+            .GetProperty("requestId").GetString()!;
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+        await LinkFastUserAsync(eligible[0]);
+        var offerId = await CurrentOfferIdAsync(staff, requestId);
+        var trainer = trainers.Clients[eligible[0]];
+        var engagementId = (await PostAsync(trainer,
+                $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "accept" }))
+            .EnumerateArray().Single().GetProperty("engagementId").GetString()!;
+        return (trainer, engagementId, requestId);
+    }
+
+    private async Task<int> SyncPlanStatusAsync()
+    {
+        using var scope = _configured!.Services.CreateScope();
+        return await FastPlanStatusSync.SyncAsync(
+            scope.ServiceProvider.GetRequiredService<ExpertHub.Infrastructure.Persistence.ExpertHubDbContext>(),
+            scope.ServiceProvider.GetRequiredService<FastTrainingApi>(),
+            scope.ServiceProvider.GetRequiredService<NotificationDispatcher>(),
+            DateTime.UtcNow,
+            CancellationToken.None);
+    }
+
+    private static string StatusJson(string status, string firstDay, string? cancelCode) =>
+        FastTrainingApiTests.Envelope(new
+        {
+            planId = FastPlanId,
+            status = new { id = "2", code = status },
+            teamsUrl = "https://teams.example/meet/1",
+            scheduleDays = new[] { 0, 1, 2 }.Select(offset => new
+            {
+                date = DateTime.Parse(firstDay, System.Globalization.CultureInfo.InvariantCulture)
+                    .AddDays(offset).ToString("yyyy-MM-ddT00:00:00", System.Globalization.CultureInfo.InvariantCulture),
+                startTime = "17:00:00",
+                endTime = "20:00:00",
+                isLatestSchedule = true,
+            }),
+            cancellation = cancelCode is null
+                ? null
+                : new
+                {
+                    reason = new { id = "14", code = cancelCode, nameAr = "عدم اكتمال النصاب", nameEn = "Quorum not met" },
+                    reasonOther = (string?)null,
+                    canceledOn = "2026-11-20T08:00:00",
+                },
+        });
+
     /// <summary>The trainer's FAST user id, as their sign-in would have stored it.</summary>
     private async Task<Guid> LinkFastUserAsync(string trainerId)
     {
@@ -375,6 +507,9 @@ public sealed partial class Cap05Tests
 
         public bool Down { get; set; }
 
+        /// <summary>`Plan/GetPlanStatus` — open, on the plan's own dates, by default.</summary>
+        public string PlanStatus { get; set; } = StatusJson("open", "2026-12-06", null);
+
         /// <summary>The status code AssignTrainer / UnassignTrainer answer with.</summary>
         public HttpStatusCode WriteStatus { get; set; } = HttpStatusCode.OK;
 
@@ -447,6 +582,46 @@ public sealed partial class Cap05Tests
             if (url.Contains("Plan/UnassignTrainer", StringComparison.Ordinal))
             {
                 return (HttpStatusCode.OK, FastTrainingApiTests.Envelope(new { planId = FastPlanId, removed = true }));
+            }
+            if (url.Contains("Plan/GetPlanStatus", StringComparison.Ordinal))
+            {
+                return (HttpStatusCode.OK, PlanStatus);
+            }
+            if (url.Contains("Plan/GetPlanTakers", StringComparison.Ordinal))
+            {
+                return (HttpStatusCode.OK, FastTrainingApiTests.Envelope(new[]
+                {
+                    new
+                    {
+                        nameAr = "سارة", nameEn = "Sara",
+                        attendance = new[]
+                        {
+                            new { date = "2026-12-06T00:00:00", sessionStartTime = "17:00:00", status = "present" },
+                            new { date = "2026-12-07T00:00:00", sessionStartTime = "17:00:00", status = "absent" },
+                        },
+                    },
+                    new
+                    {
+                        nameAr = "خالد", nameEn = "Khalid",
+                        attendance = new[]
+                        {
+                            new { date = "2026-12-06T00:00:00", sessionStartTime = "17:00:00", status = "present" },
+                        },
+                    },
+                }));
+            }
+            if (url.Contains("Survey/GetTrainerEvaluations", StringComparison.Ordinal))
+            {
+                return (HttpStatusCode.OK, FastTrainingApiTests.Envelope(new
+                {
+                    planId = FastPlanId,
+                    rating = new { overallRating = 4.5, responseCount = 2 },
+                    planSurveyResponses = new object[]
+                    {
+                        new { evaluationId = "e1", questionId = "q1", questionTextAr = "وضوح الشرح", value = 5, scaleLow = 1, scaleHigh = 5, receivedAt = "2026-12-08T10:00:00" },
+                        new { evaluationId = "e2", questionId = "q1", questionTextAr = "وضوح الشرح", value = (int?)null, scaleLow = 1, scaleHigh = 5, receivedAt = "2026-12-08T10:00:00" },
+                    },
+                }));
             }
             if (url.Contains("Plan/TrainingMaterial", StringComparison.Ordinal))
             {

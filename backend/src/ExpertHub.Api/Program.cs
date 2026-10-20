@@ -66,6 +66,8 @@ builder.Services.AddExpertHubAi();
 builder.Services.AddExpertHubIntegration();
 // J-18/F2/AC-3 — offers expire on their own, not only when answered late.
 builder.Services.AddHostedService<ExpertHub.Api.Assignments.OfferExpiryWorker>();
+// B-11 — FAST plan cancellations and date changes, carried into engagements.
+builder.Services.AddHostedService<ExpertHub.Api.Assignments.FastPlanStatusWorker>();
 // J-12/F1 — the 90/30/5-day agreement expiry alerts (offsets from SLA-0301).
 builder.Services.AddHostedService<ExpertHub.Api.Agreements.AgreementExpiryReminderWorker>();
 builder.Services.AddHealthChecks()

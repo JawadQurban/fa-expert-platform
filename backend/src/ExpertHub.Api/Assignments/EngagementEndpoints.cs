@@ -191,7 +191,8 @@ public static class EngagementEndpoints
         }).WithName("MyEngagements");
 
         me.MapGet("/engagements/{engagementId}", async (
-            string engagementId, HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
+            string engagementId, HttpContext http, ExpertHubDbContext db, FastTrainingApi fast,
+            CancellationToken ct) =>
         {
             var found = await FindOwnEngagementAsync(engagementId, http, db, ct);
             if (found is null)
@@ -200,6 +201,13 @@ public static class EngagementEndpoints
             }
             var (engagement, request, slot) = found.Value;
             var form = FormOf(request);
+            // B-10, B-11, B-12 — read live from FAST when the request is
+            // linked to a FAST plan; each section otherwise names its gap.
+            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+            var trainerName = await db.Users.Where(u => u.UserId == actor.UserId)
+                .Select(u => u.FullNameAr).FirstOrDefaultAsync(ct) ?? string.Empty;
+            var fastSections = await FastExecution.ReadAsync(
+                fast, db, form?.FastPlanId, engagement.TrainerId, trainerName, form?.ProgramName, ct);
             return Results.Ok(new
             {
                 engagementId = engagement.EngagementId.ToString(),
@@ -208,20 +216,18 @@ public static class EngagementEndpoints
                 status = OfferService.Lifecycle(
                     engagement, ParseDate(form?.DateFrom), ParseDate(form?.DateTo), DateTime.UtcNow),
                 confirmedAt = ApplicationEndpoints.Iso(engagement.ConfirmedAt),
-                details = DetailsOf(request),
-                // ⚠️ `Q20` — `plan.PlanTaker` is not supplied, so enrolment
-                // and attendance have no source. Served as EMPTY with the
-                // gap named, never as zeroes that look like real figures.
-                enrolment = new { available = false, reason = "Q20", takers = Array.Empty<object>() },
-                attendance = new { available = false, reason = "Q20", days = Array.Empty<object>() },
+                details = DetailsOf(request, fastSections.MeetingUrl),
+                // B-10 — FAST's enrolled trainees (names only) and attendance;
+                // without a FAST plan, EMPTY with the gap named — never zeroes.
+                enrolment = fastSections.Enrolment,
+                attendance = fastSections.Attendance,
                 // J-21/F1/AC-3 — FAST moving the dates is a fact about the
                 // plan, so it is reported when it happened and null otherwise.
                 scheduleChangedAt = engagement.ScheduleChangedAt is { } changed
                     ? ApplicationEndpoints.Iso(changed)
                     : null,
-                // J-21/F6 — trainee evaluations come straight from MTM (`Q29`),
-                // and no such integration exists: the gap is named, not zeroed.
-                evaluations = new { available = false, reason = "Q29", items = Array.Empty<object>() },
+                // J-21/F6 — trainee evaluations from MTM, through FAST (B-12).
+                evaluations = fastSections.Evaluations,
                 // J-22/F3/AC-6 — an ended engagement shows how it ended.
                 termination = await TerminationOfAsync(db, engagement.EngagementId, ct),
             });
@@ -868,7 +874,7 @@ public static class EngagementEndpoints
     /// `PulledRequestDataDto` — there is no plan read — but the centre's own
     /// entered request, which is the only description that exists today.
     /// </summary>
-    private static object? DetailsOf(AssignmentRequest request)
+    private static object? DetailsOf(AssignmentRequest request, string? meetingUrl = null)
     {
         var form = FormOf(request);
         return form is null ? null : new
@@ -883,9 +889,9 @@ public static class EngagementEndpoints
             deliveryMechanism = form.DeliveryMechanism,
             city = form.City,
             specializationDomain = form.SpecializationDomain,
-            // J-21/F2 — the meeting link is FAST's and there is no feed, so
-            // it is null rather than fabricated.
-            meetingUrl = (string?)null,
+            // J-21/F2 — the meeting link is FAST's (B-11): served only on the
+            // engagement view, from the plan; null otherwise, never fabricated.
+            meetingUrl,
         };
     }
 

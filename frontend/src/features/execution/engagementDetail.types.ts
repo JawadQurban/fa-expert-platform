@@ -53,14 +53,20 @@ export interface EnrolmentDto {
 }
 
 /**
- * F4 — attendance per programme day. ⚠️ The day shape is undefined by the API
- * (open item 1: the FAST attendance field is pending), so nothing reads a day's
- * content yet.
+ * F4 — attendance per programme day, as counts (B-10: FAST records only
+ * present / absent per session; no "excused" state). No trainee is named here.
  */
+export interface AttendanceDayDto {
+  /** `yyyy-MM-dd`. */
+  readonly date: string;
+  readonly present: number;
+  readonly absent: number;
+}
+
 export interface AttendanceDto {
   readonly available: boolean;
   readonly reason: string | null;
-  readonly days: readonly unknown[];
+  readonly days: readonly AttendanceDayDto[];
 }
 
 /* ------------------------------------------------------------------ *
@@ -85,8 +91,10 @@ export interface TraineeEvaluationDto {
 
 export interface EvaluationsDto {
   readonly available: boolean;
-  /** `Q29` — no MTM integration exists. */
+  /** Why not: `not-linked` (no FAST plan), `fast-unavailable`, `no-fast-user`. */
   readonly reason: string | null;
+  /** B-12 — MTM's rating of the trainer on the plan, when FAST has one. */
+  readonly rating?: { readonly overall: number | null; readonly responseCount: number } | null;
   readonly items: readonly TraineeEvaluationDto[];
 }
 

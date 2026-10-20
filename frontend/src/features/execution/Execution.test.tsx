@@ -158,6 +158,54 @@ describe('EH-TP-07c — Engagement Execution Follow-up (J-21)', () => {
     expect(screen.queryByText(content.evaluationsEmpty)).not.toBeInTheDocument();
   });
 
+  it('B-10/B-11/B-12: a FAST-linked engagement shows the trainees, attendance, Teams link and MTM rating', async () => {
+    const mock = createMockExecutionProvider({ latencyMs: 0 });
+    const base = await mock.getEngagement(IN_PROGRESS);
+    if (!base.ok) {
+      throw new Error('seed missing');
+    }
+    setExecutionServiceForTesting({
+      ...mock,
+      getEngagement: () =>
+        Promise.resolve({
+          ok: true as const,
+          value: {
+            ...base.value,
+            details:
+              base.value.details == null
+                ? null
+                : { ...base.value.details, meetingUrl: 'https://teams.example/meet/1' },
+            enrolment: {
+              available: true,
+              reason: null,
+              takers: [{ nameAr: 'سارة', nameEn: 'Sara' }],
+            },
+            attendance: {
+              available: true,
+              reason: null,
+              days: [{ date: '2026-08-18', present: 7, absent: 2 }],
+            },
+            evaluations: {
+              available: true,
+              reason: null,
+              rating: { overall: 4.5, responseCount: 12 },
+              items: [],
+            },
+          },
+        }),
+    });
+    const { container } = await renderDetail(IN_PROGRESS);
+    expect(await screen.findByText('سارة')).toBeInTheDocument();
+    expect(screen.getByText(/حاضر ٧، غائب ٢|حاضر 7، غائب 2/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: content.joinAction })).toHaveAttribute(
+      'href',
+      'https://teams.example/meet/1'
+    );
+    expect(screen.getByText(/تقييم MTM للمدرب في الخطة/)).toBeInTheDocument();
+    expect(screen.queryByText(content.attendanceUnavailable)).not.toBeInTheDocument();
+    await expectNoA11yViolations(container);
+  });
+
   /* ── navigation + a11y ─────────────────────────────────────────────────── */
 
   it('an engagement that is not yours is not found', async () => {

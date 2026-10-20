@@ -56,6 +56,9 @@ export interface ExecutionContent {
   readonly enrolmentUnavailable: string;
   readonly attendanceHeading: string;
   readonly attendanceUnavailable: string;
+  /** B-10 — one programme day's counts. */
+  readonly attendanceDay: (date: string, present: string, absent: string) => string;
+  readonly attendanceEmpty: string;
 
   /** F6 — the MTM evaluations. */
   readonly evaluationsHeading: string;
@@ -66,6 +69,8 @@ export interface ExecutionContent {
   readonly evaluationValue: (value: string, low: string, high: string) => string;
   readonly evaluationReceived: (date: string) => string;
   readonly evaluationProgram: (program: string) => string;
+  /** B-12 — MTM's rating of the trainer on the plan. */
+  readonly evaluationRating: (overall: string, responses: string) => string;
 
   readonly errors: {
     readonly loadTitle: string;
@@ -113,16 +118,21 @@ const ar: ExecutionContent = {
   sourceNote: 'المصدر: جدول المسجّلين في نظام FAST.',
   enrolmentEmpty: 'لا يوجد مسجّلون بعد.',
   enrolmentUnavailable:
-    'بيانات المسجّلين غير متاحة حاليًا؛ لم يُربط جدول المسجّلين في نظام FAST بالمنصة بعد.',
+    'بيانات المسجّلين غير متاحة حاليًا؛ الطلب غير مرتبط بخطة في نظام FAST، أو تعذّر الوصول إليه.',
   attendanceHeading: 'الحضور والغياب',
   attendanceUnavailable:
-    'بيانات الحضور غير متاحة حاليًا؛ لم يُربط مصدرها في نظام FAST بالمنصة بعد.',
+    'بيانات الحضور غير متاحة حاليًا؛ الطلب غير مرتبط بخطة في نظام FAST، أو تعذّر الوصول إليه.',
+  attendanceDay: (date, present, absent) => `${date}: حاضر ${present}، غائب ${absent}`,
+  attendanceEmpty: 'لم يُسجَّل حضور بعد.',
 
   evaluationsHeading: 'تقييمات المتدربين',
   evaluationsNote:
     'تصل هذه التقييمات مباشرة من نظام MTM بقيمها كما وردت، وهي ليست التقييم المحتسب لملفك.',
   evaluationsEmpty: 'لم تصل تقييمات بعد.',
-  evaluationsUnavailable: 'تقييمات المتدربين غير متاحة حاليًا؛ لم يُربط نظام MTM بالمنصة بعد.',
+  evaluationsUnavailable:
+    'تقييمات المتدربين غير متاحة حاليًا؛ الطلب غير مرتبط بخطة في نظام FAST، أو تعذّر الوصول إليه.',
+  evaluationRating: (overall, responses) =>
+    `تقييم MTM للمدرب في الخطة: ${overall} (${responses} استجابة)`,
   evaluationValue: (value, low, high) => `${value} على مقياس من ${low} إلى ${high}`,
   evaluationReceived: (date) => `وردت في ${date}`,
   evaluationProgram: (program) => `البرنامج: ${program}`,
@@ -172,17 +182,21 @@ const en: ExecutionContent = {
   sourceNote: 'Source: the enrollee table in FAST.',
   enrolmentEmpty: 'Nobody has enrolled yet.',
   enrolmentUnavailable:
-    'Enrollee data is not available yet; the FAST enrollee table is not connected to the platform.',
+    'Enrollee data is not available; the request is not linked to a FAST plan, or FAST could not be reached.',
   attendanceHeading: 'Attendance',
   attendanceUnavailable:
-    'Attendance data is not available yet; its FAST source is not connected to the platform.',
+    'Attendance data is not available; the request is not linked to a FAST plan, or FAST could not be reached.',
+  attendanceDay: (date, present, absent) => `${date}: ${present} present, ${absent} absent`,
+  attendanceEmpty: 'No attendance has been recorded yet.',
 
   evaluationsHeading: 'Trainee evaluations',
   evaluationsNote:
     'These arrive directly from MTM with the values as submitted; they are not the calculated rating on your profile.',
   evaluationsEmpty: 'No evaluations have arrived yet.',
   evaluationsUnavailable:
-    'Trainee evaluations are not available yet; MTM is not connected to the platform.',
+    'Trainee evaluations are not available; the request is not linked to a FAST plan, or FAST could not be reached.',
+  evaluationRating: (overall, responses) =>
+    `MTM rating of the trainer on this plan: ${overall} (${responses} responses)`,
   evaluationValue: (value, low, high) => `${value} on a scale of ${low} to ${high}`,
   evaluationReceived: (date) => `Received on ${date}`,
   evaluationProgram: (program) => `Programme: ${program}`,

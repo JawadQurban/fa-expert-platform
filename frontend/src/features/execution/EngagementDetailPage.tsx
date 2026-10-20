@@ -354,10 +354,28 @@ export default function EngagementDetailPage() {
           <Typography as="h3" variant="text-md" weight="bold">
             {content.attendanceHeading}
           </Typography>
-          {!attendance.available && (
+          {!attendance.available ? (
             <Typography as="p" variant="text-sm" color="muted">
               {content.attendanceUnavailable}
             </Typography>
+          ) : attendance.days.length === 0 ? (
+            <Typography as="p" variant="text-sm" color="muted">
+              {content.attendanceEmpty}
+            </Typography>
+          ) : (
+            <ul className={styles.enrollees}>
+              {attendance.days.map((day) => (
+                <li key={day.date} className={styles.enrollee}>
+                  <Typography as="span" variant="text-md">
+                    {content.attendanceDay(
+                      dates.format(new Date(`${day.date}T00:00:00`)),
+                      decimals.format(day.present),
+                      decimals.format(day.absent)
+                    )}
+                  </Typography>
+                </li>
+              ))}
+            </ul>
           )}
         </Card>
 
@@ -370,6 +388,14 @@ export default function EngagementDetailPage() {
           <Typography as="p" variant="text-sm" color="muted">
             {content.evaluationsNote}
           </Typography>
+          {evaluations.available && evaluations.rating?.overall != null && (
+            <Typography as="p" variant="text-md" weight="bold">
+              {content.evaluationRating(
+                decimals.format(evaluations.rating.overall),
+                decimals.format(evaluations.rating.responseCount)
+              )}
+            </Typography>
+          )}
           {!evaluations.available ? (
             <Typography as="p" variant="text-sm" color="muted">
               {content.evaluationsUnavailable}

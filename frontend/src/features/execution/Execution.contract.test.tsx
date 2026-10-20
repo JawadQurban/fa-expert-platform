@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import detail from '../../contracts/fixtures/me.engagement-detail.json';
 import terminated from '../../contracts/fixtures/me.engagement-detail.terminated.json';
+import fastLinked from '../../contracts/fixtures/me.engagement-detail.fast.json';
 import {
   clearExpertHubSession,
   renderExpertHubAt,
@@ -72,6 +73,20 @@ describe('J-21 contract — the engagement detail page against the real API resp
     }
     expect(keyPaths(upcoming.value)).toEqual(keyPaths(detail));
     expect(keyPaths(delinked.value)).toEqual(keyPaths(terminated));
+  });
+
+  it('B-10/B-11/B-12: a FAST-linked engagement renders the served trainees, attendance, link and rating', async () => {
+    await renderDetail(fastLinked);
+    expect(await screen.findByText('سارة')).toBeInTheDocument();
+    expect(screen.getByText('خالد')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: content.joinAction })).toHaveAttribute(
+      'href',
+      fastLinked.details.meetingUrl
+    );
+    expect(screen.getByText(/تقييم MTM للمدرب في الخطة/)).toBeInTheDocument();
+    expect(screen.getByText(/وضوح الشرح/)).toBeInTheDocument();
+    expect(screen.queryByText(content.enrolmentUnavailable)).not.toBeInTheDocument();
+    expect(screen.queryByText(content.attendanceUnavailable)).not.toBeInTheDocument();
   });
 
   it('upcoming: renders the request, its status, and names every missing source', async () => {
