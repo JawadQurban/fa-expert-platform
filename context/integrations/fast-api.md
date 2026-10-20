@@ -19,6 +19,31 @@ conventions around that boundary.
 - `FastReferenceDataSync` + its worker copy FAST reference lists into
   `REFERENCE_VALUE` on a schedule (`Fast:ReferenceSyncIntervalHours`, default 24).
 
+### The Training API (second FAST client)
+
+- `FastTrainingApi` (`backend/src/ExpertHub.Infrastructure/Fast/FastTrainingApi.cs`)
+  wraps a second `FastApiClient` for FAST's **Training API** — the service FAST
+  published for Expert Hub's request (B-03…B-14, B-15's lookups). Testing host
+  `https://testingadminapi.fa.gov.sa/training`; contract saved in
+  `tools/fast-api/training-swagger-v1.json`, register in
+  `docs/integrations/fast-training-api-register.md` (`build-training-register.py`).
+- Configured by `Fast__TrainingBaseUrl` (`EXPERT_HUB_FAST_TRAINING_API_BASE_URL`).
+  **Empty means off.** Authenticated as a service only: its own
+  `ClientCredentialsFastTokenProvider` for `Fast__TrainingScope` (default
+  `ims_training_api`), with the same `Fast__ClientId`/`Fast__ClientSecret`.
+  Readiness reports it as `fast-training`.
+- Every response is typed (`ApiResponse` envelope, payload in `value`); ids are
+  strings because FAST mixes int and GUID keys.
+- What uses it: the request form's programme → plan pick and pull
+  (`FastPlanSelection`, RUN-030); the outbox channel `FastPlanChannel`
+  (assign / unassign trainer, approved material — B-07…B-09); the engagement
+  view's trainees, attendance, Teams link and evaluations (`FastExecution`,
+  B-10…B-12); `FastPlanStatusWorker` (cancellations and date changes, B-11);
+  `FastDeliveredPlansSync` (delivered plans → `TRAINER_RECORD`, B-14); the
+  reference sync's 14 lookups (B-15).
+- A request is linked to FAST by `fastPlanId`/`fastProgramId` in its form
+  values; the trainer by `FAST_PROFILE_REPLICA.fast_user_id` from sign-in.
+
 ## Conventions
 
 - **Every FAST endpoint is scoped to the authenticated caller's own token.** The
@@ -54,6 +79,13 @@ conventions around that boundary.
 - A timeout arrives as `TaskCanceledException`, which **is** an
   `OperationCanceledException` — see the catch-filter rule in
   `code-standards.md`. Every catch here is written against the token.
+- **The Training API is a different host and scope from the portal API.**
+  Countries (`Lookup/GetCountries`), the sign-in profile and qualifications
+  still come from `/fa-api`; the Training API has no country, city, event,
+  exam, speaker or Yaqeen operation.
+- An outbox message for a request with no FAST plan is a successful no-op
+  (`fast_sync_state = not-linked`); a trainer with no FAST id stays queued with
+  that reason.
 - `LastError` on a failed sync holds raw exception text and is readable by
   internal users; keep provider detail out of messages that could carry a
   credential.

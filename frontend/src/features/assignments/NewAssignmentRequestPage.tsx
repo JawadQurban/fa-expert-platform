@@ -765,7 +765,8 @@ export default function NewAssignmentRequestPage() {
 
             <div className={styles.fieldGrid}>
               {/* «مجال التخصص» — the existing 147-value list (Notion's
-                    Sector → Job Family cascade needs the FAST lookup). */}
+                    Sector → Job Family cascade waits on an approved
+                    mapping to FAST's sectors and job families). */}
               <Select
                 label={copy.fields.specializationDomain}
                 options={SPECIALIZATION_DOMAIN_OPTIONS.map((option) => ({

@@ -7,9 +7,9 @@ namespace ExpertHub.Infrastructure.Persistence.Configurations;
 /*
  * CAP-05 — `10` §3.7, migration 10. Recorded deviations: the `EXT_FAST_*`
  * mirrors (PROGRAM, PLAN, SCHEDULE_DAY, PLAN_TAKER, PLAN_TRAINER) are NOT
- * built — there is no FAST plan read yet (INT-05a, and `Q20` for
- * PlanTaker), so the request carries the centre's OWN entered form
- * (`DM-GAP-06`) and `pulled` serves null rather than a fabricated plan.
+ * built. The request carries its form (`DM-GAP-06`); a FAST-linked one holds
+ * `fastPlanId` and FAST's values in it, and trainees, attendance and status
+ * are read from the FAST Training API when needed (`P-357`, `P-359`).
  */
 
 /// <summary>`ASSIGNMENT_REQUEST`.</summary>

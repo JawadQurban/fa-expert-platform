@@ -18,7 +18,8 @@ import type { AssignmentServiceType } from './assignment.types';
  *   «متحدث، مدرب» (2026-09-29). Speaker (J-04) is not built, so all three keep
  *   the trainer routing — the owner's ruling, `P-341`.
  * - Forms 1–5 are "FAST-driven" (plan/event/exam selection auto-fills them).
- *   No FAST read exists, so the centre still enters them by hand.
+ *   Forms 1–2 can now link a FAST plan (RUN-030, `isPlanDriven`); FAST exposes
+ *   no event or exam operation, so forms 3–5 are still entered by hand.
  * - «مجال التخصص» is Notion's Sector → Job Family cascade from FAST; the
  *   existing 147-value list stays until that lookup is available.
  * - A named person bypassing matching (J-16/F5, J-18/F4) is a workflow change.

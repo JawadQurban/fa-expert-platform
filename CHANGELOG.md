@@ -13,6 +13,33 @@ The history before this repository existed is in
 
 ### Added
 
+- **The FAST Training API is connected (INT-05, `P-356`–`P-361`).** FAST published
+  a Training API for Expert Hub (27 operations; contract in
+  `tools/fast-api/training-swagger-v1.json`, register in
+  `docs/integrations/fast-training-api-register.md`). It is off until
+  `EXPERT_HUB_FAST_TRAINING_API_BASE_URL` is set, and uses the FAST service
+  credential with scope `ims_training_api`. With it:
+  - **A general or private programme request can be linked to a FAST plan (RUN-030,
+    BUG-004).** The form lists FAST's approved programmes with an upcoming plan,
+    then the programme's open plans; the plan fills the programme name, days,
+    dates, period, delivery mode, city, language, trainee level and client, and
+    those fields are locked. A closed, final-closed, cancelled or ended plan is
+    refused. The programme's FAST prospectus can stand in for the brochure.
+  - **The trainer is assigned to the FAST plan when they confirm, and removed when
+    the engagement ends** (B-07, B-08); **approved training material is sent to the
+    plan** (B-09).
+  - **The trainer's engagement page shows FAST's enrolled trainees, attendance per
+    day, the Teams link and the MTM evaluations** (B-10, B-11, B-12). FAST moving a
+    plan's dates updates the engagement; FAST cancelling it ends the engagement as
+    cancelled with FAST's reason.
+  - **Programmes a trainer delivered with the Academy come from FAST** (B-14) into
+    their Academy record, which the trainer file and the public directory show.
+  - **FAST's 14 training lookups are synchronized daily** (B-15). Migrations
+    **M49** (the lists) and **M50** (`TRAINER_RECORD.fast_plan_id`).
+  - Still blocked, because the Training API has no operation for them: Yaqeen
+    accounts (B-02), another person's profile (B-13), speaker email and history
+    (B-16, B-17), events and exams, cities, and countries (still read from the
+    portal API).
 - **Staff can set a trainer file's status by hand (RUN-025, `F-0411`, `P-354`).**
   The comprehensive trainer file has a «ضبط حالة الملف» panel for viewers holding
   F-0411: choose a status (or «تلقائية» to follow the agreement again) and give

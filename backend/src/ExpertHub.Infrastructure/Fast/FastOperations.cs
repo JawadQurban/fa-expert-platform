@@ -7,12 +7,12 @@ namespace ExpertHub.Infrastructure.Fast;
  * assembles a URL. Everything here is drawn from the 2026-09-08 reference; an
  * endpoint the reference does not document is not invented here.
  *
- * ⚠️ What is DELIBERATELY absent, because FAST does not expose it:
- *   - `plan.Plan`, `PlanScheduleDay`, `PlanTrainer`, `PlanTaker` — the whole
- *     CAP-05 chain, and `Q20`'s enrolment and attendance.
- *   - `Survey.*` — MTM trainee evaluations (INT-02, `Q23`).
- *   - Writing a trainer's accreditation back to FAST.
- * Those remain asks, not code.
+ * The CAP-05 chain — programmes, plans, trainer assignment, training material,
+ * enrolment and attendance, MTM evaluations, delivered plans — lives in the
+ * separate FAST Training API (`FastTrainingApi`, 2026-10-20), not here.
+ *
+ * ⚠️ Still absent, because FAST exposes it nowhere: writing a trainer's
+ * accreditation back to FAST.
  */
 
 /// <summary>One of FAST's reference values — the shape its lookups share.</summary>

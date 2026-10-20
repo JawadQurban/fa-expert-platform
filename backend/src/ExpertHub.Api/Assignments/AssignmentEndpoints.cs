@@ -530,10 +530,9 @@ public static class AssignmentEndpoints
             return Results.Ok(new RequestDetailWire(
                 summary.RequestId, summary.Reference, summary.ServiceType, summary.ProgramName,
                 summary.RequiredHeadcount, summary.Status, summary.CreatedAt, summary.CreatedByName,
-                // ⚠️ FAST's plan payload. There is no FAST plan read
-                // (INT-05a has no agreed contract — `Q20`/`Q21`), so this is NULL rather than a
-                // fabricated programme — the contract types it nullable for
-                // exactly this reason.
+                // ⚠️ FAST's plan payload is not stored: a FAST-linked request
+                // (RUN-030) keeps what FAST filled in its form values, with
+                // `fastPlanId`, so this stays NULL rather than a second copy.
                 Pulled: null,
                 // UAT `BUG-040` — the whole request, as entered, so the people
                 // deciding on candidates see what the candidates are for.

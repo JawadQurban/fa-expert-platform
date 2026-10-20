@@ -203,3 +203,38 @@ taxonomy until this contract is confirmed and a business mapping is approved.
 | 5 | Schemas for `GetSectors`, `GetAllEducationType`, `GetTopics`, `GetCompetencyLevels` | those dropdowns |
 | 6 | Meaning of `isRestricted` | any behaviour on restricted countries |
 | 7 | City, specialization and university lists: does FAST own any? (none found among the 325 operations) | those dropdowns stay free text |
+
+## 8. Status — FAST's Training API (2026-10-20)
+
+FAST answered with a new service, the **Training API** (testing:
+`https://testingadminapi.fa.gov.sa/training`, OAuth client credentials, scope
+`ims_training_api`). Its 27 operations (14 lookups, 6 plan, 5 programme, 1 survey,
+1 trainer) are saved in `tools/fast-api/training-swagger-v1.json` and listed in
+`docs/integrations/fast-training-api-register.md`. Every response is typed, so the
+"no schema" gaps of §2–§4 are closed for what it covers. The blocked items of the
+FAST contract document (B-01…B-17) against it:
+
+| Item | Training API operation | Status in Expert Hub |
+|---|---|---|
+| B-01 permission | client credentials, scope `ims_training_api` | **Needs Confirmation (FAST):** the Expert Hub client is granted the scope in each environment; the production host |
+| B-02 Yaqeen account creation | — | still blocked: no operation |
+| B-03 programme list | `POST Program/Search` | built — request form programme dropdown (RUN-030, BUG-004, `P-357`) |
+| B-04 programme details | `GET Program/GetProgramDetails`, `Program/{id}/Prospectus/File` | built — name, trainee level, prospectus as brochure (`P-357`, `P-361`) |
+| B-05 plans of a programme | `GET Program/GetPlansByProgramId` | built — open plans only (`P-357`) |
+| B-06 plan details | `GET Program/GetPlanDetails` | built — pulled fields; closed and ended plans refused (`P-357`) |
+| B-07 assign trainer | `POST Plan/AssignTrainer` | built — outbox channel on confirmation (`P-358`) |
+| B-08 remove trainer | `POST Plan/UnassignTrainer` | built — on withdrawal or de-link (`P-358`) |
+| B-09 training material | `POST Plan/TrainingMaterial` | built — the approved material file (`P-358`); status code Needs Confirmation |
+| B-10 trainees and attendance | `GET Plan/GetPlanTakers` | built — engagement view (`P-359`) |
+| B-11 status, schedule, cancellation | `GET Plan/GetPlanStatus` | built — Teams link; worker for date changes and cancellation (`P-359`) |
+| B-12 evaluations | `GET Survey/GetTrainerEvaluations` | built — engagement view (`P-359`); the answers are plan-level |
+| B-13 profile by FAST user id | — | still blocked: no operation |
+| B-14 delivered programmes | `GET Trainer/GetDeliveredPlans` | built — `TRAINER_RECORD` (`P-360`) |
+| B-15 reference lists | `GET Lookup/Get*` (14) | built — synchronized daily (`P-356`); countries still from the portal API; no cities list |
+| B-16 speaker account and email | — | still blocked: no operation (`P-347`) |
+| B-17 speaker history | — | still blocked: no operation (`P-349`) |
+
+Still open beyond the B-items: events and exams for forms 3 and 5 (§4 Q-L3); a
+Saudi cities list (UAT BUG-005); the format of the portal's `countryCode` that the
+bank-country IBAN check reads (RUN-026); foreign and GCC applicants and incomplete
+prefill (BUG-016, BUG-018), which need B-02 or B-13; the meaning of `isRestricted` (§2).

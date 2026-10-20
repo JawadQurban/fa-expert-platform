@@ -5,12 +5,10 @@ namespace ExpertHub.Core.Domain;
 /// </summary>
 /// <remarks>
 /// ⚠️ The FAST plan payload (`PulledRequestDataDto`) is deliberately NOT
-/// stored: there is no FAST plan read (INT-05a has no agreed contract —
-/// `Q20`/`Q21`), so the request
-/// carries what the centre itself entered — the owner's `DM-GAP-06` workbook
-/// (`P-174`/`P-175`) — and `pulled` serves null rather than a fabricated
-/// programme. Matching reads the entered fields, which is where the language,
-/// delivery mode, city and dates actually come from today.
+/// stored as its own record. The request carries its form — the owner's
+/// `DM-GAP-06` workbook (`P-174`/`P-175`) — which, for a FAST-linked request
+/// (RUN-030, `P-357`), holds `fastPlanId` and the values FAST filled.
+/// Matching reads those fields either way.
 /// </remarks>
 public sealed class AssignmentRequest
 {

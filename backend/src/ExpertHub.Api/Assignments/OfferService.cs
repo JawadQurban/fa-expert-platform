@@ -271,9 +271,9 @@ public static partial class OfferService
             ct);
 
         // J-20/F4 — material submission opens on confirmation when the plan
-        // has none. ⚠️ Without a FAST plan read there is no way to know, so
-        // the submission opens `awaiting_upload` and the trainer may upload;
-        // when the plan feed exists this becomes conditional on it.
+        // has none. ⚠️ The submission still opens `awaiting_upload` for every
+        // engagement: the plan's material status is readable now (B-06), but
+        // making the submission conditional on it is Needs Confirmation.
         db.MaterialSubmissions.Add(new MaterialSubmission
         {
             SubmissionId = Guid.NewGuid(),
