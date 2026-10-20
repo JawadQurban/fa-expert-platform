@@ -76,6 +76,9 @@ public static class PersistenceServiceCollectionExtensions
     {
         services.TryAddScoped<DatabaseDocumentStore>();
         services.TryAddSingleton<FileSystemDocumentStore>();
+        // `P-370` — reads whenever a connection string is set; writes only when
+        // `Storage:Provider` is `AzureBlob` (options validated in the API).
+        services.TryAddSingleton<AzureBlobDocumentStore>();
         // Writes go to whichever store is configured; reads try both, so a ref
         // written before a switch still resolves after it.
         services.TryAddScoped<IDocumentStore, DocumentStoreRouter>();

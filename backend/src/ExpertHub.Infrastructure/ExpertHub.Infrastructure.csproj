@@ -5,6 +5,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- P-370 — document storage. Pinned: 12.28+ pulls Microsoft.Extensions.* 10.x
+         through Azure.Core, which is a downgrade error (NU1605) on net9. -->
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.19" />
     <!-- BackgroundService/IHostedService for the outbox publisher - the
          abstractions only; the host itself stays the API's concern. -->

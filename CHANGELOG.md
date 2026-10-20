@@ -46,6 +46,17 @@ The history before this repository existed is in
     accounts (B-02), another person's profile (B-13), speaker email and history
     (B-16, B-17), events and exams, cities, and countries (still read from the
     portal API).
+- **Uploaded documents can be stored in Azure Blob Storage (`P-370`, ADR-0002).**
+  Setting `EXPERT_HUB_STORAGE_PROVIDER=AzureBlob`, with the container name and
+  the connection string (in `env/api.secrets.env` only), sends new uploads to a
+  **private** container. Downloads still go through the API, with the same
+  permission checks, content type, `nosniff` and inline preview. Files uploaded
+  before the switch are still read from the documents volume. The API refuses
+  to start when AzureBlob is selected without a connection string.
+  `/health/ready` reports a `storage` check, which fails if the container is
+  public. A storage outage returns 503. New dependency: `Azure.Storage.Blobs`
+  12.27.0. The default stays `Local`, which changes nothing.
+
 - **Staff can set a trainer file's status by hand (RUN-025, `F-0411`, `P-354`).**
   The comprehensive trainer file has a «ضبط حالة الملف» panel for viewers holding
   F-0411: choose a status (or «تلقائية» to follow the agreement again) and give

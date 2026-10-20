@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace ExpertHub.Infrastructure.Documents;
 
@@ -50,13 +51,7 @@ public sealed class FileSystemDocumentStore : IDocumentStore
         byte[] content, string fileName, string mimeType, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(content);
-        // `yyyy/MM` keeps a directory from growing to a million entries, which
-        // is where filesystems get slow and backups get awkward.
-        var folder = DateTime.UtcNow.ToString("yyyy'/'MM", CultureInfo.InvariantCulture);
-        var extension = SafeExtension(fileName);
-        var relative = string.Create(
-            CultureInfo.InvariantCulture, $"{folder}/{Guid.NewGuid():N}{extension}");
-
+        var relative = NewObjectName(fileName);
         var absolute = Path.Combine(_root, relative.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(absolute)!);
         await File.WriteAllBytesAsync(absolute, content, cancellationToken).ConfigureAwait(false);
@@ -90,6 +85,19 @@ public sealed class FileSystemDocumentStore : IDocumentStore
     }
 
     /// <summary>
+    /// A fresh object name: <c>yyyy/MM/{guid}{.ext}</c>. Shared with the blob
+    /// store, so a name never comes from what the uploader typed.
+    /// </summary>
+    internal static string NewObjectName(string fileName)
+    {
+        // `yyyy/MM` keeps a directory from growing to a million entries, which
+        // is where filesystems get slow and backups get awkward.
+        var folder = DateTime.UtcNow.ToString("yyyy'/'MM", CultureInfo.InvariantCulture);
+        return string.Create(
+            CultureInfo.InvariantCulture, $"{folder}/{Guid.NewGuid():N}{SafeExtension(fileName)}");
+    }
+
+    /// <summary>
     /// The extension, only if it is plainly safe. Anything else stores with
     /// none — the bytes are still served under the recorded display name, and
     /// a filename is not a place to take chances.
@@ -113,21 +121,33 @@ public sealed class FileSystemDocumentStore : IDocumentStore
 /// </summary>
 /// <remarks>
 /// This is what makes changing stores a configuration change rather than a
-/// migration: writes go to the configured store, reads try each store until
-/// one recognises the ref's scheme.
+/// migration: writes go to the configured store (<c>Storage:Provider</c> =
+/// <c>AzureBlob</c>, else the volume when <c>Documents:RootPath</c> is set,
+/// else the database), and reads go by the ref's scheme — <c>blob:</c>,
+/// <c>file:</c>, <c>db:</c>.
 /// </remarks>
 public sealed class DocumentStoreRouter : IDocumentStore
 {
     private readonly FileSystemDocumentStore _files;
     private readonly DatabaseDocumentStore _database;
+    private readonly AzureBlobDocumentStore _blobs;
+    private readonly bool _writeToBlobs;
 
-    public DocumentStoreRouter(FileSystemDocumentStore files, DatabaseDocumentStore database)
+    public DocumentStoreRouter(
+        FileSystemDocumentStore files,
+        DatabaseDocumentStore database,
+        AzureBlobDocumentStore blobs,
+        IOptions<StorageOptions> options)
     {
+        ArgumentNullException.ThrowIfNull(options);
         _files = files;
         _database = database;
+        _blobs = blobs;
+        _writeToBlobs = options.Value.UsesAzureBlob;
     }
 
-    private IDocumentStore Write => _files.IsConfigured ? _files : (IDocumentStore)_database;
+    private IDocumentStore Write =>
+        _writeToBlobs ? _blobs : _files.IsConfigured ? _files : _database;
 
     public string Scheme => Write.Scheme;
 
@@ -135,8 +155,13 @@ public sealed class DocumentStoreRouter : IDocumentStore
         byte[] content, string fileName, string mimeType, CancellationToken cancellationToken) =>
         Write.PutAsync(content, fileName, mimeType, cancellationToken);
 
+    // ponytail: no copy step — a `file:` ref written before the switch to blob
+    // storage is read from the volume for as long as that ref exists, so the
+    // volume stays mounted after the switch. Retiring it needs a one-off copy
+    // that uploads each file and rewrites ATTACHMENT.storage_ref to `blob:`.
     public async Task<DocumentContent?> GetAsync(
         string storageRef, CancellationToken cancellationToken) =>
-        await _files.GetAsync(storageRef, cancellationToken).ConfigureAwait(false)
+        await _blobs.GetAsync(storageRef, cancellationToken).ConfigureAwait(false)
+        ?? await _files.GetAsync(storageRef, cancellationToken).ConfigureAwait(false)
         ?? await _database.GetAsync(storageRef, cancellationToken).ConfigureAwait(false);
 }

@@ -347,6 +347,54 @@ The import-boundary check (`boundary.test.ts`) runs in CI to prevent future coup
 
 ---
 
+## Document storage — Azure Blob (`P-370`)
+
+Uploaded documents are written to the `expert-hub-api-documents` volume by
+default (`Storage__Provider=Local`). To move **new** uploads to Azure Blob
+Storage:
+
+1. In Azure, confirm that the container (`rakeeza-container`) has access level
+   **Private**. Readiness fails if it allows public access. Turning on soft
+   delete or versioning for the storage account is recommended, because blobs
+   are not part of the volume backup.
+2. On the server, in the untracked `deploy/env/api.secrets.env`:
+
+   ```
+   EXPERT_HUB_STORAGE_CONNECTION_STRING=<the storage account connection string>
+   EXPERT_HUB_STORAGE_PROVIDER=AzureBlob
+   EXPERT_HUB_STORAGE_CONTAINER=rakeeza-container
+   ```
+
+   Optional: `EXPERT_HUB_STORAGE_TIMEOUT_SECONDS` (per attempt, default 30) and
+   `EXPERT_HUB_STORAGE_MAX_RETRIES` (default 3).
+3. Redeploy the API. If the provider is `AzureBlob` and the connection string
+   or container is missing (or the string is malformed), the API **refuses to
+   start**, and the log names the missing variable. Then check
+   `/health/ready`: its `storage` check must be `Healthy`.
+4. Upload a file and open it from the screen. The download still comes from
+   `/api/v1/attachments/{id}`. The browser never sees a blob URL.
+
+**Existing files are not moved.** Each attachment's `storage_ref` records
+where its bytes are. Files uploaded before the switch (`file:`) keep being read
+from the volume, so **keep the documents volume mounted** and keep backing it
+up. Only new uploads (`blob:`) go to Azure.
+
+**Switching back** (`EXPERT_HUB_STORAGE_PROVIDER=Local`) sends new uploads to
+the volume again. Blob files stay readable while the connection string is still
+set.
+
+**Key rotation.** Azure has two account keys. Rotate as follows: put the
+connection string for key 2 in `api.secrets.env`, redeploy the API, check
+`/health/ready`, then regenerate key 1 in Azure. The secret appears only in
+that file. It never goes in `appsettings*.json`, compose, a tracked env file, a
+ticket or a log, and a test fails the build if an account key or SAS signature
+appears in a tracked file.
+
+**Outage behaviour.** If Azure cannot be reached, uploads and downloads answer
+`503` (`storage-unavailable`). The rest of the product keeps working.
+
+---
+
 ## Security notes
 
 - Multi-stage build — **no Node, no source, no dev deps** in the final image; only static assets + minimal Nginx.
@@ -355,6 +403,7 @@ The import-boundary check (`boundary.test.ts`) runs in CI to prevent future coup
 - **No source maps** in the production build (`sourcemap: false`).
 - Security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) set by the container Nginx; HSTS/CSP belong on the TLS-terminating external Nginx.
 - The frontend container **never** proxies FAST / MTM / ERP / SQL Server.
+- Uploaded documents in Azure Blob live in a **private** container and are served only through the API (`P-370`). No SAS token or blob URL is ever handed to the browser.
 
 ---
 

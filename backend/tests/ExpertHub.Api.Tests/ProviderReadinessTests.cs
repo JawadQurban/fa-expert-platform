@@ -68,6 +68,8 @@ public sealed class ProviderReadinessTests
             ["e-signature"] = "PENDING_BUSINESS_APPROVAL",
             ["yaqeen"] = "NOT_CONFIGURED",
             ["antivirus"] = "NOT_CONFIGURED",
+            // `P-370` — Local is the default: files on the server volume.
+            ["storage"] = "NOT_CONFIGURED",
         }, providers);
 
         // Statuses only — the connection string, OIDC client and any URL stay out.

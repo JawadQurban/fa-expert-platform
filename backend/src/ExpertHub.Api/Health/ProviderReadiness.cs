@@ -38,13 +38,20 @@ public static class ProviderReadiness
             IMeetingProvider meetings,
             IEmailGateway email,
             IUploadScanner scanner,
+            IOptions<StorageOptions> storage,
             CancellationToken ct) =>
         {
             var databaseStatus = string.IsNullOrWhiteSpace(database.Value.ExpertHub)
                 ? "NOT_CONFIGURED"
-                : (await health.CheckHealthAsync(r => r.Tags.Contains("ready"), ct)).Status == HealthStatus.Healthy
+                : (await health.CheckHealthAsync(r => r.Name == "database", ct)).Status == HealthStatus.Healthy
                     ? "READY"
                     : "DEGRADED";
+            // `P-370` — Local is today's behaviour: files on the server volume.
+            var storageStatus = !storage.Value.UsesAzureBlob
+                ? new ProviderStatusWire("storage", "NOT_CONFIGURED", "server-volume")
+                : (await health.CheckHealthAsync(r => r.Name == "storage", ct)).Status == HealthStatus.Healthy
+                    ? new ProviderStatusWire("storage", "READY", null)
+                    : new ProviderStatusWire("storage", "DEGRADED", "uploads-and-downloads-unavailable");
 
             ProviderStatusWire[] providers =
             [
@@ -81,6 +88,7 @@ public static class ProviderReadiness
                 scanner is UnscannedUploadScanner
                     ? new("antivirus", "NOT_CONFIGURED", "stored-as-not-scanned")
                     : new("antivirus", "READY", null),
+                storageStatus,
             ];
             return Results.Ok(new { providers });
         })

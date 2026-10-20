@@ -148,6 +148,16 @@ services:
       # (owner ruling 2026-09-03). This path MUST be the mounted volume below —
       # written anywhere else, every document is lost on the next deployment.
       Documents__RootPath: ${EXPERT_HUB_DOCUMENTS_ROOT:-/var/expert-hub/documents}
+      # `P-370` — Azure Blob Storage for uploaded documents. `Local` (default)
+      # keeps the volume above. `AzureBlob` writes new uploads to a PRIVATE
+      # container; files already on the volume are still read from it, so the
+      # volume stays mounted. The connection string is a SECRET:
+      # env/api.secrets.env only. AzureBlob without it stops startup.
+      Storage__Provider: ${EXPERT_HUB_STORAGE_PROVIDER:-Local}
+      Storage__AzureBlob__ContainerName: ${EXPERT_HUB_STORAGE_CONTAINER:-}
+      Storage__AzureBlob__ConnectionString: ${EXPERT_HUB_STORAGE_CONNECTION_STRING:-}
+      Storage__AzureBlob__TimeoutSeconds: ${EXPERT_HUB_STORAGE_TIMEOUT_SECONDS:-30}
+      Storage__AzureBlob__MaxRetries: ${EXPERT_HUB_STORAGE_MAX_RETRIES:-3}
       Database__AutoMigrate: ${EXPERT_HUB_DB_AUTO_MIGRATE:-true}
     # Bind to localhost ONLY — the external Nginx proxies /api/ to this port.
     ports:

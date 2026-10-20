@@ -35,8 +35,8 @@ public sealed class ReadinessTests : IClassFixture<WebApplicationFactory<Program
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Unhealthy", body.GetProperty("status").GetString());
-        var check = Assert.Single(body.GetProperty("checks").EnumerateArray());
-        Assert.Equal("database", check.GetProperty("name").GetString());
+        var check = body.GetProperty("checks").EnumerateArray()
+            .Single(c => c.GetProperty("name").GetString() == "database");
         Assert.Contains(
             "No database is configured",
             check.GetProperty("reason").GetString(),

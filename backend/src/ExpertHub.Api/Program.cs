@@ -36,6 +36,8 @@ builder.Services.AddProblemDetails();
 // race submitted a request that is no longer valid, which is not a server
 // fault. The backstop behind the conditional claims, not a substitute for them.
 builder.Services.AddExceptionHandler<ExpertHub.Api.Middleware.UniqueViolationExceptionHandler>();
+// `P-370` — a document storage outage is a 503, never a 500 with details.
+builder.Services.AddExceptionHandler<ExpertHub.Api.Middleware.DocumentStoreUnavailableExceptionHandler>();
 
 // The database (`10_DATABASE_DESIGN`). The connection string arrives from the
 // environment (`ConnectionStrings__ExpertHub`); until it does, the process
@@ -71,7 +73,8 @@ builder.Services.AddHostedService<ExpertHub.Api.Assignments.FastPlanStatusWorker
 // J-12/F1 — the 90/30/5-day agreement expiry alerts (offsets from SLA-0301).
 builder.Services.AddHostedService<ExpertHub.Api.Agreements.AgreementExpiryReminderWorker>();
 builder.Services.AddHealthChecks()
-    .AddCheck<DatabaseReadinessCheck>("database", tags: ["ready"]);
+    .AddCheck<DatabaseReadinessCheck>("database", tags: ["ready"])
+    .AddCheck<StorageReadinessCheck>("storage", tags: ["ready"]);
 
 // INT-01 — cookie session + the OIDC code/PKCE flow, in the API (`P-163`).
 builder.Services.AddExpertHubAuthentication(builder.Configuration);

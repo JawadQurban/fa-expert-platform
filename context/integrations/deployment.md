@@ -42,7 +42,10 @@ Browser → server Nginx → expert-hub-frontend (127.0.0.1:8085) → container 
   (`/home/app/.aspnet/DataProtection-Keys`) — lose them and every session cookie
   is invalid — and the uploaded documents (`Documents__RootPath`, default
   `/var/expert-hub/documents`). Written anywhere else, every uploaded CV is lost
-  with the container. Back the documents up with the database.
+  with the container. Back the documents up with the database. After a switch
+  to Azure Blob (`Storage__Provider=AzureBlob`, `P-370`) the volume is **still
+  needed**, because files uploaded before the switch are read from it. See
+  `storage.md`.
 - ⚠️ **Nginx defaults to a 1 MB body.** Attachment rules allow more, and Kestrel
   and the form reader are both set to 25 MB — so `client_max_body_size` must be
   raised in the server Nginx too, or the upload the product invites is refused.

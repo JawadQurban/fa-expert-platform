@@ -58,6 +58,9 @@ public sealed class ConfigurationSafetyTests
     [InlineData("Access__TrainerFastRoles")]
     [InlineData("Teams__ClientSecret")]
     [InlineData("Teams__OrganizerUpn")]
+    [InlineData("Storage__Provider")]
+    [InlineData("Storage__AzureBlob__ContainerName")]
+    [InlineData("Storage__AzureBlob__ConnectionString")]
     public void Every_setting_a_deployment_must_change_is_reachable_from_compose(string key)
     {
         var compose = Path.Combine(
@@ -96,7 +99,9 @@ public sealed class ConfigurationSafetyTests
             var sensitive =
                 key.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
                 key.Contains("password", StringComparison.OrdinalIgnoreCase) ||
-                key.Contains("apikey", StringComparison.OrdinalIgnoreCase);
+                key.Contains("apikey", StringComparison.OrdinalIgnoreCase) ||
+                // `P-370` — Storage:AzureBlob:ConnectionString carries the account key.
+                key.Contains("connectionstring", StringComparison.OrdinalIgnoreCase);
 
             Assert.False(
                 sensitive,
@@ -107,11 +112,39 @@ public sealed class ConfigurationSafetyTests
                 key.StartsWith("ConnectionStrings:", StringComparison.Ordinal),
                 $"{relativePath} commits a value for {key}. Use ConnectionStrings__ExpertHub.");
 
-            foreach (var marker in new[] { "password=", "pwd=" })
+            foreach (var marker in new[] { "password=", "pwd=", "accountkey=", "sharedaccesssignature=", "sig=" })
             {
                 Assert.DoesNotContain(marker, value, StringComparison.OrdinalIgnoreCase);
             }
         }
+    }
+
+    /// <summary>
+    /// `P-370` — the storage account key never lands in a tracked file: not in
+    /// settings, compose, the env templates, the docs or the code. An Azure
+    /// account key is 88 characters of base64; a placeholder is not.
+    /// </summary>
+    [Fact]
+    public void No_tracked_file_carries_an_azure_storage_account_key()
+    {
+        var repository = Path.GetFullPath(Path.Combine(RepositoryRoot(), ".."));
+        var key = new System.Text.RegularExpressions.Regex(
+            @"AccountKey=[A-Za-z0-9+/]{40,}={0,2}|[?&]sig=[A-Za-z0-9%+/=]{20,}");
+        string[] extensions = [".json", ".env", ".example", ".yml", ".yaml", ".md", ".cs", ".sh", ".conf"];
+        var leaks = new[] { "backend/src", "backend/tests", "deploy", "docs", "context" }
+            .Select(folder => Path.Combine(repository, folder))
+            .Where(Directory.Exists)
+            .SelectMany(folder => Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+            .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)
+                && !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(file => key.IsMatch(File.ReadAllText(file)))
+            .Select(file => Path.GetRelativePath(repository, file))
+            .ToList();
+
+        Assert.True(leaks.Count == 0,
+            "An Azure Storage key or SAS signature is committed in: " + string.Join(", ", leaks)
+            + ". It belongs in env/api.secrets.env on the server only.");
     }
 
     /// <summary>Every string leaf in the document, with its dotted path.</summary>

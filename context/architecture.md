@@ -65,7 +65,8 @@ tools/data/                  reference-data generators reading docs/inputs/
   is configured.
 - **External systems** — one file each in `context/integrations/`: INT-01
   identity, INT-02 MTM, INT-03 ERP, INT-04 email, INT-05 FAST, INT-06 AI, plus
-  Teams meetings and the database.
+  Teams meetings, the database, and document storage (`storage.md`: the
+  volume by default, or a private Azure Blob container).
 
 ## Data & domain model
 
@@ -100,7 +101,9 @@ Browser → server Nginx → Expert Hub containers (frontend 8085, API 8086, bot
   per-environment values in `deploy/env/*.env`, with secrets in the
   uncommitted `env/api.secrets.env`.
 - Volumes that must survive a redeploy: the data-protection keys and the uploaded
-  documents. Both are named volumes, not binds into the image.
+  documents. Both are named volumes, not binds into the image. The documents
+  volume stays even with `Storage__Provider=AzureBlob`, because files uploaded
+  before the switch are read from it (`P-370`).
 - Scripts: `deploy/scripts/{build,deploy,rollback,verify}-expert-hub.sh`.
   They touch the Expert Hub containers only — never a repo-wide
   `docker compose down`.
