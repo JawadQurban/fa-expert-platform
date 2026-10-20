@@ -164,6 +164,154 @@ public sealed partial class Cap05Tests
         Assert.True(fields.DaysCountOther);
     }
 
+    /* ── B-07 / B-08 / B-09 — the outbox delivers to FAST ──────────────────── */
+
+    [Fact]
+    public async Task A_confirmed_engagement_puts_the_trainer_on_the_FAST_plan_with_its_material_and_ending_it_takes_them_off()
+    {
+        var fast = UseFakeFast();
+        using var staff = await SignInAsync("cap05-b07-staff", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync("cap05-b07-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var body = GeneralProgramRequest();
+        body["fastPlanId"] = FastPlanId;
+        var requestId = (await PostAsync(centre, "/api/v1/internal/assignment-requests/", body))
+            .GetProperty("requestId").GetString()!;
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+        var trainerFastUserId = await LinkFastUserAsync(eligible[0]);
+        var offerId = await CurrentOfferIdAsync(staff, requestId);
+        var trainer = trainers.Clients[eligible[0]];
+        var engagementId = (await PostAsync(trainer,
+                $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "accept" }))
+            .EnumerateArray().Single().GetProperty("engagementId").GetString()!;
+
+        // J-20 — the trainer's material, approved by staff.
+        var submissionId = (await GetAsync(trainer, "/api/v1/me/submissions"))
+            .EnumerateArray().Single().GetProperty("submissionId").GetString()!;
+        Assert.Equal(HttpStatusCode.OK, (await UploadMaterialAsync(
+            trainer, $"/api/v1/me/submissions/{submissionId}/upload", "deck.pdf", "%PDF-1.4 deck"u8.ToArray())).StatusCode);
+        await PostAsync(staff, $"/api/v1/internal/submissions/{submissionId}/decision", new { decision = "approved" });
+
+        Assert.Equal(2, await PublishFastAsync());
+
+        // B-07 — as a freelance trainer, on the plan the request was linked to.
+        var assign = JsonSerializer.Deserialize<JsonElement>(
+            fast.Seen.Single(c => c.Url.EndsWith("/api/v1/Plan/AssignTrainer", StringComparison.Ordinal)).Body);
+        Assert.Equal(FastPlanId, assign.GetProperty("planId").GetString());
+        Assert.Equal(trainerFastUserId.ToString(), assign.GetProperty("trainerFastUserId").GetString());
+        Assert.True(assign.GetProperty("isFreelance").GetBoolean());
+        // B-09 — the approved file itself, as multipart.
+        var material = fast.Seen.Single(c => c.Url.EndsWith("/api/v1/Plan/TrainingMaterial", StringComparison.Ordinal)).Body;
+        Assert.Contains(FastPlanId, material, StringComparison.Ordinal);
+        Assert.Contains("filename=deck.pdf", material, StringComparison.Ordinal);
+        Assert.Contains("%PDF-1.4 deck", material, StringComparison.Ordinal);
+        await using (var db = _database.CreateContext())
+        {
+            Assert.Equal("synchronized", (await db.AssignmentSlots.SingleAsync()).FastSyncState);
+            Assert.Equal("synchronized", (await db.MaterialSubmissions.SingleAsync()).FastSyncState);
+            Assert.All(await db.OutboxMessages.Where(m => m.SystemCode == IntegrationSystems.Fast).ToListAsync(),
+                m => Assert.Equal(OutboxStatuses.Published, m.Status));
+        }
+
+        // B-08 — the Academy ends the engagement; FAST is told to take them off.
+        await PostAsync(staff, $"/api/v1/internal/engagements/{engagementId}/delink",
+            new { reason = "operational-need-change" });
+        Assert.Equal(1, await PublishFastAsync());
+        var unassign = JsonSerializer.Deserialize<JsonElement>(
+            fast.Seen.Single(c => c.Url.EndsWith("/api/v1/Plan/UnassignTrainer", StringComparison.Ordinal)).Body);
+        Assert.Equal(FastPlanId, unassign.GetProperty("planId").GetString());
+        Assert.Equal(trainerFastUserId.ToString(), unassign.GetProperty("trainerFastUserId").GetString());
+        Assert.Equal("operational-need-change", unassign.GetProperty("reasonText").GetString());
+    }
+
+    [Fact]
+    public async Task An_engagement_on_a_request_without_a_FAST_plan_tells_FAST_nothing()
+    {
+        var fast = UseFakeFast();
+        using var staff = await SignInAsync("cap05-b07-manual-staff", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync("cap05-b07-manual-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var requestId = await CreateRequestAsync(centre);
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+        var offerId = await CurrentOfferIdAsync(staff, requestId);
+        await PostAsync(trainers.Clients[eligible[0]],
+            $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "accept" });
+
+        Assert.Equal(1, await PublishFastAsync());
+
+        Assert.DoesNotContain(fast.Seen, c => c.Url.Contains("/Plan/", StringComparison.Ordinal));
+        await using var db = _database.CreateContext();
+        Assert.Equal("not-linked", (await db.AssignmentSlots.SingleAsync()).FastSyncState);
+    }
+
+    [Fact]
+    public async Task FASTs_refusal_or_a_trainer_without_a_FAST_id_keeps_the_assignment_queued_with_the_reason()
+    {
+        var fast = UseFakeFast();
+        using var staff = await SignInAsync("cap05-b07-refused-staff", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync("cap05-b07-refused-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var body = GeneralProgramRequest();
+        body["fastPlanId"] = FastPlanId;
+        var requestId = (await PostAsync(centre, "/api/v1/internal/assignment-requests/", body))
+            .GetProperty("requestId").GetString()!;
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+        var offerId = await CurrentOfferIdAsync(staff, requestId);
+        await PostAsync(trainers.Clients[eligible[0]],
+            $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "accept" });
+
+        // No FAST user id: nothing is sent, and the reason says why.
+        Assert.Equal(0, await PublishFastAsync());
+        Assert.DoesNotContain(fast.Seen, c => c.Url.Contains("AssignTrainer", StringComparison.Ordinal));
+        await using (var db = _database.CreateContext())
+        {
+            var message = await db.OutboxMessages.SingleAsync(m => m.EntityType == "ENGAGEMENT");
+            Assert.Equal(OutboxStatuses.Pending, message.Status);
+            Assert.Contains("no FAST user id", message.LastError, StringComparison.Ordinal);
+        }
+
+        // FAST refuses (the plan closed meanwhile): still queued, FAST's reason kept.
+        await LinkFastUserAsync(eligible[0]);
+        fast.WriteStatus = HttpStatusCode.BadRequest;
+        Assert.Equal(0, await PublishFastAsync(minutesAhead: 120));
+        await using (var db = _database.CreateContext())
+        {
+            var message = await db.OutboxMessages.SingleAsync(m => m.EntityType == "ENGAGEMENT");
+            Assert.Equal(OutboxStatuses.Pending, message.Status);
+            Assert.Equal("The plan is closed.", message.LastError);
+            Assert.Equal("processing", (await db.AssignmentSlots.SingleAsync()).FastSyncState);
+        }
+    }
+
+    /// <summary>The trainer's FAST user id, as their sign-in would have stored it.</summary>
+    private async Task<Guid> LinkFastUserAsync(string trainerId)
+    {
+        await using var db = _database.CreateContext();
+        var userId = await db.TrainerProfiles
+            .Where(p => p.TrainerId == Guid.Parse(trainerId))
+            .Select(p => p.UserId)
+            .SingleAsync();
+        var fastUserId = Guid.NewGuid();
+        db.FastProfiles.Add(new FastProfileReplica
+        {
+            UserId = userId,
+            FastUserId = fastUserId.ToString(),
+            LastSyncedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+        return fastUserId;
+    }
+
+    /// <summary>One outbox pass, driven by hand; returns how many were published.</summary>
+    private async Task<int> PublishFastAsync(int minutesAhead = 1)
+    {
+        using var scope = _configured!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExpertHub.Infrastructure.Persistence.ExpertHubDbContext>();
+        var channel = scope.ServiceProvider.GetRequiredService<ExpertHub.Infrastructure.Integration.IIntegrationChannel>();
+        return await ExpertHub.Infrastructure.Integration.OutboxPublisher.PublishDueAsync(
+            db, channel, DateTime.UtcNow.AddMinutes(minutesAhead), CancellationToken.None);
+    }
+
     /* ── the fake Training API ─────────────────────────────────────────────── */
 
     /// <summary>Swaps the Training API for one over <see cref="FakeTrainingFast"/>.

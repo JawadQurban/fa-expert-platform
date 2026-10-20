@@ -65,7 +65,8 @@ export type SubmissionStatus = (typeof SUBMISSION_STATUS)[keyof typeof SUBMISSIO
  * F3 — the FAST write for approved **training material only**. No `failed`: a
  * stalled sync stays `processing` and never un-approves the material.
  */
-export type SubmissionSyncState = 'none' | 'processing' | 'synchronized';
+/** `not-linked` — the request has no FAST plan, so there is nothing to send (B-09). */
+export type SubmissionSyncState = 'none' | 'processing' | 'synchronized' | 'not-linked';
 
 /** What a decided round records — the status values, not the input values. */
 export type SubmissionRoundDecision =

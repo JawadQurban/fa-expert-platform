@@ -243,6 +243,7 @@ const ar: EngagementsContent = {
       none: 'لم تبدأ',
       processing: 'قيد المزامنة',
       synchronized: 'تمت المزامنة',
+      'not-linked': 'غير مرتبط بخطة في فاست',
     },
     exhaustedTitle: 'استُنفد المرشحون على هذا المقعد',
     exhaustedBody: 'رفض جميع المرشحين المعتمدين أو انتهت مدة ردّهم، ويُفعَّل مسار إعادة التوجيه.',
@@ -371,6 +372,7 @@ const en: EngagementsContent = {
       none: 'Not started',
       processing: 'Syncing',
       synchronized: 'Synced',
+      'not-linked': 'No FAST plan',
     },
     exhaustedTitle: 'Candidates exhausted on this slot',
     exhaustedBody:

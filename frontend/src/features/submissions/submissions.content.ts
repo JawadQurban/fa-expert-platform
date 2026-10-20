@@ -183,6 +183,7 @@ const ar: SubmissionsContent = {
       none: 'لم تبدأ',
       processing: 'قيد المزامنة',
       synchronized: 'تمت المزامنة',
+      'not-linked': 'غير مرتبط بخطة في فاست',
     },
     syncDirectionNote: 'تُدار حالة المادة داخل المنصة، والمزامنة باتجاه واحد: من المنصة إلى FAST.',
   },
@@ -284,6 +285,7 @@ const en: SubmissionsContent = {
       none: 'Not started',
       processing: 'Syncing',
       synchronized: 'Synced',
+      'not-linked': 'No FAST plan',
     },
     syncDirectionNote:
       'Material status is managed inside the platform, and sync flows one way only: platform → FAST.',

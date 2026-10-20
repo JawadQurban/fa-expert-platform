@@ -186,6 +186,9 @@ public static class PersistenceServiceCollectionExtensions
                 new FastApiClient(NewHttpClient(TimeSpan.FromSeconds(30)), tokens, configuration, "Fast:TrainingBaseUrl"),
                 tokens);
         });
+        // INT-05's outbox channel (B-07, B-08, B-09) — configured exactly when
+        // the Training API is.
+        services.AddSingleton<ISystemChannel, FastPlanChannel>();
         services.AddScoped<FastReferenceReader>();
         services.AddScoped<FastUserReader>();
         services.AddScoped<FastQualificationsReader>();

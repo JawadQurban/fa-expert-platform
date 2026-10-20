@@ -136,7 +136,8 @@ export interface SlotBackupDto {
  * ⚠️ No `failed` state, matching the trainer-facing precedent (`§0.9`): a
  * stalled sync stays `processing` and never reverts a confirmed engagement.
  */
-export type SlotSyncState = 'none' | 'processing' | 'synchronized';
+/** `not-linked` — the request has no FAST plan, so there is nothing to sync (B-07). */
+export type SlotSyncState = 'none' | 'processing' | 'synchronized' | 'not-linked';
 
 export interface AssignmentSlotDto {
   readonly slotNumber: number;

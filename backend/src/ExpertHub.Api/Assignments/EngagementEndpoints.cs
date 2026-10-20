@@ -3,6 +3,7 @@ using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Applications;
+using ExpertHub.Infrastructure.Fast;
 using ExpertHub.Infrastructure.Integration;
 using ExpertHub.Infrastructure.Notifications;
 using ExpertHub.Infrastructure.Persistence;
@@ -232,6 +233,7 @@ public static class EngagementEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             NotificationDispatcher dispatcher,
+            IntegrationHub hub,
             CancellationToken ct) =>
         {
             var found = await FindOwnEngagementAsync(engagementId, http, db, ct);
@@ -242,7 +244,7 @@ public static class EngagementEndpoints
             var (engagement, _, slot) = found.Value;
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
             return await TerminateAsync(
-                db, dispatcher, engagement, slot,
+                db, dispatcher, hub, engagement, slot,
                 actorKind: "trainer", allowed: TerminationReasons.Trainer,
                 // `D-10` (BR-0511) — a trainer may withdraw until 4 days before.
                 noticeBeforeStart: TimeSpan.FromDays(4),
@@ -396,6 +398,7 @@ public static class EngagementEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             NotificationDispatcher dispatcher,
+            IntegrationHub hub,
             CancellationToken ct) =>
         {
             if (!Guid.TryParse(engagementId, out var id))
@@ -410,7 +413,7 @@ public static class EngagementEndpoints
             var slot = await db.AssignmentSlots.SingleAsync(s => s.SlotId == engagement.SlotId, ct);
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
             return await TerminateAsync(
-                db, dispatcher, engagement, slot,
+                db, dispatcher, hub, engagement, slot,
                 actorKind: "staff", allowed: TerminationReasons.Staff,
                 // `D-10` (BR-0512) — staff may end it until 24 hours before.
                 noticeBeforeStart: TimeSpan.FromHours(24),
@@ -567,6 +570,7 @@ public static class EngagementEndpoints
     private static async Task<IResult> TerminateAsync(
         ExpertHubDbContext db,
         NotificationDispatcher dispatcher,
+        IntegrationHub hub,
         Engagement engagement,
         AssignmentSlot slot,
         string actorKind,
@@ -627,6 +631,24 @@ public static class EngagementEndpoints
 
         slot.ConfirmedEngagementId = null;
         slot.FastSyncState = "none";
+        // B-08 — the trainer comes off the FAST plan they were put on (B-07),
+        // in the same transaction as the termination. FAST's removal is
+        // idempotent, so a request with no FAST plan, or a trainer never
+        // assigned, is simply nothing to remove (`FastPlanChannel`).
+        await hub.EnqueueOutboundAsync(
+            IntegrationSystems.Fast,
+            "engagement",
+            "ENGAGEMENT",
+            engagement.EngagementId,
+            entityVersion: 2,
+            operation: FastPlanChannel.Unassign,
+            JsonSerializer.Serialize(new
+            {
+                engagementId = engagement.EngagementId,
+                trainerId = engagement.TrainerId,
+                reason = input.Reason,
+            }, AssignmentEndpoints.WireJson),
+            ct);
         if (actorKind == "staff")
         {
             // UAT `BUG-049` — an Academy de-link offers the slot to NOBODY: the

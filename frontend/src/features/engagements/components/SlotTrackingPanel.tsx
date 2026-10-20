@@ -48,6 +48,7 @@ const SYNC_VARIANT: Readonly<Record<SlotSyncState, 'neutral' | 'warning' | 'succ
   none: 'neutral',
   processing: 'warning',
   synchronized: 'success',
+  'not-linked': 'neutral',
 };
 
 export function SlotTrackingPanel({ requestId }: { readonly requestId: string }) {
