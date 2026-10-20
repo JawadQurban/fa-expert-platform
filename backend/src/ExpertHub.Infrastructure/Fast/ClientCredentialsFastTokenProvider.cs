@@ -51,7 +51,8 @@ public sealed partial class ClientCredentialsFastTokenProvider : IFastTokenProvi
         HttpClient http,
         IConfiguration configuration,
         ILogger<ClientCredentialsFastTokenProvider> logger,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        string scopeKey = "Fast:Scope")
     {
         ArgumentNullException.ThrowIfNull(configuration);
         _http = http;
@@ -59,7 +60,10 @@ public sealed partial class ClientCredentialsFastTokenProvider : IFastTokenProvi
         _clock = clock ?? TimeProvider.System;
         _clientId = configuration["Fast:ClientId"] ?? string.Empty;
         _clientSecret = configuration["Fast:ClientSecret"] ?? string.Empty;
-        _scope = configuration["Fast:Scope"] ?? string.Empty;
+        // The Training API asks for its own scope (`ims_training_api`), so it
+        // gets its own instance — and its own cached token — read from
+        // `Fast:TrainingScope`. The client credential is the same one.
+        _scope = configuration[scopeKey] ?? string.Empty;
         _tokenEndpoint = NullIfEmpty(configuration["Fast:TokenEndpoint"]);
         _authority = (NullIfEmpty(configuration["Fast:Authority"])
             ?? configuration["Oidc:Authority"] ?? string.Empty).TrimEnd('/');

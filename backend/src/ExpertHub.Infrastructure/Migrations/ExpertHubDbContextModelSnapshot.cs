@@ -14096,6 +14096,104 @@ namespace ExpertHub.Infrastructure.Migrations
                             IsEditable = false,
                             NameAr = "الدول والجنسيات (FAST)",
                             NameEn = "Countries and nationalities (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-sector",
+                            IsEditable = false,
+                            NameAr = "القطاعات والقطاعات الفرعية (FAST)",
+                            NameEn = "Sectors and sub-sectors (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-job-family",
+                            IsEditable = false,
+                            NameAr = "العائلات الوظيفية (FAST)",
+                            NameEn = "Job families (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-topic",
+                            IsEditable = false,
+                            NameAr = "موضوعات البرامج (FAST)",
+                            NameEn = "Programme topics (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-trainee-level",
+                            IsEditable = false,
+                            NameAr = "مستويات المتدربين (FAST)",
+                            NameEn = "Trainee levels (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-cancellation-reason",
+                            IsEditable = false,
+                            NameAr = "أسباب إلغاء الخطط (FAST)",
+                            NameEn = "Plan cancellation reasons (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-plan-status",
+                            IsEditable = false,
+                            NameAr = "حالات الخطط (FAST)",
+                            NameEn = "Plan statuses (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-delivery-mode",
+                            IsEditable = false,
+                            NameAr = "آليات التنفيذ (FAST)",
+                            NameEn = "Delivery modes (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-venue-scope",
+                            IsEditable = false,
+                            NameAr = "نطاقات مكان التنفيذ (FAST)",
+                            NameEn = "Venue scopes (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-training-material-status",
+                            IsEditable = false,
+                            NameAr = "حالات المادة التدريبية (FAST)",
+                            NameEn = "Training material statuses (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-language",
+                            IsEditable = false,
+                            NameAr = "لغات التدريب (FAST)",
+                            NameEn = "Training languages (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-program-type",
+                            IsEditable = false,
+                            NameAr = "أنواع البرامج (FAST)",
+                            NameEn = "Programme types (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-food-service-period",
+                            IsEditable = false,
+                            NameAr = "فترات الضيافة (FAST)",
+                            NameEn = "Food service periods (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-program-skill-type",
+                            IsEditable = false,
+                            NameAr = "أنواع مهارات البرامج (FAST)",
+                            NameEn = "Programme skill types (FAST)"
+                        },
+                        new
+                        {
+                            ListCode = "fast-target-gender",
+                            IsEditable = false,
+                            NameAr = "الفئات المستهدفة حسب الجنس (FAST)",
+                            NameEn = "Target genders (FAST)"
                         });
                 });
 

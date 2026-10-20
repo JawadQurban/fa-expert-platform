@@ -220,7 +220,10 @@ public sealed class FastReferenceDataTests
 
         var statusRaw = await staff.GetStringAsync("/api/v1/internal/integration/reference-data");
         using var status = JsonDocument.Parse(statusRaw);
-        var countries = status.RootElement.GetProperty("lists").EnumerateArray().Single();
+        // Every registered FAST list is reported, countries among them (B-15).
+        Assert.Equal(FastReferenceLists.All.Count, status.RootElement.GetProperty("lists").GetArrayLength());
+        var countries = status.RootElement.GetProperty("lists").EnumerateArray()
+            .Single(l => l.GetProperty("listCode").GetString() == FastReferenceLists.Countries);
         Assert.Equal(1, countries.GetProperty("activeCount").GetInt32());
         Assert.Equal(1, countries.GetProperty("inactiveCount").GetInt32());
 

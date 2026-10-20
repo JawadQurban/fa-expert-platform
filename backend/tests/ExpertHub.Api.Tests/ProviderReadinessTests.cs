@@ -62,6 +62,7 @@ public sealed class ProviderReadinessTests
             ["database"] = "READY",
             ["sso"] = "READY",
             ["fast"] = "NOT_CONFIGURED",
+            ["fast-training"] = "NOT_CONFIGURED",
             ["teams"] = "NOT_CONFIGURED",
             ["email"] = "NOT_CONFIGURED",
             ["e-signature"] = "PENDING_BUSINESS_APPROVAL",

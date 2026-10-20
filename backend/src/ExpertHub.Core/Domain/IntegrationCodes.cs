@@ -39,7 +39,43 @@ public static class FastReferenceLists
     /// <summary>`Lookup/GetCountries` — countries and nationalities, both languages in one call.</summary>
     public const string Countries = "fast-country";
 
-    public static readonly IReadOnlyList<string> All = [Countries];
+    /* B-15 — the FAST Training API's lookups (`LookupItemDto`, documented). */
+    public const string Sectors = "fast-sector";
+    public const string JobFamilies = "fast-job-family";
+    public const string Topics = "fast-topic";
+    public const string TraineeLevels = "fast-trainee-level";
+    public const string CancellationReasons = "fast-cancellation-reason";
+    public const string PlanStatuses = "fast-plan-status";
+    public const string DeliveryModes = "fast-delivery-mode";
+    public const string VenueScopes = "fast-venue-scope";
+    public const string TrainingMaterialStatuses = "fast-training-material-status";
+    public const string Languages = "fast-language";
+    public const string ProgramTypes = "fast-program-type";
+    public const string FoodServicePeriods = "fast-food-service-period";
+    public const string ProgramSkillTypes = "fast-program-skill-type";
+    public const string TargetGenders = "fast-target-gender";
+
+    /// <summary>The Training API lists, with their `REFERENCE_LIST` names (M49).</summary>
+    public static readonly IReadOnlyList<(string Code, string NameAr, string NameEn)> TrainingLists =
+    [
+        (Sectors, "القطاعات والقطاعات الفرعية (FAST)", "Sectors and sub-sectors (FAST)"),
+        (JobFamilies, "العائلات الوظيفية (FAST)", "Job families (FAST)"),
+        (Topics, "موضوعات البرامج (FAST)", "Programme topics (FAST)"),
+        (TraineeLevels, "مستويات المتدربين (FAST)", "Trainee levels (FAST)"),
+        (CancellationReasons, "أسباب إلغاء الخطط (FAST)", "Plan cancellation reasons (FAST)"),
+        (PlanStatuses, "حالات الخطط (FAST)", "Plan statuses (FAST)"),
+        (DeliveryModes, "آليات التنفيذ (FAST)", "Delivery modes (FAST)"),
+        (VenueScopes, "نطاقات مكان التنفيذ (FAST)", "Venue scopes (FAST)"),
+        (TrainingMaterialStatuses, "حالات المادة التدريبية (FAST)", "Training material statuses (FAST)"),
+        (Languages, "لغات التدريب (FAST)", "Training languages (FAST)"),
+        (ProgramTypes, "أنواع البرامج (FAST)", "Programme types (FAST)"),
+        (FoodServicePeriods, "فترات الضيافة (FAST)", "Food service periods (FAST)"),
+        (ProgramSkillTypes, "أنواع مهارات البرامج (FAST)", "Programme skill types (FAST)"),
+        (TargetGenders, "الفئات المستهدفة حسب الجنس (FAST)", "Target genders (FAST)"),
+    ];
+
+    public static readonly IReadOnlyList<string> All =
+        [Countries, .. TrainingLists.Select(list => list.Code)];
 }
 
 /// <summary>Who masters a data element (`BR-1201`, `08` §1.1.1).</summary>

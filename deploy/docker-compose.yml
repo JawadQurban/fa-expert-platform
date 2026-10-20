@@ -121,6 +121,11 @@ services:
       Fast__Scope: ${EXPERT_HUB_FAST_SCOPE:-}
       Fast__Authority: ${EXPERT_HUB_FAST_AUTHORITY:-}
       Fast__TokenEndpoint: ${EXPERT_HUB_FAST_TOKEN_ENDPOINT:-}
+      # The FAST Training API (programmes, plans, trainer assignment, material,
+      # attendance, evaluations, delivered plans, its lookups). Empty = off.
+      # Same client credential, its own scope.
+      Fast__TrainingBaseUrl: ${EXPERT_HUB_FAST_TRAINING_API_BASE_URL:-}
+      Fast__TrainingScope: ${EXPERT_HUB_FAST_TRAINING_SCOPE:-ims_training_api}
       # INT-06 — the AI provider for every AI use case (screening insight, the
       # trainer bio draft). `anthropic` or `openai`; switching is these values
       # and a restart. The key is a secret: env/api.secrets.env only. Empty key

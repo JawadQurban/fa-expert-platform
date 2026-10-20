@@ -34,6 +34,7 @@ public static class ProviderReadiness
             IOptions<OidcOptions> oidc,
             FastApiClient fast,
             IFastTokenProvider fastTokens,
+            FastTrainingApi fastTraining,
             IMeetingProvider meetings,
             IEmailGateway email,
             IUploadScanner scanner,
@@ -59,6 +60,13 @@ public static class ProviderReadiness
                     : fastTokens is NoFastToken
                         ? new("fast", "DEGRADED", "WAITING_FOR_FAST_SERVICE_CREDENTIAL")
                         : new("fast", "READY", null),
+                // The FAST Training API — programmes, plans, trainer
+                // assignment (B-03…B-15). Same rule, its own token.
+                !fastTraining.IsConfigured
+                    ? new("fast-training", "NOT_CONFIGURED", "manual-request-entry")
+                    : fastTraining.Tokens is NoFastToken
+                        ? new("fast-training", "DEGRADED", "WAITING_FOR_FAST_SERVICE_CREDENTIAL")
+                        : new("fast-training", "READY", null),
                 meetings.IsConfigured
                     ? new("teams", "READY", null)
                     : new("teams", "NOT_CONFIGURED", "internal-scheduling-meeting-link-pending"),

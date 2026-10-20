@@ -53,16 +53,78 @@ public sealed partial class FastReferenceDataSync
     private readonly FastApiClient _client;
     private readonly IFastTokenProvider _tokens;
     private readonly ILogger<FastReferenceDataSync> _logger;
+    private readonly FastTrainingApi? _training;
 
     public FastReferenceDataSync(
-        FastApiClient client, IFastTokenProvider tokens, ILogger<FastReferenceDataSync> logger)
+        FastApiClient client,
+        IFastTokenProvider tokens,
+        ILogger<FastReferenceDataSync> logger,
+        FastTrainingApi? training = null)
     {
         _client = client;
         _tokens = tokens;
         _logger = logger;
+        _training = training;
     }
 
-    public bool IsConfigured => _client.IsConfigured;
+    /// <summary>True when either FAST API is configured.</summary>
+    public bool IsConfigured => _client.IsConfigured || _training?.IsConfigured == true;
+
+    /// <summary>One value as it will be stored.</summary>
+    private sealed record Row(string Code, string LabelAr, string LabelEn, string? Attributes, bool IsActive);
+
+    /// <summary>Every list this instance can synchronize, countries first.</summary>
+    public async Task<IReadOnlyList<FastReferenceSyncResult>> SyncAllAsync(
+        ExpertHubDbContext db, DateTime nowUtc, CancellationToken ct)
+    {
+        var results = new List<FastReferenceSyncResult>
+        {
+            await SyncCountriesAsync(db, nowUtc, ct).ConfigureAwait(false),
+        };
+        foreach (var (code, _, _) in FastReferenceLists.TrainingLists)
+        {
+            results.Add(await SyncTrainingListAsync(db, code, nowUtc, ct).ConfigureAwait(false));
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// B-15 — one FAST Training API lookup (`LookupItemDto`) into its list.
+    /// FAST's own <c>isActive</c> is kept (a retired value stays readable on
+    /// old records); its <c>code</c> and <c>parentId</c> ride in the attributes,
+    /// so a sub-sector still knows its sector.
+    /// </summary>
+    public async Task<FastReferenceSyncResult> SyncTrainingListAsync(
+        ExpertHubDbContext db, string listCode, DateTime nowUtc, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+        if (_training is null || !_training.IsConfigured)
+        {
+            return new FastReferenceSyncResult(listCode, false, 0, 0, 0, "The FAST Training API is not configured.");
+        }
+        if (string.IsNullOrWhiteSpace(await _training.Tokens.GetTokenAsync(ct).ConfigureAwait(false)))
+        {
+            return await FailAsync(db, listCode, nowUtc, WaitingForCredential, ct).ConfigureAwait(false);
+        }
+        var response = await _training.LookupAsync(listCode, ct).ConfigureAwait(false);
+        if (!response.Ok || response.Value is null)
+        {
+            return await FailAsync(
+                db, listCode, nowUtc, response.Error ?? "FAST returned no payload.", ct).ConfigureAwait(false);
+        }
+        var rows = response.Value
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+            .GroupBy(item => item.Id!, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .Select(item => new Row(
+                item.Id!,
+                FirstText(item.NameAr, item.NameEn) ?? item.Id!,
+                FirstText(item.NameEn, item.NameAr) ?? item.Id!,
+                JsonSerializer.Serialize(new { item.Code, item.ParentId }, AttributeJson),
+                item.IsActive))
+            .ToList();
+        return await ApplyAsync(db, listCode, rows, nowUtc, ct).ConfigureAwait(false);
+    }
 
     /// <summary>`INTEGRATION_LOG.entity_type` for one list.</summary>
     public static string EntityTypeFor(string listCode) => $"REFERENCE_LIST:{listCode}";
@@ -96,15 +158,47 @@ public sealed partial class FastReferenceDataSync
                 db, list, nowUtc, response.Error ?? "FAST returned no payload.", ct).ConfigureAwait(false);
         }
 
-        var countries = response.Value
+        var rows = response.Value
             .Where(country => country.Id is not null)
             .GroupBy(country => country.Id!.Value)
             .Select(group => group.First())
+            .Select(country =>
+            {
+                var code = country.Id!.Value.ToString(CultureInfo.InvariantCulture);
+                return new Row(
+                    code,
+                    FirstText(country.NameAr, country.NameEn) ?? code,
+                    FirstText(country.NameEn, country.NameAr) ?? code,
+                    JsonSerializer.Serialize(
+                        new
+                        {
+                            country.NationalityAr,
+                            country.NationalityEn,
+                            country.CountryCode,
+                            country.NafathMappingCode,
+                            // ⚠️ Carried, not acted on: what the Academy does with a
+                            // restricted country is not documented anywhere.
+                            country.IsRestricted,
+                        },
+                        AttributeJson),
+                    IsActive: true);
+            })
             .ToList();
-        if (countries.Count == 0)
+        return await ApplyAsync(db, list, rows, nowUtc, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The idempotent, never-destructive upsert every list shares: matched on
+    /// FAST's id, labels and attributes updated, a value FAST stopped sending
+    /// deactivated (never deleted), and an empty answer refused outright.
+    /// </summary>
+    private async Task<FastReferenceSyncResult> ApplyAsync(
+        ExpertHubDbContext db, string list, IReadOnlyList<Row> rows, DateTime nowUtc, CancellationToken ct)
+    {
+        if (rows.Count == 0)
         {
-            // An empty list is far likelier an outage than the world having no
-            // countries — never a reason to deactivate everything.
+            // An empty list is far likelier an outage than the list really
+            // being empty — never a reason to deactivate everything.
             return await FailAsync(
                 db, list, nowUtc,
                 "FAST returned an empty list; the last successful copy is kept.", ct).ConfigureAwait(false);
@@ -118,38 +212,22 @@ public sealed partial class FastReferenceDataSync
         int added = 0, updated = 0, deactivated = 0;
         var present = new HashSet<string>(StringComparer.Ordinal);
 
-        for (var index = 0; index < countries.Count; index++)
+        for (var index = 0; index < rows.Count; index++)
         {
-            var country = countries[index];
-            var code = country.Id!.Value.ToString(CultureInfo.InvariantCulture);
-            present.Add(code);
-            var labelAr = FirstText(country.NameAr, country.NameEn) ?? code;
-            var labelEn = FirstText(country.NameEn, country.NameAr) ?? code;
-            var attributes = JsonSerializer.Serialize(
-                new
-                {
-                    country.NationalityAr,
-                    country.NationalityEn,
-                    country.CountryCode,
-                    country.NafathMappingCode,
-                    // ⚠️ Carried, not acted on: what the Academy does with a
-                    // restricted country is not documented anywhere.
-                    country.IsRestricted,
-                },
-                AttributeJson);
-
-            if (byCode.TryGetValue(code, out var row))
+            var value = rows[index];
+            present.Add(value.Code);
+            if (byCode.TryGetValue(value.Code, out var row))
             {
-                if (row.LabelAr != labelAr || row.LabelEn != labelEn
-                    || row.Attributes != attributes || !row.IsActive)
+                if (row.LabelAr != value.LabelAr || row.LabelEn != value.LabelEn
+                    || row.Attributes != value.Attributes || row.IsActive != value.IsActive)
                 {
                     updated++;
                 }
-                row.LabelAr = labelAr;
-                row.LabelEn = labelEn;
-                row.Attributes = attributes;
+                row.LabelAr = value.LabelAr;
+                row.LabelEn = value.LabelEn;
+                row.Attributes = value.Attributes;
                 row.SortOrder = index;
-                row.IsActive = true;
+                row.IsActive = value.IsActive;
                 row.Source = IntegrationSystems.Fast;
                 row.SyncedAt = nowUtc;
             }
@@ -159,13 +237,13 @@ public sealed partial class FastReferenceDataSync
                 {
                     ValueId = Guid.NewGuid(),
                     ListCode = list,
-                    Code = code,
-                    LabelAr = labelAr,
-                    LabelEn = labelEn,
+                    Code = value.Code,
+                    LabelAr = value.LabelAr,
+                    LabelEn = value.LabelEn,
                     SortOrder = index,
-                    IsActive = true,
+                    IsActive = value.IsActive,
                     Source = IntegrationSystems.Fast,
-                    Attributes = attributes,
+                    Attributes = value.Attributes,
                     SyncedAt = nowUtc,
                 });
                 added++;
@@ -266,7 +344,7 @@ public sealed partial class FastReferenceDataWorker : BackgroundService
             {
                 using var scope = _scopes.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ExpertHubDbContext>();
-                await _sync.SyncCountriesAsync(db, DateTime.UtcNow, stoppingToken).ConfigureAwait(false);
+                await _sync.SyncAllAsync(db, DateTime.UtcNow, stoppingToken).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not OperationCanceledException
                 || !stoppingToken.IsCancellationRequested)

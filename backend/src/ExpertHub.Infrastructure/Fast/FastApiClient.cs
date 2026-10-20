@@ -96,12 +96,19 @@ public sealed class FastApiClient
     private readonly IFastTokenProvider _tokens;
     private readonly string _baseUrl;
 
-    public FastApiClient(HttpClient http, IFastTokenProvider tokens, IConfiguration configuration)
+    /// <param name="baseUrlKey">The setting that holds the base URL: the portal
+    /// API's <c>Fast:BaseUrl</c> by default, <c>Fast:TrainingBaseUrl</c> for
+    /// <see cref="FastTrainingApi"/>. Same envelope, same fail-closed rules.</param>
+    public FastApiClient(
+        HttpClient http,
+        IFastTokenProvider tokens,
+        IConfiguration configuration,
+        string baseUrlKey = "Fast:BaseUrl")
     {
         ArgumentNullException.ThrowIfNull(configuration);
         _http = http;
         _tokens = tokens;
-        _baseUrl = (configuration["Fast:BaseUrl"] ?? string.Empty).TrimEnd('/');
+        _baseUrl = (configuration[baseUrlKey] ?? string.Empty).TrimEnd('/');
         if (_baseUrl.Length > 0)
         {
             _http.Timeout = TimeSpan.FromSeconds(
@@ -181,7 +188,9 @@ public sealed class FastApiClient
             new StringWithQualityHeaderValue(locale == "en" ? "en" : "ar"));
         if (body is not null)
         {
-            request.Content = JsonContent.Create(body, options: Json);
+            // A multipart form (the Training API's material upload) is sent
+            // as it is; anything else is JSON.
+            request.Content = body as HttpContent ?? JsonContent.Create(body, options: Json);
         }
 
         HttpResponseMessage response;

@@ -168,6 +168,24 @@ public static class PersistenceServiceCollectionExtensions
             NewHttpClient(TimeSpan.FromSeconds(30)),
             sp.GetRequiredService<IFastTokenProvider>(),
             sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()));
+        // The FAST Training API (B-03…B-15): its own base URL, and its own
+        // token for its own scope (`ims_training_api`), from the same client
+        // credential. Off — every call failing closed — until
+        // `Fast:TrainingBaseUrl` is set.
+        services.TryAddSingleton(sp =>
+        {
+            var configuration = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+            IFastTokenProvider tokens = ClientCredentialsFastTokenProvider.IsConfigured(configuration)
+                ? new ClientCredentialsFastTokenProvider(
+                    NewHttpClient(TimeSpan.FromSeconds(configuration.GetValue("Fast:TimeoutSeconds", 30))),
+                    configuration,
+                    sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ClientCredentialsFastTokenProvider>>(),
+                    scopeKey: "Fast:TrainingScope")
+                : new NoFastToken();
+            return new FastTrainingApi(
+                new FastApiClient(NewHttpClient(TimeSpan.FromSeconds(30)), tokens, configuration, "Fast:TrainingBaseUrl"),
+                tokens);
+        });
         services.AddScoped<FastReferenceReader>();
         services.AddScoped<FastUserReader>();
         services.AddScoped<FastQualificationsReader>();

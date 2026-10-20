@@ -83,6 +83,14 @@ public sealed class ReferenceListConfiguration : IEntityTypeConfiguration<Refere
                 NameEn = "Countries and nationalities (FAST)",
                 IsEditable = false,
             });
+        // B-15 — the Training API's lookups, synchronized the same way (M49).
+        builder.HasData(FastReferenceLists.TrainingLists.Select(list => new
+        {
+            ListCode = list.Code,
+            list.NameAr,
+            list.NameEn,
+            IsEditable = false,
+        }));
     }
 }
 
