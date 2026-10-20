@@ -158,10 +158,11 @@ public sealed class ApplicationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var schema = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal("dm-gap-01.2026-10-07", schema.GetProperty("version").GetString());
+        Assert.Equal("dm-gap-01.2026-10-19", schema.GetProperty("version").GetString());
         Assert.Equal(6, schema.GetProperty("sections").GetArrayLength());
-        // 57: «القطاع» and «المجال (أخرى)» joined on 2026-10-07 (`P-342`).
-        Assert.Equal(57, schema.GetProperty("fields").GetArrayLength());
+        // 59: «القطاع» and «المجال (أخرى)» joined on 2026-10-07 (`P-342`),
+        // «التخصص (أخرى)» and «اسم الشهادة (أخرى)» on 2026-10-19 (UAT).
+        Assert.Equal(59, schema.GetProperty("fields").GetArrayLength());
         Assert.Equal(5, schema.GetProperty("attachments").GetArrayLength());
         // Speaker is never self-service selectable (BR-0113).
         var selectable = schema.GetProperty("selectableServices").EnumerateArray()
@@ -304,9 +305,58 @@ public sealed class ApplicationTests
         Assert.True(ApplicationFormLogic.IsVisible(endDate, services, With("{\"currentlyEmployed\":false}")));
         Assert.False(ApplicationFormLogic.IsVisible(endDate, services, With("{\"currentlyEmployed\":true}")));
 
-        // Optional — the matrix has no mandatory flag: absent while shown still passes.
-        Assert.DoesNotContain("experienceEndDate",
+        // RUN-019 — while shown it is MANDATORY; while working there it is not.
+        Assert.Contains("experienceEndDate",
             ApplicationFormLogic.MissingOrInvalidFields(definitions, services, With("{}")));
+        Assert.DoesNotContain("experienceEndDate", ApplicationFormLogic.MissingOrInvalidFields(
+            definitions, services, With("{\"currentlyEmployed\":true}")));
+        // «عدد سنوات الخبرة» follows the same switch (ruling 2026-10-20): mandatory
+        // while «أعمل حاليًا» is off, optional — but still shown — while it is on.
+        var years = definitions.Single(f => f.Id == "yearsOfExperience");
+        Assert.True(ApplicationFormLogic.IsVisible(years, services, With("{\"currentlyEmployed\":true}")));
+        Assert.Contains("yearsOfExperience",
+            ApplicationFormLogic.MissingOrInvalidFields(definitions, services, With("{}")));
+        Assert.Contains("yearsOfExperience", ApplicationFormLogic.MissingOrInvalidFields(
+            definitions, services, With("{\"currentlyEmployed\":false}")));
+        Assert.DoesNotContain("yearsOfExperience", ApplicationFormLogic.MissingOrInvalidFields(
+            definitions, services, With("{\"currentlyEmployed\":true}")));
+
+        // BUG-014/BUG-015 — never before the start, and a date is a date.
+        Assert.Contains("experienceEndDate", ApplicationFormLogic.MissingOrInvalidFields(
+            definitions, services,
+            With("{\"experienceStartDate\":\"2020-05-01\",\"experienceEndDate\":\"2019-12-31\"}")));
+        Assert.DoesNotContain("experienceEndDate", ApplicationFormLogic.MissingOrInvalidFields(
+            definitions, services,
+            With("{\"experienceStartDate\":\"2020-05-01\",\"experienceEndDate\":\"2020-05-01\"}")));
+        Assert.Contains("experienceStartDate", ApplicationFormLogic.MissingOrInvalidFields(
+            definitions, services, With("{\"experienceStartDate\":\"01/05/2020\"}")));
+        Assert.Contains("dateOfBirth", ApplicationFormLogic.MissingOrInvalidFields(
+            definitions, services, With("{\"dateOfBirth\":\"2999-01-01\"}")));
+    }
+
+    [Fact]
+    public async Task Choosing_other_opens_a_mandatory_name_for_specialization_and_certificate()
+    {
+        // BUG-006 / BUG-007 — «أخرى» is named, not stored as a bare code.
+        var schema = await GetJsonAsync("/api/v1/applications/schema");
+        var definitions = schema.GetProperty("fields").EnumerateArray()
+            .Select(f => ApplicationFormLogic.Parse(f.GetRawText()))
+            .ToList();
+        string[] services = ["consultant"];
+        static Dictionary<string, JsonElement> With(string json) =>
+            JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)!;
+
+        Assert.Contains(definitions.Single(f => f.Id == "certificateName").Options!,
+            o => o.Value == "other");
+        foreach (var (choice, named) in new[]
+        {
+            ("{\"specializationDetail\":\"spec-024\"}", "specializationOther"),
+            ("{\"certificateName\":\"other\"}", "certificateNameOther"),
+        })
+        {
+            Assert.Contains(named, ApplicationFormLogic.MissingOrInvalidFields(definitions, services, With(choice)));
+            Assert.DoesNotContain(named, ApplicationFormLogic.MissingOrInvalidFields(definitions, services, With("{}")));
+        }
     }
 
     /* ── the upload — `BR-0106`, and where the bytes actually go ─────────── */
@@ -378,6 +428,106 @@ public sealed class ApplicationTests
         await using (var db = _database.CreateContext())
         {
             Assert.False(await db.Attachments.AnyAsync(a => a.FileName == "notes.exe"));
+        }
+    }
+
+    [Fact]
+    public async Task A_removed_file_is_gone_and_its_slot_takes_another()
+    {
+        // RUN-020 / BUG-013 — the upload answered with the ATTACHMENT id, the
+        // removal looked for the APPLICATION_ATTACHMENT id, and every removal
+        // in the same visit 404'd silently: the CV came back on refresh, was
+        // submitted, and a replacement hit «accepts 1 file(s)».
+        await SignInApplicantAsync();
+        await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+
+        var first = await UploadAsync("cv", "cv-old.pdf", "application/pdf", "%PDF-1.4 old"u8.ToArray());
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        var firstId = (await first.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
+
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync(
+            "/api/v1/me/applications/draft/attachments/remove", new { attachmentId = firstId })).StatusCode);
+
+        var second = await UploadAsync("cv", "cv-new.pdf", "application/pdf", "%PDF-1.4 new"u8.ToArray());
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        var resumed = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        var files = resumed.GetProperty("draft").GetProperty("attachments").EnumerateArray()
+            .Select(a => a.GetProperty("fileName").GetString()!).ToArray();
+        Assert.Equal(["cv-new.pdf"], files);
+
+        // …and the id the draft read hands out removes too.
+        var resumedId = resumed.GetProperty("draft").GetProperty("attachments")[0].GetProperty("id").GetString();
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync(
+            "/api/v1/me/applications/draft/attachments/remove", new { attachmentId = resumedId })).StatusCode);
+        var emptied = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        Assert.Equal(0, emptied.GetProperty("draft").GetProperty("attachments").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task A_file_whose_content_is_not_its_extension_is_refused()
+    {
+        await SignInApplicantAsync();
+        await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+
+        // A renamed executable: right name, wrong bytes.
+        var renamed = await UploadAsync("cv", "cv.pdf", "application/pdf", "MZ\u0090\u0000"u8.ToArray());
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, renamed.StatusCode);
+        Assert.Contains("\"reason\":\"format\"", await renamed.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_stored_pdf_on_the_server_disk_opens_for_preview()
+    {
+        /*
+         * BUG-001 — the server runs the DISK store (`Documents__RootPath` in
+         * deploy/docker-compose.yml), which keeps bytes only and answered
+         * `application/octet-stream`; the download also always said
+         * `attachment`. So no CV, screening document or agreement file could
+         * be previewed in production. The type now comes from the ATTACHMENT
+         * row's validated extension — never from the uploader, so a «.pdf»
+         * declared `text/html` cannot render as a page.
+         */
+        var root = Path.Combine(Path.GetTempPath(), "eh-docs-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var onDisk = TestOidc.Configure(
+                _factory, _tokenEndpoint,
+                ("ConnectionStrings:ExpertHub", _database.ConnectionString),
+                ("Documents:RootPath", root));
+            using var client = TestOidc.CreateClient(onDisk);
+            await TestOidc.SignInAsync(client, _tokenEndpoint, "unmapped");
+            Assert.Equal(HttpStatusCode.OK,
+                (await client.PostAsync("/api/v1/me/applications/draft/start", null)).StatusCode);
+
+            var bytes = "%PDF-1.4 on the server disk"u8.ToArray();
+            using var form = new MultipartFormDataContent();
+            form.Add(new StringContent("cv"), "ruleId");
+            var file = new ByteArrayContent(bytes);
+            file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/html");
+            form.Add(file, "file", "السيرة الذاتية.pdf");
+            var uploaded = await client.PostAsync("/api/v1/me/applications/draft/attachments", form);
+            Assert.Equal(HttpStatusCode.OK, uploaded.StatusCode);
+            var id = (await uploaded.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
+
+            await using (var db = _database.CreateContext())
+            {
+                Assert.StartsWith("file:", (await db.Attachments.SingleAsync(
+                    a => a.AttachmentId == Guid.Parse(id!))).StorageRef, StringComparison.Ordinal);
+            }
+            var download = await client.GetAsync($"/api/v1/attachments/{id}");
+            Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+            Assert.Equal("application/pdf", download.Content.Headers.ContentType?.MediaType);
+            Assert.Equal("inline", download.Content.Headers.ContentDisposition?.DispositionType);
+            Assert.Equal("السيرة الذاتية.pdf", download.Content.Headers.ContentDisposition?.FileNameStar);
+            Assert.Equal("nosniff", download.Headers.GetValues("X-Content-Type-Options").Single());
+            Assert.Equal(bytes, await download.Content.ReadAsByteArrayAsync());
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
         }
     }
 
@@ -709,6 +859,89 @@ public sealed class ApplicationTests
             $"/api/v1/internal/service-requests/{requestId}/decision",
             new { kind = "reject", reasonId = "other", reasonText = "x" });
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_service_request_is_tracked_by_its_trainer_and_reviewed_against_the_active_agreement()
+    {
+        // RUN-018 / BUG-019 / BUG-022 / BUG-025.
+        await SignInApplicantAsync();
+        var applicationId = await SeedApprovedApplicationAsync("trainer");
+        await SeedRoutedEventAsync("EV-0103");
+        string agreementReference;
+        string fieldCode, optionValue, optionLabel;
+        await using (var db = _database.CreateContext())
+        {
+            agreementReference = (await db.Agreements.SingleAsync(a => a.ApplicationId == applicationId)).Reference;
+            // Any select field of the current form, answered with its first option.
+            var select = (await db.FormFields
+                    .Where(f => f.SchemaVersion == FormSchemaVersions.Current && f.InputType == "select")
+                    .ToListAsync())
+                .First(f => f.Definition.Contains("\"options\":[{", StringComparison.Ordinal));
+            fieldCode = select.FieldCode;
+            using var definition = JsonDocument.Parse(select.Definition);
+            var option = definition.RootElement.GetProperty("options")[0];
+            optionValue = option.GetProperty("value").GetString()!;
+            optionLabel = option.GetProperty("labelAr").GetString()!;
+        }
+
+        var created = await PostJsonAsync($"/api/v1/me/applications/{applicationId}/services", new
+        {
+            service = "consultant",
+            values = new Dictionary<string, object> { [fieldCode] = optionValue },
+            attachments = Array.Empty<object>(),
+        });
+        var requestId = created.GetProperty("requestId").GetString()!;
+        var reference = created.GetProperty("reference").GetString()!;
+        Assert.Matches(@"^EH-ASR-\d{4}-\d{4}$", reference);
+
+        // BUG-022 — a PENDING request is not an approved service.
+        var pending = await _client.PostAsJsonAsync(
+            $"/api/v1/me/applications/{applicationId}/services",
+            new { service = "consultant", values = new Dictionary<string, object>() });
+        Assert.Equal(HttpStatusCode.Conflict, pending.StatusCode);
+        Assert.Equal("service-request-pending",
+            (await pending.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+        var held = await _client.PostAsJsonAsync(
+            $"/api/v1/me/applications/{applicationId}/services",
+            new { service = "trainer", values = new Dictionary<string, object>() });
+        Assert.Equal("service-already-approved",
+            (await held.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+
+        // BUG-019 / BUG-021 — the trainer sees the request, its number and its status.
+        var mine = await GetJsonAsync("/api/v1/me/service-requests");
+        var listed = mine.GetProperty("items").EnumerateArray().Single();
+        Assert.Equal(reference, listed.GetProperty("reference").GetString());
+        Assert.Equal("pending", listed.GetProperty("status").GetString());
+        Assert.Equal(applicationId.ToString(), mine.GetProperty("addServiceApplicationId").GetString());
+
+        // RUN-018 — the reviewer sees the agreement in effect and a label, not a code.
+        using var staff = TestOidc.CreateClient(_configured!);
+        await TestOidc.SignInAsync(staff, _tokenEndpoint, "fa-staff");
+        await GrantAsync(TestOidc.Subject, RoleCode.Staff);
+        var detail = await (await staff.GetAsync($"/api/v1/internal/service-requests/{requestId}"))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(agreementReference,
+            detail.GetProperty("trainerContext").GetProperty("agreement").GetProperty("reference").GetString());
+        Assert.True(detail.GetProperty("viewer").GetProperty("canDecide").GetBoolean());
+        Assert.Equal(optionLabel,
+            detail.GetProperty("submittedFields").EnumerateArray().Single().GetProperty("value").GetString());
+
+        // BUG-025 — the approval reaches the trainer in-platform.
+        var approved = await staff.PostAsJsonAsync(
+            $"/api/v1/internal/service-requests/{requestId}/decision",
+            new
+            {
+                kind = "approve",
+                addendum = new { fileName = "addendum.pdf", sizeBytes = 1, attachmentId = (await TestDocuments.UploadInternalAsync(staff, "service-addendum", "addendum.pdf")).GetProperty("attachmentId").GetString() },
+                note = "",
+            });
+        Assert.Equal(HttpStatusCode.OK, approved.StatusCode);
+        var inbox = await GetJsonAsync("/api/v1/me/notifications");
+        Assert.Equal("EV-0103", inbox.EnumerateArray().Single().GetProperty("eventCode").GetString());
+        var home = await GetJsonAsync("/api/v1/me/home");
+        Assert.Equal($"إشعار: {reference}",
+            home.GetProperty("notifications").EnumerateArray().Single().GetProperty("title").GetString());
     }
 
     [Fact]

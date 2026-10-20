@@ -12,6 +12,7 @@ import { BIO_MAX_LENGTH } from './profile.types';
 import { getProfileService } from './profileService';
 import { fieldLabel } from '../applications/applicationValidation';
 import { getProfileContent } from './profile.content';
+import type { ProfileContent } from './profile.content';
 import { ProfileHeader } from './components/ProfileHeader';
 import { ProfileSection } from './components/ProfileSection';
 import { ProfileFieldsForm } from './components/ProfileFieldsForm';
@@ -127,31 +128,34 @@ export default function MyProfilePage() {
   };
 
   /**
-   * J-14/F1/AC-2 — store a certificate. The refusal is shown on the file row
-   * itself, so this answers the copy for it (or `null` once stored) instead of
-   * raising the page-level failure.
+   * J-14/F1/AC-2 — store a certificate (or, RUN-027, replace the CV). The
+   * refusal is shown on the file row itself, so this answers the copy for it
+   * (or `null` once stored) instead of raising the page-level failure.
    */
-  const uploadCertificate = async (file: File): Promise<string | null> => {
+  const uploadFile = async (
+    op: Promise<Result<MyProfileDto, ExpertHubApiError>>,
+    copy: ProfileContent['certificates']
+  ): Promise<string | null> => {
     setBusy(true);
     setActionFailed(false);
     setFeedback('');
-    const result = await service.uploadCertificate(file);
+    const result = await op;
     setBusy(false);
     if (result.ok) {
       setProfile(result.value);
-      setFeedback(content.certificates.uploaded);
+      setFeedback(copy.uploaded);
       return null;
     }
     const { status } = result.error;
     return status === 422
-      ? content.certificates.refused
+      ? copy.refused
       : status === 409
-        ? content.certificates.ruleUnavailable
+        ? copy.ruleUnavailable
         : status === 404
-          ? content.certificates.noProfile
+          ? copy.noProfile
           : status === 400
-            ? content.certificates.emptyFile
-            : content.certificates.failed;
+            ? copy.emptyFile
+            : copy.failed;
   };
 
   /**
@@ -270,6 +274,7 @@ export default function MyProfilePage() {
                   content={content}
                   locale={locale}
                   saving={busy}
+                  agreementSigned={profile.lockedFacts.agreementStatus != null}
                   onSave={(fields) =>
                     run(service.saveBankData(fields), content.bankData.savedToast)
                   }
@@ -396,13 +401,36 @@ export default function MyProfilePage() {
                     (rule) => rule.id === 'professional-certificate'
                   ) ?? null
                 }
-                content={content}
+                copy={content.certificates}
                 busy={busy}
-                onUpload={uploadCertificate}
+                onUpload={(file) =>
+                  uploadFile(service.uploadCertificate(file), content.certificates)
+                }
                 onRemove={(id) => run(service.removeCertificate(id), content.certificates.removed)}
               />
             </ProfileSection>
           </Card>
+
+          {/* RUN-027 — the CV is its own slot, replaced under J-01's `cv` rule;
+              before this a new CV could only be added as a certificate. */}
+          {profile.establishedInExpertHub && (
+            <Card effect="stroke" className={styles.card}>
+              <ProfileSection
+                id="eh-cv"
+                icon="note-01"
+                title={content.cv.heading}
+                description={content.cv.description}
+              >
+                <CertificatesSection
+                  certificates={profile.cv == null ? [] : [profile.cv]}
+                  rule={profile.formSchema.attachments.find((rule) => rule.id === 'cv') ?? null}
+                  copy={content.cv}
+                  busy={busy}
+                  onUpload={(file) => uploadFile(service.replaceCv(file), content.cv)}
+                />
+              </ProfileSection>
+            </Card>
+          )}
         </div>
       ),
     },
@@ -435,7 +463,7 @@ export default function MyProfilePage() {
                   {profile.specialties.map((specialty) => (
                     <li key={specialty}>
                       <Tag variant="neutral" size="sm">
-                        {content.specialties[specialty]}
+                        {content.specialties[specialty] ?? specialty}
                       </Tag>
                     </li>
                   ))}
@@ -496,6 +524,8 @@ export default function MyProfilePage() {
           >
             <VisibilityConsent
               consent={profile.visibilityConsent}
+              established={profile.establishedInExpertHub}
+              listed={profile.listedInDirectory}
               content={content}
               busy={busy}
               onRequestToggle={(next) => setPendingConsent({ next })}

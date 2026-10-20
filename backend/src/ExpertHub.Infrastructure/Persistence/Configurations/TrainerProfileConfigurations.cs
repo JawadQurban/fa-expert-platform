@@ -26,6 +26,7 @@ public sealed class TrainerProfileConfiguration : IEntityTypeConfiguration<Train
         builder.Property(p => p.ApplicationId).HasColumnName("application_id");
         builder.Property(p => p.FastUserProfileId).HasColumnName("fast_user_profile_id").HasMaxLength(100);
         builder.Property(p => p.FileStatus).HasColumnName("file_status").HasMaxLength(20);
+        builder.Property(p => p.FileStatusOverride).HasColumnName("file_status_override").HasMaxLength(20);
         builder.Property(p => p.VisibilityConsent).HasColumnName("visibility_consent");
         builder.Property(p => p.PhotoAttachmentId).HasColumnName("photo_attachment_id");
         builder.Property(p => p.CreatedAt).HasColumnName("created_at");

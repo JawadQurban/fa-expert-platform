@@ -5,6 +5,7 @@ import type { ExpertHubApiClient, ExpertHubApiError } from '../../shared/service
 import { createMockTrainerSearchProvider } from './mockTrainerSearchProvider';
 import type {
   BioDecision,
+  FileStatusChoice,
   PendingBioDto,
   TrainerProfileDto,
   TrainerSearchFilters,
@@ -38,6 +39,12 @@ export interface TrainerSearchService {
     note: string,
     revision: number
   ): Promise<Result<readonly PendingBioDto[], ExpertHubApiError>>;
+  /** RUN-025 / `F-0411` — set the file status by hand, with a reason; answers the refreshed file. */
+  setFileStatus(
+    trainerId: string,
+    status: FileStatusChoice,
+    reason: string
+  ): Promise<Result<TrainerProfileDto, ExpertHubApiError>>;
 }
 
 /** Future-API provider — already wired to the versioned endpoint shape. */
@@ -54,6 +61,7 @@ export function createHttpTrainerSearchProvider(
       for (const [key, value] of [
         ['service', filters.service],
         ['fileStatus', filters.fileStatus],
+        ['domain', filters.domain],
       ] as const) {
         if (value !== 'all') {
           query.set(key, value);
@@ -62,8 +70,8 @@ export function createHttpTrainerSearchProvider(
       if (filters.minCertifications != null) {
         query.set('minCertifications', String(filters.minCertifications));
       }
-      // No `specialty`, `domain` or `minEvaluation`: the API answers each with
-      // 400 — no taxonomy (`Q16`), no calculated rating (`DM-GAP-14`).
+      // No `specialty` or `minEvaluation`: the API answers each with 400 — no
+      // separate taxonomy (`Q16`), no calculated rating (`DM-GAP-14`).
       const suffix = query.toString() === '' ? '' : `?${query.toString()}`;
       return client.get<TrainerSearchListDto>(`${base}${suffix}`);
     },
@@ -79,6 +87,12 @@ export function createHttpTrainerSearchProvider(
       return client.post<readonly PendingBioDto[]>(
         `${base}/${encodeURIComponent(trainerId)}/bio/decision`,
         { decision, note, revision }
+      );
+    },
+    setFileStatus(trainerId, status, reason) {
+      return client.post<TrainerProfileDto>(
+        `${base}/${encodeURIComponent(trainerId)}/file-status`,
+        { status, reason }
       );
     },
   };

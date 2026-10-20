@@ -89,6 +89,19 @@ import type { ApplicationService } from './application.types';
  * Fields by Service» is still «?», so every existing flag is kept as it was
  * and every field this version adds is optional — REQUIRES REVIEW.
  *
+ * `dm-gap-01.2026-10-19` (this version) answers the UAT round of 2026-10:
+ * - «الخبرة العملية»: with «أعمل حاليًا» off, «تاريخ الانتهاء» is mandatory and
+ *   may not precede «تاريخ البدء» (`validation.notBefore`) — RUN-019,
+ *   BUG-014/BUG-015. «عدد سنوات الخبرة» is mandatory under the same
+ *   condition (`requiredWhen`) and optional while «أعمل حاليًا» is on — the
+ *   user's ruling of 2026-10-20; criterion #4 scores a missing value as 0.
+ * - «التخصص» = «أخرى» opens «التخصص (أخرى)» to name it (BUG-006); the stored
+ *   code stays `spec-024`, which criterion #2 already pays 0.
+ * - «اسم الشهادة» offers «أخرى», with «اسم الشهادة (أخرى)» to name it
+ *   (BUG-007). ⚠️ Criteria #7/#8 have no weight for it, so it scores as
+ *   unresolved until the business decides — REQUIRES REVIEW.
+ * Nothing else changed; every earlier version keeps exactly what it published.
+ *
  * `TEMPORARY_TRANSLATION_REQUIRES_BUSINESS_REVIEW` marks option labels the
  * matrix gives in one language only; the other language is a working
  * translation.
@@ -180,13 +193,23 @@ export const OTHER_DOMAIN_OPTION: ApplicationFieldOption = {
   labelEn: 'Other',
 };
 
+/** «أخرى» in «التخصص» — the owner's own list already carries it as `spec-024`. */
+export const OTHER_SPECIALIZATION_VALUE = 'spec-024';
+
+/** «أخرى» in «اسم الشهادة» — not one of the master list's `cert-###` codes. */
+export const OTHER_CERTIFICATE_OPTION: ApplicationFieldOption = {
+  value: 'other',
+  labelAr: 'أخرى',
+  labelEn: 'Other',
+};
+
 const YES_NO_OPTIONS: readonly ApplicationFieldOption[] = [
   { value: 'yes', labelAr: 'نعم', labelEn: 'Yes' },
   { value: 'no', labelAr: 'لا', labelEn: 'No' },
 ];
 
 export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
-  version: 'dm-gap-01.2026-10-07',
+  version: 'dm-gap-01.2026-10-19',
   // Speaker intentionally absent (`BR-0113`) — and the workbook's own `*`
   // legend confirms the form is for the four contractual services. The
   // workbook's «الخدمة | Service Type» row IS the service-selection step the
@@ -535,6 +558,21 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       order: 3,
     },
     {
+      // BUG-006 — «أخرى» named, not just flagged. Shown only for `spec-024`.
+      id: 'specializationOther',
+      type: 'text',
+      sectionId: 'education',
+      labelAr: 'التخصص (أخرى)',
+      labelEn: 'Specialization (other)',
+      helpAr: 'اكتب تخصصك إن لم يكن في القائمة.',
+      helpEn: 'Name your specialization if it is not in the list.',
+      requiredFor: ALL_SERVICES,
+      dependsOn: { fieldId: 'specializationDetail', equals: OTHER_SPECIALIZATION_VALUE },
+      validation: { maxLength: 200 },
+      ownership: 'expert-hub',
+      order: 3.1,
+    },
+    {
       // The owner's «جميع الجامعات» list, delivered 2026-09-21 (517 entries).
       id: 'universityName',
       type: 'select',
@@ -574,9 +612,24 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'اسم الشهادة',
       labelEn: 'Certificate name',
       requiredFor: [],
-      options: asOptions(PROFESSIONAL_CERTIFICATION_OPTIONS),
+      // BUG-007 — «أخرى» for a certificate outside the master list.
+      options: [...asOptions(PROFESSIONAL_CERTIFICATION_OPTIONS), OTHER_CERTIFICATE_OPTION],
       ownership: 'expert-hub',
       order: 1,
+    },
+    {
+      // Shown only for «أخرى», and then it must be named — the section stays
+      // optional; a certificate the applicant DOES claim is identified.
+      id: 'certificateNameOther',
+      type: 'text',
+      sectionId: 'certifications',
+      labelAr: 'اسم الشهادة (أخرى)',
+      labelEn: 'Certificate name (other)',
+      requiredFor: ALL_SERVICES,
+      dependsOn: { fieldId: 'certificateName', equals: OTHER_CERTIFICATE_OPTION.value },
+      validation: { maxLength: 200 },
+      ownership: 'expert-hub',
+      order: 1.1,
     },
     {
       id: 'issuingInstitution',
@@ -673,15 +726,16 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       order: 6,
     },
     {
-      // Confirmed rule: shown only while «أنا أعمل حاليًا في هذا المنصب» is off.
-      // Optional — REQUIRES REVIEW (no mandatory flag in the matrix).
+      // Confirmed rule: shown only while «أنا أعمل حاليًا في هذا المنصب» is off,
+      // and then mandatory, never before the start (RUN-019, BUG-014/015).
       id: 'experienceEndDate',
       type: 'date',
       sectionId: 'experience',
       labelAr: 'تاريخ الانتهاء',
       labelEn: 'End date',
-      requiredFor: [],
+      requiredFor: ALL_SERVICES,
       dependsOn: { fieldId: 'currentlyEmployed', notEquals: true },
+      validation: { notBefore: 'experienceStartDate' },
       ownership: 'expert-hub',
       order: 7,
     },
@@ -696,7 +750,10 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       sectionId: 'experience',
       labelAr: 'عدد سنوات الخبرة',
       labelEn: 'Years of experience',
-      requiredFor: [],
+      // RUN-019 (`dm-gap-01.2026-10-19`): mandatory while «أعمل حاليًا» is
+      // off, optional while it is on — visible either way.
+      requiredFor: ALL_SERVICES,
+      requiredWhen: { fieldId: 'currentlyEmployed', notEquals: true },
       options: [
         { value: '1-5', labelAr: 'من 1 إلى 5 سنوات', labelEn: '1 to 5 years' },
         { value: '5-10', labelAr: 'من 5 إلى 10 سنوات', labelEn: '5 to 10 years' },

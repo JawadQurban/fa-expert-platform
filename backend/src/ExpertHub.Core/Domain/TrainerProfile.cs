@@ -37,6 +37,13 @@ public sealed class TrainerProfile
     /// masters it, and it never leaves the internal surface.</summary>
     public required string FileStatus { get; set; }
 
+    /// <summary>
+    /// RUN-025 (`F-0411`) — a status staff set by hand, with a reason in the
+    /// audit trail. While set it WINS over the agreement-derived status
+    /// (`P-244`); null means the file reports what its agreement says.
+    /// </summary>
+    public string? FileStatusOverride { get; set; }
+
     /// <summary>`BR-1002`/`BR-1007` — the toggle that feeds the public
     /// directory. Off until the trainer turns it on; a directory that
     /// defaulted to visible would publish people who never agreed.</summary>
@@ -244,6 +251,9 @@ public static class TrainerFileStatuses
     /// <summary>The agreement lapsed without renewal — a lapse, distinct
     /// from a deliberate ending.</summary>
     public const string Expired = "expired";
+
+    /// <summary>Every value of the union, for validating input.</summary>
+    public static readonly IReadOnlyList<string> All = [Active, Idle, Suspended, Expired];
 }
 
 /// <summary>`TRAINER_SERVICE.classification` — the wire union.</summary>

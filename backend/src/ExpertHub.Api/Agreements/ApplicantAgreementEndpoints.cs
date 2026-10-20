@@ -31,6 +31,10 @@ namespace ExpertHub.Api.Agreements;
 internal sealed record ApplicantDecisionInputWire(
     string? Kind, string? Note, string? SignatureName);
 
+/// <summary>«دولة البنك» as FAST's list knows it: whether it is on the list,
+/// and its ISO 3166 alpha-2 code when FAST gives one.</summary>
+internal sealed record BankCountry(bool Listed, string? Iso);
+
 internal sealed record BankDataInputWire(
     string? BankCountry, string? BankCity, string? BankName, string? BranchName,
     string? Iban, string? SwiftCode, string? AccountHolderName, string? AccountNumber);
@@ -43,11 +47,18 @@ public static partial class ApplicantAgreementEndpoints
     /// saved before these rules existed is never re-validated or rewritten.
     /// Letters are matched case-insensitively and the value is stored as typed.
     /// </summary>
-    internal static List<string> InvalidBankFields(Dictionary<string, string> fields)
+    /// <param name="fields">The eight trimmed bank fields.</param>
+    /// <param name="country">«دولة البنك» against FAST's country list — see
+    /// <see cref="BankCountryAsync"/>.</param>
+    internal static List<string> InvalidBankFields(Dictionary<string, string> fields, BankCountry country)
     {
         var invalid = new List<string>();
-        // IBAN — the Saudi format: "SA" followed by 22 digits (24 characters).
-        if (!IbanPattern().IsMatch(fields["iban"]))
+        // RUN-026 — a dropdown over FAST's country list: a name outside it is refused.
+        if (!country.Listed)
+        {
+            invalid.Add("bankCountry");
+        }
+        if (!IbanIsValid(fields["iban"], country.Iso))
         {
             invalid.Add("iban");
         }
@@ -66,7 +77,82 @@ public static partial class ApplicantAgreementEndpoints
         return invalid;
     }
 
-    [GeneratedRegex("^SA[0-9]{22}$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    /// <summary>
+    /// RUN-026 — the IBAN follows «دولة البنك». Saudi Arabia keeps the Saudi
+    /// rule ("SA" + 22 digits, 24 characters); any other country is ISO 13616:
+    /// its own country code first, 15–34 characters, and the mod-97 check
+    /// digits. With no ISO code for the country (FAST's copy is empty, or its
+    /// `countryCode` is not alpha-2), the IBAN's own prefix picks the rule.
+    /// </summary>
+    internal static bool IbanIsValid(string iban, string? countryIso)
+    {
+        var value = iban.ToUpperInvariant();
+        if (countryIso == "SA" || (countryIso is null && value.StartsWith("SA", StringComparison.Ordinal)))
+        {
+            return SaudiIbanPattern().IsMatch(value);
+        }
+        // ponytail: one length range for every country — a per-country length
+        // table (the SWIFT IBAN registry) belongs here once one is supplied.
+        return IbanPattern().IsMatch(value)
+            && (countryIso is null || value.StartsWith(countryIso, StringComparison.Ordinal))
+            && Mod97(value) == 1;
+    }
+
+    /// <summary>ISO 7064 mod 97-10 over the IBAN with its first four characters
+    /// moved to the end, letters as 10–35.</summary>
+    private static int Mod97(string iban)
+    {
+        var remainder = 0;
+        foreach (var c in iban[4..] + iban[..4])
+        {
+            var digit = c <= '9' ? c - '0' : c - 'A' + 10;
+            remainder = ((remainder * (digit < 10 ? 10 : 100)) + digit) % 97;
+        }
+        return remainder;
+    }
+
+    /// <summary>
+    /// «دولة البنك» resolved against FAST's country list (`fast-country`, the
+    /// documented source for the bank country). The dropdown stores the
+    /// country's Arabic name; an English name resolves too. While Expert Hub
+    /// holds no copy of the list yet, any name is accepted, unresolved.
+    /// </summary>
+    internal static async Task<BankCountry> BankCountryAsync(
+        ExpertHubDbContext db, string name, CancellationToken ct)
+    {
+        var countries = db.ReferenceValues.AsNoTracking()
+            .Where(v => v.ListCode == FastReferenceLists.Countries && v.IsActive);
+        if (!await countries.AnyAsync(ct))
+        {
+            return new BankCountry(true, null);
+        }
+        var match = await countries
+            .Where(v => v.LabelAr == name || v.LabelEn == name)
+            .Select(v => new { v.Attributes })
+            .FirstOrDefaultAsync(ct);
+        if (match is null)
+        {
+            return new BankCountry(false, null);
+        }
+        string? code = null;
+        if (match.Attributes is { } json)
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.TryGetProperty("countryCode", out var value)
+                && value.ValueKind is JsonValueKind.String)
+            {
+                code = value.GetString();
+            }
+        }
+        return new BankCountry(
+            true,
+            code is { Length: 2 } && code.All(char.IsAsciiLetter) ? code.ToUpperInvariant() : null);
+    }
+
+    [GeneratedRegex("^SA[0-9]{22}$", RegexOptions.CultureInvariant)]
+    private static partial Regex SaudiIbanPattern();
+
+    [GeneratedRegex("^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$", RegexOptions.CultureInvariant)]
     private static partial Regex IbanPattern();
 
     [GeneratedRegex("^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
@@ -118,7 +204,8 @@ public static partial class ApplicantAgreementEndpoints
                     detail: "bank-fields-missing",
                     extensions: new Dictionary<string, object?> { ["missingFields"] = missing });
             }
-            var invalid = InvalidBankFields(fields);
+            var invalid = InvalidBankFields(
+                fields, await BankCountryAsync(db, fields["bankCountry"], ct));
             if (invalid.Count > 0)
             {
                 // AC-5 — a field that breaks its format rule is blocked; the
@@ -197,11 +284,12 @@ public static partial class ApplicantAgreementEndpoints
                 ?? await AgreementDocuments.SnapshotAsync(db, row, actor.UserId, now, ct)).DocumentVersionId;
             row.ApplicantSignatureMethod = SignatureMethods.InternalAcceptance;
 
-            // F2 — signature activates the agreement. BR-0301: the end date
-            // is CALCULATED from the term BR-0302 decides (1 year first).
+            // F2 — signature activates the agreement, over the term the
+            // preparer ENTERED (RUN-003): the dates everybody signed. Only an
+            // agreement prepared without them falls back to signature day plus
+            // the BR-0302 term.
             row.Status = AgreementStatuses.Active;
-            row.StartsAt = now;
-            row.EndsAt = now.AddYears(row.TermYears);
+            (row.StartsAt, row.EndsAt) = TermOf(row, now);
             AgreementEndpoints.LogEvent(db, row.AgreementId, "signed", actor.UserId, now);
             AgreementEndpoints.LogEvent(
                 db, row.AgreementId, "activated", actor.UserId, now, termYears: row.TermYears);
@@ -278,6 +366,27 @@ public static partial class ApplicantAgreementEndpoints
         _ = dispatcher; // J-11 states no notification of its own; CAP-07 has none catalogued.
         return Results.Ok(await ApplicationEndpoints.DetailWireForAsync(db, application, ct));
     }
+
+    /// <summary>
+    /// The agreement's term from its prepared `startDate` / `endDate` fields
+    /// (yyyy-MM-dd, stored as UTC midnight of that day). A missing or
+    /// unparseable start falls back to <paramref name="nowUtc"/>, a missing end
+    /// to the start plus <see cref="Agreement.TermYears"/>.
+    /// </summary>
+    internal static (DateTime StartsAt, DateTime EndsAt) TermOf(Agreement row, DateTime nowUtc)
+    {
+        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(row.FieldValues) ?? [];
+        var starts = DateField(values, "startDate") ?? nowUtc;
+        var ends = DateField(values, "endDate") ?? starts.AddYears(row.TermYears);
+        return (starts, ends);
+    }
+
+    internal static DateTime? DateField(IReadOnlyDictionary<string, string> values, string id) =>
+        values.TryGetValue(id, out var raw) && DateOnly.TryParseExact(
+            raw?.Trim(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var date)
+            ? date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+            : null;
 
     /// <summary>
     /// The applicant's view of the agreement (`ApplicantAgreementDto`):

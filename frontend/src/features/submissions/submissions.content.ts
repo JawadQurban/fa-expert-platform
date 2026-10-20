@@ -38,8 +38,10 @@ export interface SubmissionsContent {
   /** The submitter's side. */
   readonly uploadHeading: string;
   readonly uploadLabel: string;
-  /** `G26`/`G27` — only the name is recorded; said, not hidden. */
+  /** J-01's document rule, stated before the person picks a file. */
   readonly uploadHint: string;
+  readonly fileFormat: string;
+  readonly fileSize: string;
   readonly uploadAction: string;
   readonly uploadedTitle: string;
   readonly uploadedBody: string;
@@ -55,6 +57,7 @@ export interface SubmissionsContent {
   readonly roundPending: string;
   readonly roundOutcomes: Readonly<Record<SubmissionRoundDecision, string>>;
   readonly previewUnavailable: string;
+  readonly openFile: string;
 
   /** The coordinator's side. */
   readonly review: {
@@ -124,8 +127,9 @@ const ar: SubmissionsContent = {
 
   uploadHeading: 'رفع الملف',
   uploadLabel: 'اختر الملف',
-  uploadHint:
-    'يُسجَّل اسم الملف فقط حاليًا، ولا يُحفظ الملف نفسه إلى أن تُعتمد آلية حفظ المستندات.',
+  uploadHint: 'الصيغ المقبولة: PDF أو DOC أو DOCX — الحد الأقصى 1 م.ب.',
+  fileFormat: 'صيغة الملف غير مقبولة. الصيغ المسموحة: PDF أو DOC أو DOCX.',
+  fileSize: 'حجم الملف يتجاوز الحد الأقصى (1 م.ب).',
   uploadAction: 'رفع الملف',
   uploadedTitle: 'تم رفع الملف',
   uploadedBody: 'وصل الملف إلى منسّق البرنامج لمراجعته واعتماده.',
@@ -145,8 +149,8 @@ const ar: SubmissionsContent = {
     [SUBMISSION_STATUS.approved]: 'اعتُمد',
     [SUBMISSION_STATUS.changesRequested]: 'طُلبت نسخة جديدة',
   },
-  previewUnavailable:
-    'المعاينة والتنزيل غير متاحين حاليًا، وسيُتاحان عند اعتماد آلية حفظ المستندات.',
+  previewUnavailable: 'جولة سُجّلت قبل حفظ الملفات تحمل اسم الملف فقط، ولا يتوفر ملفها للمعاينة.',
+  openFile: 'معاينة الملف أو تنزيله',
 
   review: {
     documentTitle: 'مراجعة المواد والمحتوى — منصة الخبراء',
@@ -220,8 +224,9 @@ const en: SubmissionsContent = {
 
   uploadHeading: 'Upload a file',
   uploadLabel: 'Choose a file',
-  uploadHint:
-    'For now only the file name is recorded; the file itself is not stored until document storage is approved.',
+  uploadHint: 'Accepted formats: PDF, DOC or DOCX — up to 1 MB.',
+  fileFormat: 'File format not accepted. Allowed formats: PDF, DOC or DOCX.',
+  fileSize: 'The file exceeds the maximum size (1 MB).',
   uploadAction: 'Upload the file',
   uploadedTitle: 'File uploaded',
   uploadedBody: 'It has reached the programme coordinator for review and approval.',
@@ -242,7 +247,8 @@ const en: SubmissionsContent = {
     [SUBMISSION_STATUS.changesRequested]: 'New upload requested',
   },
   previewUnavailable:
-    'Preview and download are not available yet; they will be once document storage is approved.',
+    'A round recorded before files were stored holds the file name only; there is no file to open.',
+  openFile: 'Preview or download the file',
 
   review: {
     documentTitle: 'Material & content review — Expert Hub',

@@ -4,7 +4,7 @@ import { Button, Textarea, Typography } from '@ds/primitives';
 import type { InterviewsContent } from '../interviews.content';
 import { validateReschedule } from '../interview.types';
 import type { RescheduleInput } from '../interview.types';
-import { InterviewSlotsField } from './InterviewSlotsField';
+import { InterviewSlotsField, slotInputToInstant } from './InterviewSlotsField';
 import styles from './RescheduleDialog.module.css';
 
 /**
@@ -39,7 +39,9 @@ export function RescheduleDialog({
 
   const handleConfirm = () => {
     const input: RescheduleInput = {
-      slots: slots.filter((slot) => slot.trim() !== ''),
+      // RUN-021 — `datetime-local` is wall-clock time with no zone; send the
+      // instant the person meant, as screening already does (`D-03`).
+      slots: slots.filter((slot) => slot.trim() !== '').map(slotInputToInstant),
       note,
     };
     if (!validateReschedule(input)) {

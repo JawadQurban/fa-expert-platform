@@ -1,6 +1,7 @@
 import type { Locale } from '@/types';
 import { getMyApplicationsContent } from '../applications/myApplications.content';
 import type { AssignmentRequestStatus, AssignmentServiceType } from './assignment.types';
+import type { MatchExclusionReason, WeightedCriterionId } from './matching.types';
 import type {
   CentreRequestType,
   CentreRequestValidationCode,
@@ -189,13 +190,17 @@ export interface AssignmentsContent {
     readonly modelVersion: (version: string) => string;
     readonly rankedHeading: string;
     readonly scoreLabel: string;
-    readonly criteria: Readonly<Record<'language' | 'delivery-mode' | 'evaluation', string>>;
+    readonly criteria: Readonly<Record<WeightedCriterionId, string>>;
     /** F1/AC-2 — excluded entirely, and the page says why. */
     readonly excludedHeading: string;
     readonly excludedNote: string;
-    readonly exclusionReasons: Readonly<
-      Record<'specialization' | 'location' | 'schedule-conflict' | 'file-status', string>
-    >;
+    readonly exclusionReasons: Readonly<Record<MatchExclusionReason, string>>;
+    /** UAT `BUG-040` — the request in full, beside the candidates. */
+    readonly requestDetailsHeading: string;
+    readonly requestFields: { readonly reference: string; readonly createdBy: string };
+    /** A slot came back to matching after the pool was decided. */
+    readonly returnedTitle: string;
+    readonly returnedBody: string;
     /** F2 — the manual path. */
     readonly manualHeading: string;
     readonly manualDescription: string;
@@ -355,7 +360,7 @@ const ar: AssignmentsContent = {
     nomineeHint:
       'كل خبير تسمّيه هنا يشغل مقعدًا واحدًا من العدد المطلوب ويُرسل العرض إليه مباشرة بعد التحقق من أهليته، وتمر المقاعد غير المسمّاة بالمطابقة.',
     nomineeNotEligible:
-      'الشخص المحدد غير مؤهل لهذا الطلب حاليًا (حالة الملف أو الخدمة أو التخصص أو الموقع أو تعارض المواعيد).',
+      'الشخص المحدد غير مؤهل لهذا الطلب حاليًا (ملفه غير مفعّل، أو غير معتمد لهذه الخدمة، أو لديه ارتباط مؤكَّد يتعارض مع المواعيد).',
     addNominee: '+ إضافة خبير',
     nomineeSlot: (position) => `الخبير المحدد ${fmtAr(position)}`,
     nomineeRemove: (position) => `إزالة الخبير المحدد ${fmtAr(position)}`,
@@ -421,18 +426,24 @@ const ar: AssignmentsContent = {
     rankedHeading: 'المرشحون المرتّبون',
     scoreLabel: 'الدرجة',
     criteria: {
+      specialization: 'التخصص',
+      location: 'المدينة',
       language: 'اللغة',
       'delivery-mode': 'نمط التقديم',
       evaluation: 'التقييم والتصنيف',
+      availability: 'عدم تعارض المواعيد',
     },
     excludedHeading: 'مستبعدون',
     excludedNote: 'استُبعد هؤلاء كليًا لعدم استيفاء معيار إقصائي، ولا يمكن ترشيحهم لهذا الطلب.',
     exclusionReasons: {
-      specialization: 'التخصص غير مطابق',
-      location: 'المدينة غير مطابقة',
       'schedule-conflict': 'تعارض مع ارتباط مؤكَّد',
-      'file-status': 'حالة الملف غير نشطة',
+      'file-status': 'ملف المدرب غير مفعّل',
     },
+    requestDetailsHeading: 'تفاصيل طلب الإسناد',
+    requestFields: { reference: 'رقم الطلب', createdBy: 'مُنشئ الطلب' },
+    returnedTitle: 'عاد الطلب إلى المطابقة',
+    returnedBody:
+      'خلا مقعد بعد اعتماد القائمة السابقة (اعتذار المرشح المحدد أو إلغاء ارتباط من الأكاديمية)، فلم يُرسل العرض لأحد تلقائيًا. ابنِ قائمة مرشحين جديدة للمقاعد الشاغرة لتمر بدورة الترشيح كاملة.',
     manualHeading: 'البحث اليدوي',
     manualDescription:
       'يمكنك بناء قائمة المرشحين يدويًا بدل محرك المطابقة. تبقى المعايير الإقصائية سارية عند الإرسال.',
@@ -595,7 +606,7 @@ const en: AssignmentsContent = {
     nomineeHint:
       'Each expert named here takes one of the required slots and receives the offer directly once their eligibility is checked; the slots left unnamed go through matching.',
     nomineeNotEligible:
-      'The named person is not currently eligible for this request (file status, service, specialization, location or a schedule conflict).',
+      'The named person is not currently eligible for this request (their file is not active, they are not accredited for this service, or a confirmed engagement conflicts with the dates).',
     addNominee: '+ Add expert',
     nomineeSlot: (position) => `Named expert ${position}`,
     nomineeRemove: (position) => `Remove named expert ${position}`,
@@ -662,19 +673,25 @@ const en: AssignmentsContent = {
     rankedHeading: 'Ranked candidates',
     scoreLabel: 'Score',
     criteria: {
+      specialization: 'Specialization',
+      location: 'City',
       language: 'Language',
       'delivery-mode': 'Delivery mode',
       evaluation: 'Evaluation & classification',
+      availability: 'No scheduling conflict',
     },
     excludedHeading: 'Excluded',
     excludedNote:
       'These candidates were excluded entirely for failing an exclusionary criterion, and cannot be nominated for this request.',
     exclusionReasons: {
-      specialization: 'Specialization does not match',
-      location: 'City does not match',
       'schedule-conflict': 'Conflicts with a confirmed engagement',
-      'file-status': 'File status is not active',
+      'file-status': 'Trainer file is not active',
     },
+    requestDetailsHeading: 'Assignment request details',
+    requestFields: { reference: 'Request reference', createdBy: 'Raised by' },
+    returnedTitle: 'The request is back in matching',
+    returnedBody:
+      'A slot became free after the earlier list was decided (the named nominee declined, or the Academy de-linked the trainer), so nobody was offered it automatically. Build a new candidate list for the open slots to take it through the full nomination cycle.',
     manualHeading: 'Manual search',
     manualDescription:
       'You can build the candidate list yourself instead of using the engine. The exclusionary criteria still apply when sending.',

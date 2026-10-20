@@ -38,7 +38,7 @@ describe('EH-PUB-03 — Public Trainer Profile', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' })
     ).toBeInTheDocument();
-    expect(screen.getAllByText(content.specialties.leadership).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(content.specialties['dom-001']).length).toBeGreaterThan(0);
     // J-24/F2/AC-1 — programs delivered with the Academy.
     const programs = screen.getByRole('region', { name: content.programs.heading });
     expect(within(programs).getAllByRole('listitem').length).toBeGreaterThan(0);

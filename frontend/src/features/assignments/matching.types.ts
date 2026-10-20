@@ -51,24 +51,28 @@ export function poolSizeFor(requiredHeadcount: number): number {
  * ------------------------------------------------------------------ */
 
 /**
- * The four **exclusionary** rows of the matrix. A candidate failing any one of
- * them is out entirely (F1/AC-2) — these are reasons, not penalties, and they
- * are deliberately a closed union so a fifth cannot appear without amending the
- * matrix first.
+ * The two **exclusionary** rows of the matrix. A candidate failing either one
+ * is out entirely (F1/AC-2) — these are reasons, not penalties, and they are
+ * deliberately a closed union so a third cannot appear without amending the
+ * matrix first. Owner ruling (UAT `BUG-038`): «المعايير الاقصائية ٢ فقط: تعارض
+ * الارتباط، ملف المدرب غير مفعل».
  *
- * - `specialization` — row 1, against the Program's specialization/domain.
- * - `location` — row 2, the trainer's city against the Plan's country/city,
- *   **unless the plan is online**, in which case the row does not apply.
- * - `schedule-conflict` — row 3, the trainer's confirmed engagements against the
+ * - `schedule-conflict` — the trainer's confirmed engagements against the
  *   plan's dates. Enforced before presentation on **either** path (F3/AC-3).
- * - `file-status` — row 4, the trainer's file status must be active. This is the
+ * - `file-status` — the trainer's file status must be active. This is the
  *   internal-only status from J-13/AC-10, used here as J-15 makes it visible.
  */
-export type MatchExclusionReason =
-  'specialization' | 'location' | 'schedule-conflict' | 'file-status';
+export type MatchExclusionReason = 'schedule-conflict' | 'file-status';
 
-/** The three **weighted** rows. None of them can exclude anyone (F1/AC-3). */
-export type WeightedCriterionId = 'language' | 'delivery-mode' | 'evaluation';
+/**
+ * The six **weighted** rows. None of them can exclude anyone (F1/AC-3) —
+ * specialization and location included: a mismatch lowers the score.
+ * `availability` is a consultant's scheduling conflict, which lowers their
+ * score instead of excluding them (owner ruling 2026-10-20); for every other
+ * service a conflict is still `schedule-conflict`.
+ */
+export type WeightedCriterionId =
+  'specialization' | 'location' | 'language' | 'delivery-mode' | 'evaluation' | 'availability';
 
 /**
  * One weighted criterion's contribution.
@@ -181,8 +185,18 @@ export interface CandidatePoolDto {
   readonly status: PoolStatus;
   readonly members: readonly PoolMemberDto[];
   readonly sentAt: string | null;
-  /** How many the request needs — the pool is three times this (F2/AC-2). */
+  /**
+   * How many people THIS pool is for — the pool is three times this (F2/AC-2).
+   * The slots still open, which is the request's headcount on a fresh request
+   * and fewer once some are named, offered or filled.
+   */
   readonly requiredHeadcount: number;
+  /**
+   * A slot came back to matching after the request's pool was decided (a
+   * named nominee declined, or the Academy de-linked the trainer), so a new
+   * pool is due. Absent on payloads from before the field existed.
+   */
+  readonly returnedToMatching?: boolean;
 }
 
 /**

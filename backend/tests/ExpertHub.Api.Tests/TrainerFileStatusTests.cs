@@ -61,6 +61,23 @@ public sealed class TrainerFileStatusTests
     }
 
     [Fact]
+    public void A_manual_status_wins_over_the_agreement_so_matching_follows_it()
+    {
+        // RUN-025 — set under F-0411; every surface reads it through this one rule.
+        var manual = new TrainerProfile
+        {
+            TrainerId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            ApplicationId = Guid.NewGuid(),
+            FileStatus = TrainerFileStatuses.Active,
+            FileStatusOverride = TrainerFileStatuses.Suspended,
+            CreatedAt = Now,
+        };
+        Assert.Equal(TrainerFileStatuses.Suspended,
+            TrainerProfileService.FileStatus(manual, AgreementIn(AgreementStatuses.Active), Now, Now.AddDays(-1)));
+    }
+
+    [Fact]
     public void No_completed_engagement_at_all_makes_an_agreement_in_effect_idle()
     {
         Assert.Equal(TrainerFileStatuses.Idle,

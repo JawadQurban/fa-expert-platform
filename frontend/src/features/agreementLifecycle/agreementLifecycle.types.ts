@@ -1,5 +1,6 @@
 import type { LocalizedText } from '../../shared/types/localizedText';
 import type { ApplicationService } from '../applications/application.types';
+import type { SigningMemberDto } from '../agreements/agreement.types';
 import type { ProfileAgreementStatus } from '../profile/profile.types';
 import type { ReminderMilestone } from '../../shared/types/sla';
 
@@ -124,6 +125,15 @@ export interface AgreementDetailDto extends AgreementSummaryDto {
   /** `null` while document storage is unresolved (`G26`) — no dead link. */
   readonly documentUrl: string | null;
   readonly viewer: AgreementViewerDto;
+  /** UAT RUN-037 — how it came into force: the internal chain and the applicant. */
+  readonly signing: AgreementSigningRecordDto;
+}
+
+/** The internal signing chain, member by member, and the applicant's own acceptance. */
+export interface AgreementSigningRecordDto {
+  readonly sequence: readonly SigningMemberDto[];
+  readonly applicantSignatureName: string | null;
+  readonly applicantSignedAt: string | null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -179,6 +189,10 @@ export function allowedActions(
       // "nearing **or past** expiry", and an active one nearing expiry is the
       // common case.
       return ['renew', 'suspend', 'end'];
+    case 'not-started':
+      // Signed but not yet in effect: it can be stopped, not renewed (the
+      // server's own rule — UAT RUN-003).
+      return ['suspend', 'end'];
     case 'suspended':
       return ['reactivate', 'end'];
     case 'expired':

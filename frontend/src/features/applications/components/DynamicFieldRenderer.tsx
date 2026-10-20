@@ -46,6 +46,7 @@ export function DynamicFieldRenderer({
   locale,
   content,
   onChange,
+  values,
 }: {
   readonly field: ApplicationFieldSchema;
   /**
@@ -60,8 +61,10 @@ export function DynamicFieldRenderer({
   readonly locale: Locale;
   readonly content: NewApplicationContent;
   readonly onChange: (fieldId: string, value: ApplicationFieldValue) => void;
+  /** The values this field sits among (its entry's, or the form's) — for `requiredWhen`. */
+  readonly values?: Readonly<Record<string, ApplicationFieldValue>>;
 }) {
-  const required = isFieldRequired(field, services);
+  const required = isFieldRequired(field, services, values);
   const help = fieldHelp(field, locale);
 
   // Explain *why* the field is required when it isn't required by every
@@ -148,6 +151,10 @@ export function DynamicFieldRenderer({
             value={parsed}
             onChange={(date) => onChange(field.id, toIsoDate(date))}
             locale={locale}
+            // RUN-038 / BUG-003 — the form stores Gregorian ISO dates, and the
+            // Arabic default (Hijri) offered birth years only around the
+            // visible Hijri year. Gregorian is what the value is.
+            calendar="gregorian"
             requiredField={required}
             helperText={helperText}
             errorText={error}

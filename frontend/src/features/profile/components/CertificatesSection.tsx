@@ -19,7 +19,7 @@ import styles from './CertificatesSection.module.css';
 function validate(
   file: File,
   rule: ApplicationAttachmentRule | null,
-  content: ProfileContent
+  copy: ProfileContent['certificates']
 ): string | null {
   // No rule in the served schema: the server answers `certificate-rule-unavailable`.
   if (rule == null) {
@@ -27,10 +27,10 @@ function validate(
   }
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
   if (!rule.acceptedFormats.includes(extension)) {
-    return content.certificates.formatError(rule.acceptedFormats.join(', '));
+    return copy.formatError(rule.acceptedFormats.join(', '));
   }
   if (file.size > rule.maxSizeMb * 1024 * 1024) {
-    return content.certificates.sizeError(rule.maxSizeMb);
+    return copy.sizeError(rule.maxSizeMb);
   }
   return null;
 }
@@ -38,7 +38,7 @@ function validate(
 export function CertificatesSection({
   certificates,
   rule,
-  content,
+  copy,
   busy,
   onUpload,
   onRemove,
@@ -46,11 +46,12 @@ export function CertificatesSection({
   readonly certificates: readonly CertificateDto[];
   /** The served `professional-certificate` rule, or `null` when the schema has none. */
   readonly rule: ApplicationAttachmentRule | null;
-  readonly content: ProfileContent;
+  readonly copy: ProfileContent['certificates'];
   readonly busy: boolean;
   /** Stores the file; resolves to the refusal to show, or `null` once stored. */
   readonly onUpload: (file: File) => Promise<string | null>;
-  readonly onRemove: (id: string) => void;
+  /** Absent for a single-file slot (the CV), which is replaced, never emptied. */
+  readonly onRemove?: (id: string) => void;
 }) {
   const [uploadFiles, setUploadFiles] = useState<UploadedFile[]>([]);
   const counter = useRef(0);
@@ -63,7 +64,7 @@ export function CertificatesSection({
     counter.current += 1;
     const attempt = counter.current;
     const id = `cert-upload-${attempt}`;
-    const invalid = validate(chosen, rule, content);
+    const invalid = validate(chosen, rule, copy);
     if (invalid != null) {
       setUploadFiles([{ id, name: chosen.name, status: 'error', errorMessage: invalid }]);
       return;
@@ -85,7 +86,7 @@ export function CertificatesSection({
     <div className={styles.wrap}>
       {certificates.length === 0 ? (
         <Typography as="p" variant="text-md" color="muted">
-          {content.certificates.empty}
+          {copy.empty}
         </Typography>
       ) : (
         <ul className={styles.list}>
@@ -95,25 +96,27 @@ export function CertificatesSection({
                 <Icon name="note-01" size="sm" tone="primary" decorative />
                 <bdi>{cert.name}</bdi>
               </span>
-              <Button
-                variant="tertiary"
-                size="sm"
-                disabled={busy}
-                onClick={() => onRemove(cert.id)}
-              >
-                {content.certificates.removeLabel}
-              </Button>
+              {onRemove != null && (
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => onRemove(cert.id)}
+                >
+                  {copy.removeLabel}
+                </Button>
+              )}
             </li>
           ))}
         </ul>
       )}
 
       <FileUploader
-        label={content.certificates.uploadLabel}
+        label={copy.uploadLabel}
         hint={
           rule == null
             ? undefined
-            : content.certificates.uploadHint(rule.acceptedFormats.join(', '), rule.maxSizeMb)
+            : copy.uploadHint(rule.acceptedFormats.join(', '), rule.maxSizeMb)
         }
         accept={rule?.acceptedFormats.map((format) => `.${format}`).join(',')}
         disabled={busy}
@@ -123,8 +126,8 @@ export function CertificatesSection({
           counter.current += 1;
           setUploadFiles([]);
         }}
-        browseLabel={content.certificates.browseLabel}
-        removeLabel={content.certificates.removeLabel}
+        browseLabel={copy.browseLabel}
+        removeLabel={copy.removeLabel}
       />
     </div>
   );

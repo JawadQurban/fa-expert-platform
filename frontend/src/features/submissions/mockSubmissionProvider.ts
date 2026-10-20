@@ -6,6 +6,7 @@ import {
   SUBMISSION_DECISION,
   SUBMISSION_STATUS,
   syncsToFast,
+  validateSubmissionFile,
   type SubmissionDecisionInput,
   type SubmissionDto,
   type UploadSubmissionInput,
@@ -118,8 +119,13 @@ export function createMockSubmissionProvider(
       if (!canUpload(submission)) {
         return { ok: false, error: { status: 409, message: 'Nothing to upload at this stage.' } };
       }
-      if (input.fileName.trim() === '') {
-        return { ok: false, error: { status: 400, message: 'file-required' } };
+      // The API's rule and answer: J-01's document rule, refused with a reason.
+      const problem = validateSubmissionFile(input.file);
+      if (problem != null) {
+        return {
+          ok: false,
+          error: { status: 422, message: `refused: ${problem}`, reason: problem },
+        };
       }
       items[index] = {
         ...submission,
@@ -129,7 +135,8 @@ export function createMockSubmissionProvider(
           ...submission.rounds,
           {
             roundNumber: submission.rounds.length + 1,
-            fileName: input.fileName,
+            fileName: input.file.name,
+            fileUrl: `/v1/attachments/mock-${submissionId}-${submission.rounds.length + 1}`,
             decision: null,
             note: null,
             decidedByName: null,

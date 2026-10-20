@@ -108,7 +108,7 @@ describe('J-20 contract — pages against the real API responses', () => {
     expect(screen.getByText(round.note)).toBeInTheDocument();
   });
 
-  it('trainer: an awaiting_upload submission uploads { fileName } to the upload path', async () => {
+  it('trainer: an awaiting_upload submission uploads the FILE (multipart) to the upload path', async () => {
     const posts = serve({
       'v1/me/submissions': [withStatus(SUBMISSION_STATUS.awaitingUpload)],
       [`v1/me/submissions/${id}/upload`]: detail,
@@ -124,9 +124,12 @@ describe('J-20 contract — pages against the real API responses', () => {
     await user.click(screen.getByRole('button', { name: content.uploadAction }));
 
     expect(await screen.findByText(content.uploadedBody)).toBeInTheDocument();
-    expect(posts).toEqual([
-      { path: `v1/me/submissions/${id}/upload`, body: { fileName: 'material-v2.pdf' } },
-    ]);
+    // RUN-004 — the file itself, not its name.
+    expect(posts).toHaveLength(1);
+    expect(posts[0].path).toBe(`v1/me/submissions/${id}/upload`);
+    const sent = (posts[0].body as FormData).get('file');
+    expect(sent).toBeInstanceOf(File);
+    expect((sent as File).name).toBe('material-v2.pdf');
   });
 
   it('trainer: nothing to upload once the file is pending approval', async () => {

@@ -1,5 +1,6 @@
 using ExpertHub.Api.Analytics;
 using ExpertHub.Api.Applications;
+using ExpertHub.Api.Assignments;
 using ExpertHub.Api.Auth;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Persistence;
@@ -63,7 +64,30 @@ internal sealed record DashboardWire(
     // is no earlier week to compare against (`DashboardAnalytics`).
     int? SubmissionDelta,
     IReadOnlyList<DashboardDistributionWire> Distribution,
-    IReadOnlyList<DashboardSlaWire> Sla);
+    IReadOnlyList<DashboardSlaWire> Sla,
+    IReadOnlyList<DashboardInterviewWire> UpcomingInterviews,
+    IReadOnlyList<DashboardRescheduleWire> RescheduleRequests,
+    IReadOnlyList<DashboardDeclinedOfferWire> DeclinedOffers);
+
+/// <summary>A confirmed interview still ahead (BUG-028) — read from J-06's
+/// own record; the dashboard holds no copy.</summary>
+internal sealed record DashboardInterviewWire(
+    string ApplicationId, string Reference, string ApplicantName, string StartsAt,
+    string? TicketNumber);
+
+/// <summary>An applicant's reschedule request waiting on staff (J-06/F4,
+/// BUG-029) — the «requires action» item nothing surfaced before.</summary>
+internal sealed record DashboardRescheduleWire(
+    string ApplicationId, string Reference, string ApplicantName, string RequestedAt,
+    string? Note);
+
+/// <summary>UAT `BUG-047` (J-22) — a trainer declined an assignment offer:
+/// which request and seat, who declined, and where the seat went —
+/// `next-candidate` (the offer passed to <c>NextTrainerName</c>) or
+/// `rematch` (nobody left: the matching engine has to run again).</summary>
+internal sealed record DashboardDeclinedOfferWire(
+    string RequestId, string Reference, int SlotNumber, string TrainerName,
+    string DeclinedAt, string Outcome, string? NextTrainerName);
 
 /// <summary>The staff entry points.</summary>
 public static class InternalEndpoints
@@ -97,7 +121,10 @@ public static class InternalEndpoints
                 rows.Count(r => OpenStatuses.Contains(r.Wire.Status)),
                 await DashboardAnalytics.SubmissionDeltaAsync(db, now, ct),
                 await DashboardAnalytics.DistributionAsync(db, ct),
-                await DashboardAnalytics.SlaAsync(db, now, ct)));
+                await DashboardAnalytics.SlaAsync(db, now, ct),
+                await UpcomingInterviewsAsync(db, now, ct),
+                await RescheduleRequestsAsync(db, ct),
+                await DeclinedOffersAsync(http, db, ct)));
         })
             .WithName("InternalDashboard")
             .RequireAnyFeature("F-0901", "F-0902", "F-0903", "F-0904");
@@ -184,7 +211,101 @@ public static class InternalEndpoints
     /// draft is the applicant's private working copy and has no reference yet
     /// (`BR-0107`), so it is not an item in anybody's queue.
     /// </summary>
+    /// <summary>The next five confirmed interviews, soonest first.</summary>
+    private static async Task<List<DashboardInterviewWire>> UpcomingInterviewsAsync(
+        ExpertHubDbContext db, DateTime now, CancellationToken ct)
+    {
+        var rows = await (
+            from interview in db.Interviews
+            join slot in db.InterviewSlots on interview.ConfirmedSlotId equals slot.SlotId
+            join application in db.Applications on interview.ApplicationId equals application.ApplicationId
+            join applicant in db.Users on application.ApplicantUserId equals applicant.UserId
+            where interview.Status == InterviewStatuses.Scheduled
+                && interview.RescheduleRequestedAt == null
+                && slot.StartsAt >= now
+            orderby slot.StartsAt
+            select new
+            {
+                application.ApplicationId, application.Reference, applicant.FullNameAr,
+                slot.StartsAt, interview.TicketNumber,
+            }).Take(5).ToListAsync(ct);
+        return [.. rows.Select(r => new DashboardInterviewWire(
+            r.ApplicationId.ToString(), r.Reference ?? string.Empty, r.FullNameAr,
+            ApplicationEndpoints.Iso(r.StartsAt), r.TicketNumber))];
+    }
+
+    /// <summary>Every reschedule request still waiting, oldest first — the
+    /// longest wait is the most urgent.</summary>
+    private static async Task<List<DashboardRescheduleWire>> RescheduleRequestsAsync(
+        ExpertHubDbContext db, CancellationToken ct)
+    {
+        var rows = await (
+            from interview in db.Interviews
+            join application in db.Applications on interview.ApplicationId equals application.ApplicationId
+            join applicant in db.Users on application.ApplicantUserId equals applicant.UserId
+            where interview.RescheduleRequestedAt != null
+                && interview.Status != InterviewStatuses.Completed
+            orderby interview.RescheduleRequestedAt
+            select new
+            {
+                application.ApplicationId, application.Reference, applicant.FullNameAr,
+                RequestedAt = interview.RescheduleRequestedAt!.Value, interview.RescheduleNote,
+            }).Take(10).ToListAsync(ct);
+        return [.. rows.Select(r => new DashboardRescheduleWire(
+            r.ApplicationId.ToString(), r.Reference ?? string.Empty, r.FullNameAr,
+            ApplicationEndpoints.Iso(r.RequestedAt), r.RescheduleNote))];
+    }
+
+    /// <summary>
+    /// UAT `BUG-047` — the newest declined offers on the assignment requests
+    /// the caller can see (J-16/J-17's `F-0501`/`F-0503`, centre-scoped by
+    /// `P-351`). Derived from the offers themselves, not from CAP-07: EV-0502
+    /// reaches the bell only once the matrix routes it.
+    /// </summary>
+    private static async Task<List<DashboardDeclinedOfferWire>> DeclinedOffersAsync(
+        HttpContext http, ExpertHubDbContext db, CancellationToken ct)
+    {
+        var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+        if (await FeatureAuthorization.WidestScopeAsync(db, actor.UserId, "F-0501", ct) is null
+            && await FeatureAuthorization.WidestScopeAsync(db, actor.UserId, "F-0503", ct) is null)
+        {
+            return [];
+        }
+        var centres = await AssignmentEndpoints.CentreScopeAsync(http, db, ct);
+        var rows = await (
+            from offer in db.AssignmentOffers
+            join slot in db.AssignmentSlots on offer.SlotId equals slot.SlotId
+            join request in db.AssignmentRequests on slot.RequestId equals request.RequestId
+            join profile in db.TrainerProfiles on offer.TrainerId equals profile.TrainerId
+            join trainer in db.Users on profile.UserId equals trainer.UserId
+            where offer.Status == OfferStatuses.Rejected && offer.RespondedAt != null
+            orderby offer.RespondedAt descending
+            select new
+            {
+                request.RequestId, request.Reference, request.CentreId, slot.SlotNumber,
+                trainer.FullNameAr, DeclinedAt = offer.RespondedAt!.Value,
+                // The offer the refusal passed the seat to, if there was one.
+                Next = (
+                    from next in db.AssignmentOffers
+                    join p in db.TrainerProfiles on next.TrainerId equals p.TrainerId
+                    join u in db.Users on p.UserId equals u.UserId
+                    where next.SlotId == offer.SlotId && next.SentAt >= offer.RespondedAt
+                    orderby next.SentAt
+                    select u.FullNameAr).FirstOrDefault(),
+            }).ToListAsync(ct);
+        return [.. rows
+            .Where(r => centres is null
+                || (Guid.TryParse(r.CentreId, out var centre) && centres.Contains(centre)))
+            .Take(10)
+            .Select(r => new DashboardDeclinedOfferWire(
+                r.RequestId.ToString(), r.Reference, r.SlotNumber, r.FullNameAr,
+                ApplicationEndpoints.Iso(r.DeclinedAt),
+                r.Next is null ? "rematch" : "next-candidate",
+                r.Next))];
+    }
+
     private static async Task<List<(InboxApplicationWire Wire, DateTime? SubmittedAtRaw)>> LoadAsync(
+
         ExpertHubDbContext db,
         CancellationToken ct)
     {

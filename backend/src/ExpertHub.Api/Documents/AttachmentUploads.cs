@@ -86,6 +86,14 @@ internal static class AttachmentUploads
             await file.CopyToAsync(buffer, ct);
             content = buffer.ToArray();
         }
+        if (!ContentMatches(extension, content))
+        {
+            // A renamed executable is not a PDF because its name says so.
+            return (null, Results.Problem(
+                statusCode: 422,
+                detail: $"The file's content is not a valid '{extension}' file.",
+                extensions: new Dictionary<string, object?> { ["reason"] = "format" }));
+        }
         var attachment = new Attachment
         {
             AttachmentId = Guid.NewGuid(),
@@ -101,6 +109,21 @@ internal static class AttachmentUploads
         db.Attachments.Add(attachment);
         return (attachment, null);
     }
+
+    /// <summary>
+    /// The file's own signature agrees with its extension — the bytes, not the
+    /// name, decide what a file is. Formats without a fixed signature pass.
+    /// </summary>
+    internal static bool ContentMatches(string extension, ReadOnlySpan<byte> content) => extension switch
+    {
+        "pdf" => content.StartsWith("%PDF-"u8),
+        "png" => content.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47]),
+        "jpg" or "jpeg" => content.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]),
+        // DOCX is a ZIP package; DOC is an OLE compound file.
+        "docx" => content.StartsWith((ReadOnlySpan<byte>)[0x50, 0x4B, 0x03, 0x04]),
+        "doc" => content.StartsWith((ReadOnlySpan<byte>)[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]),
+        _ => true,
+    };
 
     internal static RouteGroupBuilder MapAttachmentUploadEndpoints(this RouteGroupBuilder v1)
     {
@@ -150,6 +173,51 @@ internal static class AttachmentUploads
             .DisableAntiforgery()
             .WithName("UploadInternalAttachment");
         return v1;
+    }
+
+    /// <summary>The types a browser can show in a tab — everything else downloads.</summary>
+    private static readonly Dictionary<string, string> PreviewableTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["pdf"] = "application/pdf",
+        ["png"] = "image/png",
+        ["jpg"] = "image/jpeg",
+        ["jpeg"] = "image/jpeg",
+    };
+
+    /// <summary>
+    /// Serves a stored file so a browser can PREVIEW it — BUG-001.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ The type comes from the validated extension on the ATTACHMENT row,
+    /// never from the store and never from the uploader. The disk store keeps
+    /// bytes only and answered <c>application/octet-stream</c>, and every file
+    /// was also sent as <c>attachment</c> — so on the server, where the disk
+    /// store is configured, no CV, screening document or agreement file could
+    /// be previewed; each one became an anonymous download. The uploader's own
+    /// content type is not trusted either: a «.pdf» declared <c>text/html</c>
+    /// would otherwise render as a page on the API's origin.
+    /// </para>
+    /// <para>
+    /// PDF and images open inline; Word files download. <c>nosniff</c> and a
+    /// sandbox CSP keep an inline file from ever running as a document.
+    /// </para>
+    /// </remarks>
+    internal static IResult Serve(HttpContext http, Attachment attachment, DocumentContent content)
+    {
+        var extension = Path.GetExtension(attachment.FileName).TrimStart('.');
+        var headers = http.Response.Headers;
+        headers.XContentTypeOptions = "nosniff";
+        headers.ContentSecurityPolicy = "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'";
+        if (PreviewableTypes.TryGetValue(extension, out var previewType))
+        {
+            var disposition = new Microsoft.Net.Http.Headers.ContentDispositionHeaderValue("inline");
+            // `filename*` too: an Arabic name survives as itself.
+            disposition.SetHttpFileName(attachment.FileName);
+            headers.ContentDisposition = disposition.ToString();
+            return Results.File(content.Bytes, previewType);
+        }
+        return Results.File(content.Bytes, "application/octet-stream", attachment.FileName);
     }
 
     /// <summary>An uploaded attachment by id, or null.</summary>

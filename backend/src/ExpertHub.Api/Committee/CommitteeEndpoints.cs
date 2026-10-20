@@ -539,7 +539,7 @@ public static class CommitteeEndpoints
             [.. templates.Select(t => new SequenceTemplateWire(
                 t.TemplateId.ToString(),
                 t.Name,
-                [.. (JsonSerializer.Deserialize<List<TemplateMemberJson>>(t.Members) ?? [])
+                [.. (JsonSerializer.Deserialize<List<TemplateMemberJson>>(t.Members, TemplateJson) ?? [])
                     .Select(m => new TemplateMemberWire(m.ApproverId, m.Obligation))]))],
             new OutcomeWire(
                 outcomeState,
@@ -588,6 +588,11 @@ public static class CommitteeEndpoints
             bank?.RequestedAt is { } requested ? ApplicationEndpoints.Iso(requested) : null,
             bank?.CompletedAt is { } completed ? ApplicationEndpoints.Iso(completed) : null);
     }
+
+    /// <summary>Templates are saved camelCase (`approverId`), so they are read
+    /// back with the web defaults — read case-sensitively, every member came
+    /// back with no approver and a null obligation (RUN-016).</summary>
+    private static readonly JsonSerializerOptions TemplateJson = new(JsonSerializerDefaults.Web);
 
     private sealed record TemplateMemberJson(string ApproverId, string Obligation);
 }

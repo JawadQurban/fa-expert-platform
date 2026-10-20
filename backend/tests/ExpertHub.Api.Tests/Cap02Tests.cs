@@ -136,7 +136,8 @@ public sealed class Cap02Tests
                     },
                 },
             });
-        Assert.Equal("under-review", decision.GetProperty("status").GetString());
+        // RUN-022 — accepted to the interview stage, before any time is picked.
+        Assert.Equal("interview-scheduled", decision.GetProperty("status").GetString());
 
         // The applicant sees the J-06 block: two slots, the 3-business-day
         // clock (SLA-0201 is seeded fixed), and the manage action.
@@ -156,6 +157,7 @@ public sealed class Cap02Tests
         Assert.Equal("interview-scheduled", confirmed.GetProperty("status").GetString());
         var ticket = confirmed.GetProperty("interview").GetProperty("ticketNumber").GetString();
         Assert.Matches(@"^INT-\d{4}-\d{4}$", ticket);
+        await StartInterviewAsync(applicationId);
 
         // A new interview is scored on the APPROVED model (Notion «Interview
         // Evaluation Model», Finalized): ten criteria, weights summing to 100,
@@ -294,19 +296,15 @@ public sealed class Cap02Tests
         Assert.Equal(70m, result.GetProperty("passThreshold").GetDecimal());
         Assert.False(result.GetProperty("passed").GetBoolean());
 
-        // Nothing passed, so nothing can proceed to the approval committee —
-        // the decision-maker's remaining path is a direct rejection.
+        // P-355 (BUG-033) — the pass mark is advisory: nothing passed, yet
+        // forwarding to the approval committee stays the decision-maker's choice.
         var decisionPath = $"/api/v1/internal/applications/{applicationId}/interview/decision";
-        var blocked = await decider.PostAsJsonAsync(decisionPath, new { kind = "forward" });
-        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
-        Assert.Contains("no-service-passed", await blocked.Content.ReadAsStringAsync(), StringComparison.Ordinal);
-        var rejected = await PostAsync(decider, decisionPath,
-            new { kind = "reject", reason = "insufficient-experience", reasonOther = "" });
-        Assert.Equal("reject", rejected.GetProperty("kind").GetString());
+        var forwarded = await PostAsync(decider, decisionPath, new { kind = "forward" });
+        Assert.Equal("forward", forwarded.GetProperty("kind").GetString());
     }
 
     [Fact]
-    public async Task Only_a_service_that_passed_proceeds_to_the_committee_which_still_decides()
+    public async Task Every_service_proceeds_to_the_committee_which_decides_whatever_the_pass_mark_said()
     {
         using var applicant = await SignInAsync("applicant-7", "unmapped", "سلمان القحطاني");
         var applicationId = await SubmitCompleteApplicationAsync(applicant, ["trainer", "consultant"]);
@@ -345,7 +343,8 @@ public sealed class Cap02Tests
         Assert.True(results["trainer"]);
         Assert.False(results["consultant"]);
 
-        // Forwarding carries the service that passed; the one that did not stops here.
+        // P-355 (BUG-033) — forwarding carries every service, passed or not;
+        // the pass mark only informs the committee.
         var forwarded = await PostAsync(decider,
             $"/api/v1/internal/applications/{applicationId}/interview/decision",
             new { kind = "forward" });
@@ -356,7 +355,7 @@ public sealed class Cap02Tests
                 .Where(s => s.ApplicationId == Guid.Parse(applicationId))
                 .ToDictionaryAsync(s => s.Service, s => s.Outcome);
             Assert.Equal("pending", outcomes["trainer"]);
-            Assert.Equal("rejected", outcomes["consultant"]);
+            Assert.Equal("pending", outcomes["consultant"]);
             var application = await db.Applications.SingleAsync(a => a.ApplicationId == Guid.Parse(applicationId));
             // Passing approved nothing: the approval committee is next.
             Assert.Equal("approval-in-progress", application.Status);
@@ -378,7 +377,7 @@ public sealed class Cap02Tests
                 .Where(s => s.ApplicationId == Guid.Parse(applicationId))
                 .ToDictionaryAsync(s => s.Service, s => s.Outcome);
             Assert.Equal("accepted", outcomes["trainer"]);
-            Assert.Equal("rejected", outcomes["consultant"]);
+            Assert.Equal("accepted", outcomes["consultant"]);
         }
     }
 
@@ -461,16 +460,24 @@ public sealed class Cap02Tests
         Assert.Equal("trainer",
             decision.GetProperty("exemptedServices").EnumerateArray().Single().GetString());
 
-        // P-45 / J-08/F2/AC-3 — the applicant's view: the interview stage
-        // reads as PASSED on the timeline, the interview block is null, and
-        // the whole payload carries no exemption field to leak through.
+        // RUN-034 — an exempted service is an ACCEPTED one, in the reply and
+        // on the screening page's recorded-decision card.
+        Assert.Equal("trainer",
+            decision.GetProperty("acceptedServices").EnumerateArray().Single().GetString());
+        var screening = await GetAsync(decider, $"/api/v1/internal/applications/{applicationId}/screening");
+        Assert.Equal("trainer", screening.GetProperty("decision")
+            .GetProperty("acceptedServices").EnumerateArray().Single().GetString());
+
+        // BUG-034 (supersedes P-45) — the applicant is told the interview was
+        // EXEMPTED, not that it passed; the interview block stays null and
+        // the exemption reason is never served to them.
         var response = await applicant.GetAsync($"/api/v1/me/applications/{applicationId}");
         var raw = await response.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("exempt", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("exemptionReason", raw, StringComparison.OrdinalIgnoreCase);
         var detail = JsonSerializer.Deserialize<JsonElement>(raw);
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("interview").ValueKind);
         var stages = detail.GetProperty("timeline").EnumerateArray().ToArray();
-        Assert.Equal("complete", stages[2].GetProperty("state").GetString()); // interview: passed
+        Assert.Equal("exempted", stages[2].GetProperty("state").GetString()); // interview: exempted
         Assert.Equal("current", stages[3].GetProperty("state").GetString());  // approval
 
         // The INTERNAL committee context does say so — with the reason.
@@ -611,13 +618,13 @@ public sealed class Cap02Tests
     /* ── J-07/J-08 — services are evaluated independently ──────────────────── */
 
     [Theory]
-    // exempted,                     interviewed with score (5 = pass, 3 = fail), forward allowed
-    [InlineData("consultant", "trainer:3", true)]                          // exempt + failed
-    [InlineData("content-developer", "trainer:5,consultant:3", true)]     // passed + exempt + failed
-    [InlineData("", "trainer:3,consultant:3", false)]                      // all failed
-    [InlineData("", "trainer:5,consultant:3", true)]                       // passed + failed
-    public async Task An_exempted_or_passed_service_keeps_the_application_moving_when_another_fails(
-        string exempted, string interviewed, bool forwardAllowed)
+    // exempted,                     interviewed with score (5 = pass, 3 = fail)
+    [InlineData("consultant", "trainer:3")]                          // exempt + failed
+    [InlineData("content-developer", "trainer:5,consultant:3")]     // passed + exempt + failed
+    [InlineData("", "trainer:3,consultant:3")]                      // all failed (P-355)
+    [InlineData("", "trainer:5,consultant:3")]                       // passed + failed
+    public async Task Every_service_goes_to_the_committee_whatever_its_interview_score(
+        string exempted, string interviewed)
     {
         var scores = interviewed.Split(',').Select(pair => pair.Split(':'))
             .ToDictionary(pair => pair[0], pair => decimal.Parse(pair[1], CultureInfo.InvariantCulture));
@@ -631,6 +638,7 @@ public sealed class Cap02Tests
         var memberId = await UserIdOfAsync($"member-mix-{tag}");
         await MixedScreeningAsync(decider, applicationId, memberId, [.. scores.Keys], exemptedServices);
         await PickFirstSlotAsync(applicant, applicationId);
+        await StartInterviewAsync(applicationId);
         await EvaluateAsync(member, applicationId, scores);
 
         var forward = await decider.PostAsJsonAsync(
@@ -639,31 +647,10 @@ public sealed class Cap02Tests
         var outcomes = await db.ApplicationServices
             .Where(s => s.ApplicationId == Guid.Parse(applicationId))
             .ToDictionaryAsync(s => s.Service, s => s.Outcome);
-        if (!forwardAllowed)
-        {
-            Assert.Equal(HttpStatusCode.Conflict, forward.StatusCode);
-            Assert.Equal("no-service-passed",
-                (await forward.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
-            Assert.All(outcomes.Values, outcome => Assert.Equal("pending", outcome));
-            return;
-        }
+        // P-355 (BUG-033) — no service is closed by its score: every one,
+        // passed, failed or exempted, waits for the committee's decision.
         Assert.Equal(HttpStatusCode.OK, forward.StatusCode);
-        foreach (var (service, score) in scores)
-        {
-            Assert.Equal(score >= 5 ? "pending" : "rejected", outcomes[service]);
-        }
-        foreach (var service in exemptedServices)
-        {
-            // The exempted service is NOT lost with the failed one.
-            Assert.Equal("pending", outcomes[service]);
-        }
-        var committee = await GetAsync(decider, $"/api/v1/internal/applications/{applicationId}/committee");
-        var before = JsonSerializer.Serialize(committee);
-        foreach (var (service, score) in scores.Where(s => s.Value < 5))
-        {
-            // A failed service is not put before the committee as accepted.
-            Assert.DoesNotContain($"\"{service}\"", before.Replace("\"services\"", string.Empty), StringComparison.Ordinal);
-        }
+        Assert.All(services, service => Assert.Equal("pending", outcomes[service]));
     }
 
     [Fact]
@@ -683,7 +670,111 @@ public sealed class Cap02Tests
             (await early.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
 
         await PickFirstSlotAsync(applicant, applicationId);
+
+        // RUN-036 / BUG-030 — confirmed but not yet started: still refused.
+        var beforeStart = await member.PostAsJsonAsync(
+            $"/api/v1/internal/applications/{applicationId}/interview/evaluations",
+            new { kind = "did-not-attend" });
+        Assert.Equal(HttpStatusCode.Conflict, beforeStart.StatusCode);
+        Assert.Equal("interview-not-started",
+            (await beforeStart.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+
+        await StartInterviewAsync(applicationId);
         await EvaluateAsync(member, applicationId, new Dictionary<string, decimal> { ["trainer"] = 5m });
+    }
+
+    /// <summary>
+    /// RUN-002 / RUN-021 / BUG-032 — a committee member is never told they are
+    /// not on the panel when they are; a reschedule keeps the panel, keeps the
+    /// time as entered, and waits for the applicant; and an interview whose
+    /// time has passed reads as ended without any job running.
+    /// </summary>
+    [Fact]
+    public async Task A_member_keeps_their_seat_through_a_reschedule_and_is_told_why_they_cannot_evaluate_yet()
+    {
+        using var applicant = await SignInAsync("applicant-seat", "unmapped", "متقدم");
+        var applicationId = await SubmitCompleteApplicationAsync(applicant);
+        using var decider = await SignInAsync("decider-seat", "fa-staff", "مدير الفرز", RoleCode.Manager);
+        using var member = await SignInAsync("member-seat", "fa-staff", "عضو", RoleCode.Manager);
+        var memberId = await UserIdOfAsync("member-seat");
+        await MixedScreeningAsync(decider, applicationId, memberId, ["trainer"], []);
+        var path = $"/api/v1/internal/applications/{applicationId}/interview";
+
+        var awaiting = await GetAsync(member, path);
+        Assert.Equal("awaiting-selection", awaiting.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, awaiting.GetProperty("ticket").GetProperty("scheduledAt").ValueKind);
+        Assert.Equal("awaiting-selection",
+            awaiting.GetProperty("viewer").GetProperty("evaluationBlockedReason").GetString());
+        // The decider is not on this panel — the one person who IS «not a member».
+        Assert.Equal("not-member",
+            (await GetAsync(decider, path)).GetProperty("viewer").GetProperty("evaluationBlockedReason").GetString());
+
+        // RUN-035 — the pick is an action the applicant owes, and is counted.
+        const string mine = "/api/v1/me/applications?page=1&pageSize=10";
+        Assert.Equal(1, (await GetAsync(applicant, mine)).GetProperty("awaitingSlotSelection").GetInt32());
+
+        await PickFirstSlotAsync(applicant, applicationId);
+        Assert.Equal(0, (await GetAsync(applicant, mine)).GetProperty("awaitingSlotSelection").GetInt32());
+        var scheduled = await GetAsync(member, path);
+        Assert.Equal("scheduled", scheduled.GetProperty("status").GetString());
+        Assert.Equal(memberId, scheduled.GetProperty("viewer").GetProperty("memberId").GetString());
+        Assert.Equal("not-started",
+            scheduled.GetProperty("viewer").GetProperty("evaluationBlockedReason").GetString());
+
+        // RUN-021 — 09:00 in Riyadh is 06:00 UTC, whatever form it arrives in.
+        var day = DateTime.UtcNow.Date.AddDays(10);
+        var riyadh = new DateTimeOffset(DateTime.SpecifyKind(day.AddHours(9), DateTimeKind.Unspecified), TimeSpan.FromHours(3));
+        var rescheduled = await PostAsync(decider, $"{path}/reschedule", new
+        {
+            slots = new[] { riyadh.ToString("yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture) },
+            note = "",
+        });
+        var ticket = rescheduled.GetProperty("ticket");
+        // Proposed, not fixed: no confirmed time until the applicant picks.
+        Assert.Equal(JsonValueKind.Null, ticket.GetProperty("scheduledAt").ValueKind);
+        Assert.Equal(
+            [day.AddHours(6).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture)],
+            ticket.GetProperty("proposedSlots").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal("awaiting-selection", rescheduled.GetProperty("status").GetString());
+        var applicantView = await GetAsync(applicant, $"/api/v1/me/applications/{applicationId}");
+        Assert.Equal("interview-scheduled", applicantView.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, applicantView.GetProperty("interview").GetProperty("selectedSlotId").ValueKind);
+
+        // The panel survived the reschedule.
+        var afterReschedule = await GetAsync(member, path);
+        Assert.Equal(memberId, Assert.Single(afterReschedule.GetProperty("committee").EnumerateArray())
+            .GetProperty("memberId").GetString());
+        Assert.Equal("awaiting-selection",
+            afterReschedule.GetProperty("viewer").GetProperty("evaluationBlockedReason").GetString());
+
+        // The applicant picks the new time; once it has passed, the member evaluates.
+        await PickFirstSlotAsync(applicant, applicationId);
+        await StartInterviewAsync(applicationId, TimeSpan.FromHours(2));
+        var ended = await GetAsync(member, path);
+        // BUG-032 — past its time, the interview reads as ended (derived).
+        Assert.Equal("ended", ended.GetProperty("status").GetString());
+        Assert.True(ended.GetProperty("viewer").GetProperty("canEvaluate").GetBoolean());
+        Assert.Equal(JsonValueKind.Null,
+            ended.GetProperty("viewer").GetProperty("evaluationBlockedReason").ValueKind);
+        await EvaluateAsync(member, applicationId, new Dictionary<string, decimal> { ["trainer"] = 5m });
+
+        // Signing in again changes nothing: they responded, they are still a member.
+        using var again = await SignInAsync("member-seat", "fa-staff", "عضو");
+        var reopened = await GetAsync(again, path);
+        Assert.Equal("already-responded",
+            reopened.GetProperty("viewer").GetProperty("evaluationBlockedReason").GetString());
+        Assert.Equal("completed", reopened.GetProperty("status").GetString());
+    }
+
+    /// <summary>Moves the confirmed time into the past, so the interview has
+    /// started — an evaluation opens only then (RUN-036).</summary>
+    private async Task StartInterviewAsync(string applicationId, TimeSpan? ago = null)
+    {
+        await using var db = _database.CreateContext();
+        var interview = await db.Interviews.SingleAsync(i => i.ApplicationId == Guid.Parse(applicationId));
+        var slot = await db.InterviewSlots.SingleAsync(s => s.SlotId == interview.ConfirmedSlotId);
+        slot.StartsAt = DateTime.UtcNow - (ago ?? TimeSpan.FromMinutes(1));
+        await db.SaveChangesAsync();
     }
 
     [Fact]
@@ -750,6 +841,8 @@ public sealed class Cap02Tests
             Assert.Equal("pending",
                 rescheduled.GetProperty("committee").EnumerateArray().Single().GetProperty("state").GetString());
             await PickFirstSlotAsync(applicant, applicationId);
+            // The re-held interview must start before it can be evaluated (RUN-036).
+            await StartInterviewAsync(applicationId);
         }
 
         // AC-4 — rejection stays available at any point, even before the new
@@ -760,6 +853,14 @@ public sealed class Cap02Tests
         var rejected = await PostAsync(decider, decisionPath,
             new { kind = "reject", reason = "insufficient-experience", reasonOther = "" });
         Assert.Equal("reject", rejected.GetProperty("kind").GetString());
+
+        // RUN-034 — the screening page's card shows the LATEST decision: the
+        // direct rejection and its reason, with the screened-in service kept.
+        var card = (await GetAsync(decider, $"/api/v1/internal/applications/{applicationId}/screening"))
+            .GetProperty("decision");
+        Assert.Equal("reject", card.GetProperty("kind").GetString());
+        Assert.Equal("insufficient-experience", card.GetProperty("rejectionReason").GetString());
+        Assert.Equal("trainer", card.GetProperty("acceptedServices").EnumerateArray().Single().GetString());
 
         // A decided interview takes no further responses.
         var late = await member.PostAsJsonAsync($"{interviewPath}/evaluations", new { kind = "did-not-attend" });
@@ -923,7 +1024,7 @@ public sealed class Cap02Tests
                 }).ToArray(),
             });
 
-    private static async Task AcceptToInterviewAsync(
+    private async Task AcceptToInterviewAsync(
         HttpClient decider, HttpClient applicant, string applicationId, string memberId,
         string[]? services = null)
     {
@@ -948,6 +1049,7 @@ public sealed class Cap02Tests
         await PostAsync(applicant,
             $"/api/v1/me/applications/{applicationId}/interview-slot",
             new { slotId = slot.GetProperty("id").GetString() });
+        await StartInterviewAsync(applicationId);
     }
 
     /// <summary>

@@ -5,7 +5,13 @@ import { Container, Section } from '@ds/layout';
 import { useLocale } from '@i18n/LocaleProvider';
 import { getSubmissionService } from './submissionService';
 import { getSubmissionsContent } from './submissions.content';
-import { canUpload, SUBMISSION_STATUS, type SubmissionDto } from './submission.types';
+import {
+  canUpload,
+  SUBMISSION_FILE_RULE,
+  SUBMISSION_STATUS,
+  validateSubmissionFile,
+  type SubmissionDto,
+} from './submission.types';
 import { SubmissionRounds, SubmissionStatusTag } from './components/SubmissionRounds';
 import styles from './MySubmissionsPage.module.css';
 import { PageLoadError } from '../../shared/components/PageLoadError';
@@ -26,9 +32,10 @@ import { dateFormatter } from '../../shared/formatting';
  *   approval is a note asking for another upload (F2/AC-3), so a
  *   `changes-requested` submission shows the note *and* the upload control
  *   together — the note is what the next upload has to answer.
- * - **Only the file name is recorded** (`G26`/`G27`): the API serves no
- *   attachment rule and stores no bytes, so the page validates nothing it
- *   cannot know and says plainly what an upload records.
+ * - **The file itself is stored** (RUN-004), under J-01's approved document
+ *   rule (PDF/DOC/DOCX, 1 MB): a refused file is refused the moment it is
+ *   picked, with the reason in the person's language, and the server re-checks
+ *   the bytes.
  * - **No reference or programme name** is on the wire, so the card names the
  *   date the slot opened instead of inventing either.
  * - **No deadline is shown**, because open item 1 defines none. Inventing one
@@ -46,7 +53,8 @@ export default function MySubmissionsPage() {
   const [submissions, setSubmissions] = useState<readonly SubmissionDto[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [picked, setPicked] = useState<Record<string, string>>({});
+  const [picked, setPicked] = useState<Record<string, File>>({});
+  const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
   const [uploadedId, setUploadedId] = useState<string | null>(null);
   const [actionFailed, setActionFailed] = useState(false);
   const loadedOnce = useRef(false);
@@ -94,21 +102,46 @@ export default function MySubmissionsPage() {
     dateStyle: 'medium',
   });
 
+  const problemMessage = (reason: string | undefined): string | null =>
+    reason === 'format' ? content.fileFormat : reason === 'size' ? content.fileSize : null;
+
+  const setFileError = (submissionId: string, message: string | null) =>
+    setFileErrors((current) => {
+      const next = { ...current };
+      if (message == null) {
+        delete next[submissionId];
+      } else {
+        next[submissionId] = message;
+      }
+      return next;
+    });
+
   const pick = (submission: SubmissionDto, files: File[]) => {
     const file = files[0];
-    if (file != null) {
-      setPicked((current) => ({ ...current, [submission.submissionId]: file.name }));
+    if (file == null) {
+      return;
     }
+    const problem = problemMessage(validateSubmissionFile(file) ?? undefined);
+    setFileError(submission.submissionId, problem);
+    setPicked((current) => {
+      const next = { ...current };
+      if (problem == null) {
+        next[submission.submissionId] = file;
+      } else {
+        delete next[submission.submissionId];
+      }
+      return next;
+    });
   };
 
   const upload = (submission: SubmissionDto) => {
-    const fileName = picked[submission.submissionId];
-    if (fileName == null) {
+    const file = picked[submission.submissionId];
+    if (file == null) {
       return;
     }
     setBusy(true);
     setActionFailed(false);
-    void service.uploadSubmission(submission.submissionId, { fileName }).then((result) => {
+    void service.uploadSubmission(submission.submissionId, { file }).then((result) => {
       setBusy(false);
       if (result.ok) {
         setUploadedId(submission.submissionId);
@@ -119,7 +152,12 @@ export default function MySubmissionsPage() {
         });
         setReloadKey((key) => key + 1);
       } else {
-        setActionFailed(true);
+        const refused = problemMessage(result.error.reason);
+        if (refused == null) {
+          setActionFailed(true);
+        } else {
+          setFileError(submission.submissionId, refused);
+        }
       }
     });
   };
@@ -242,12 +280,20 @@ export default function MySubmissionsPage() {
                           variant="single"
                           label={content.uploadLabel}
                           hint={content.uploadHint}
+                          accept={SUBMISSION_FILE_RULE.acceptedFormats
+                            .map((format) => `.${format}`)
+                            .join(',')}
                           onFilesSelected={(files) => pick(submission, files)}
                         />
                         {chosen != null && (
                           <Typography as="p" variant="text-sm">
-                            <bdi>{chosen}</bdi>
+                            <bdi>{chosen.name}</bdi>
                           </Typography>
+                        )}
+                        {fileErrors[submission.submissionId] != null && (
+                          <Alert tone="error" surface="tinted" role="alert">
+                            {fileErrors[submission.submissionId]}
+                          </Alert>
                         )}
                         <div className={styles.actions}>
                           <Button

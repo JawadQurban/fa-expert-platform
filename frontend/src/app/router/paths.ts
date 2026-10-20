@@ -39,6 +39,8 @@ export const expertHubRouteSegments = {
   engagementDetail: 'engagements/:engagementId',
   submissions: 'submissions',
   entitlements: 'entitlements',
+  notifications: 'notifications',
+  internalMyNotifications: 'internal/my-notifications',
   internal: 'internal',
   internalApplications: 'internal/applications',
   internalNominations: 'internal/nominations',
@@ -114,6 +116,11 @@ export const expertHubPaths = {
   /** EH-TP-09 — the trainer's own entitlement record (CAP-06 / `F-0601`).
    *  Read-only: every value is consumed from ERP (`BR-0601`). */
   entitlements: abs('entitlements'),
+  /** J-25 «إشعاراتي» — the signed-in person's own in-platform notifications
+   *  (the header bell). Any role; staff reach the same page inside their shell. */
+  notifications: abs('notifications'),
+  internalMyNotifications: abs('internal/my-notifications'),
+
   /** EH-INT-01 Internal Dashboard (staff) + EH-INT-02 Application Inbox. Nested
    *  under `internal/` behind the internal-role guard (the IA's same-URL,
    *  role-resolved render is a later reconciliation). */

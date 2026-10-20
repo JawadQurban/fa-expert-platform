@@ -31,8 +31,13 @@ namespace ExpertHub.Api.Interviews;
  *   `SCREENING_RESULT.decided_by`, never a role string.
  */
 
+/// <remarks><c>ScheduledAt</c> is the CONFIRMED time only — null while the
+/// applicant has not chosen (RUN-021: the first proposal used to be served here,
+/// so a reschedule looked fixed before anybody had picked it).
+/// <c>ProposedSlots</c> are the open proposals, shown as entered.</remarks>
 internal sealed record TicketWire(
-    string Number, string ScheduledAt, string? MeetingUrl, int RescheduleCount);
+    string Number, string? ScheduledAt, string? MeetingUrl, int RescheduleCount,
+    IReadOnlyList<string> ProposedSlots);
 
 /// <summary>J-06/F1/AC-3 + F3 — the applicant asked for a different time. Served
 /// to staff so the request reaches somebody who can act on it; cleared when
@@ -67,10 +72,14 @@ internal sealed record ServiceResultWire(
 
 /// <remarks><c>CanReject</c> — J-07/F3/AC-4: after a reschedule for a full
 /// committee no-show, rejection stays available while forwarding does not.
-/// <c>FullNoShow</c> — every member marked «did not attend» (AC-3).</remarks>
+/// <c>FullNoShow</c> — every member marked «did not attend» (AC-3).
+/// <c>EvaluationBlockedReason</c> says WHY <c>CanEvaluate</c> is false
+/// (RUN-002: the page read every false as «not a member», so a member who had
+/// already evaluated, or whose interview was awaiting a new time, was told they
+/// did not belong to the panel). Null when the viewer can evaluate.</remarks>
 internal sealed record InterviewViewerWire(
     string? MemberId, bool CanEvaluate, bool CanDecide, bool CanReschedule,
-    bool CanReject = false, bool FullNoShow = false);
+    bool CanReject = false, bool FullNoShow = false, string? EvaluationBlockedReason = null);
 
 internal sealed record PostInterviewDecisionWire(
     string Kind, string DecidedAt, string DecidedByName, string? RejectionReason);
@@ -87,7 +96,21 @@ internal sealed record InterviewDetailWire(
     InterviewViewerWire Viewer,
     PostInterviewDecisionWire? Decision,
     IReadOnlyList<string> ExemptedServices,
-    RescheduleRequestWire? RescheduleRequest = null);
+    RescheduleRequestWire? RescheduleRequest = null,
+    string Status = InterviewPhases.AwaitingSelection);
+
+/// <summary>
+/// The interview's state as a person reads it — DERIVED from the stored status
+/// and the clock, so «ended» needs no background job (BUG-032).
+/// </summary>
+internal static class InterviewPhases
+{
+    public const string AwaitingSelection = "awaiting-selection";
+    public const string Scheduled = "scheduled";
+    public const string InProgress = "in-progress";
+    public const string Ended = "ended";
+    public const string Completed = "completed";
+}
 
 internal sealed record AxisScoreInputWire(string? AxisId, decimal? Score);
 
@@ -114,7 +137,8 @@ public static class InterviewEndpoints
         // F-0203 تقييم المقابلة for reading and evaluating; F-0202 جدولة
         // المقابلة for proposing new times — two features, two audiences.
         interview.MapGet("/", async (
-            string id, HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
+            string id, HttpContext http, ExpertHubDbContext db, IConfiguration configuration,
+            CancellationToken ct) =>
         {
             var loaded = await LoadAsync(id, db, ct);
             if (loaded is null)
@@ -122,7 +146,7 @@ public static class InterviewEndpoints
                 return Results.Problem(statusCode: 404, detail: "No interview exists for this application.");
             }
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
-            return Results.Ok(await BuildDetailAsync(db, loaded.Value.Application, loaded.Value.Interview, actor.UserId, ct));
+            return Results.Ok(await BuildDetailAsync(db, loaded.Value.Application, loaded.Value.Interview, actor.UserId, ct, InterviewMeeting.Length(configuration)));
         }).WithName("InterviewDetail")
             .RequireFeature("F-0203");
 
@@ -131,6 +155,7 @@ public static class InterviewEndpoints
             EvaluationInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            IConfiguration configuration,
             CancellationToken ct) =>
         {
             var loaded = await LoadAsync(id, db, ct);
@@ -161,6 +186,12 @@ public static class InterviewEndpoints
                 return Results.Problem(statusCode: 409, detail: "interview-not-scheduled");
             }
             var now = DateTime.UtcNow;
+            if (await ConfirmedStartAsync(db, interviewRow, ct) is not { } startsAt || startsAt > now)
+            {
+                // RUN-036 / BUG-030 — an evaluation records what happened in
+                // the room, so it opens when the interview starts, not before.
+                return Results.Problem(statusCode: 409, detail: "interview-not-started");
+            }
 
             /*
              * Two claims, in this order. (1) Lock the interview row: the panel's
@@ -256,7 +287,7 @@ public static class InterviewEndpoints
             }
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            return Results.Ok(await BuildDetailAsync(db, application, interviewRow, actor.UserId, ct));
+            return Results.Ok(await BuildDetailAsync(db, application, interviewRow, actor.UserId, ct, InterviewMeeting.Length(configuration)));
         }).WithName("SubmitInterviewEvaluation")
             .RequireFeature("F-0203");
 
@@ -297,36 +328,12 @@ public static class InterviewEndpoints
 
             if (string.Equals(input.Kind, "forward", StringComparison.Ordinal))
             {
-                /*
-                 * The 70% pass mark (business decision, 2026-09-16): only a
-                 * service that passed proceeds to the approval committee
-                 * (J-09), which still decides — passing approves nothing. A
-                 * service that did not pass stops here; if none passed there
-                 * is nothing to forward and only rejection remains. A model
-                 * without a pass mark (the draft model) gates nothing.
-                 */
-                var results = await ServiceResultsAsync(db, application.ApplicationId, interviewRow, ct) ?? [];
-                var notPassed = results.Where(r => r.Passed == false).Select(r => r.Service).ToList();
-                // Eligible for the committee = passed the interview + exempted
-                // from it (J-08). Services are evaluated independently: only
-                // when NOTHING remains eligible is forwarding impossible.
-                var exempted = await ExemptedServicesAsync(db, application.ApplicationId, ct);
-                if (results.Count > 0 && notPassed.Count == results.Count && exempted.Count == 0)
-                {
-                    return Results.Problem(statusCode: 409, detail: "no-service-passed");
-                }
+                // P-355 (BUG-033, owner ruling 2026-10-20, supersedes the
+                // 2026-09-16 binding pass mark): the pass mark is advisory.
+                // Every pending service goes to the approval committee (J-09);
+                // a rejection is only ever the decision-maker's own choice.
                 interviewRow.DecisionKind = "forward";
                 application.Status = ApplicationStatuses.ApprovalInProgress;
-                var stopped = await db.ApplicationServices
-                    .Where(s => s.ApplicationId == application.ApplicationId
-                        && notPassed.Contains(s.Service)
-                        && s.Outcome == ServiceOutcomes.Pending)
-                    .ToListAsync(ct);
-                foreach (var row in stopped)
-                {
-                    row.Outcome = ServiceOutcomes.Rejected;
-                    row.DecidedAt = now;
-                }
             }
             else if (string.Equals(input.Kind, "reject", StringComparison.Ordinal))
             {
@@ -376,6 +383,7 @@ public static class InterviewEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             NotificationDispatcher dispatcher,
+            IConfiguration configuration,
             CancellationToken ct) =>
         {
             var loaded = await LoadAsync(id, db, ct);
@@ -414,13 +422,12 @@ public static class InterviewEndpoints
             var proposed = new List<DateTime>();
             foreach (var slot in slots)
             {
-                if (!DateTime.TryParse(slot, System.Globalization.CultureInfo.InvariantCulture,
-                        System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
+                if (ParseSlot(slot) is not { } parsed)
                 {
                     // A malformed time is the caller's mistake (400), not a 500.
                     return Results.Problem(statusCode: 400, detail: "slot-invalid");
                 }
-                if (parsed.ToUniversalTime() <= now)
+                if (parsed <= now)
                 {
                     // Nobody can attend an interview in the past.
                     return Results.Problem(statusCode: 400, detail: "slot-in-past");
@@ -480,7 +487,9 @@ public static class InterviewEndpoints
             interviewRow.RescheduleRequestedAt = null;
             interviewRow.RescheduleNote = null;
             interviewRow.RescheduleCount += 1;
-            application.Status = ApplicationStatuses.UnderReview;
+            // RUN-022 — still an interview stage; the applicant only picks a
+            // new time. Dropping back to «قيد المراجعة» told them otherwise.
+            application.Status = ApplicationStatuses.InterviewScheduled;
             application.UpdatedAt = now;
 
             // New slots are, once again, slots available (J-06/F1/AC-1).
@@ -497,7 +506,7 @@ public static class InterviewEndpoints
                 ct);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            return Results.Ok(await BuildDetailAsync(db, application, interviewRow, actor.UserId, ct));
+            return Results.Ok(await BuildDetailAsync(db, application, interviewRow, actor.UserId, ct, InterviewMeeting.Length(configuration)));
         }).WithName("StaffReschedule")
             .RequireFeature("F-0202");
 
@@ -505,6 +514,39 @@ public static class InterviewEndpoints
     }
 
     /* ── shared assembly ───────────────────────────────────────────────────── */
+
+    /// <summary>
+    /// A proposed time as the UTC instant it names. RUN-021: the reschedule
+    /// parsed with <c>RoundtripKind</c>, so an offset-less value stayed
+    /// <c>Unspecified</c>, was stored as written and served back as UTC —
+    /// 09:00 entered, 12:00 shown in Riyadh. An offset is honoured; a value
+    /// without one is taken as UTC, which is what the client sends.
+    /// </summary>
+    internal static DateTime? ParseSlot(string value) =>
+        DateTimeOffset.TryParse(
+            value,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal,
+            out var parsed)
+            ? parsed.UtcDateTime
+            : null;
+
+    private static async Task<DateTime?> ConfirmedStartAsync(
+        ExpertHubDbContext db, Interview interviewRow, CancellationToken ct) =>
+        interviewRow.ConfirmedSlotId is { } slotId
+            ? await db.InterviewSlots.Where(s => s.SlotId == slotId)
+                .Select(s => (DateTime?)s.StartsAt).FirstOrDefaultAsync(ct)
+            : null;
+
+    /// <summary>The derived phase — the stored status plus the clock.</summary>
+    internal static string PhaseOf(
+        Interview interviewRow, DateTime? confirmedStart, TimeSpan length, DateTime now) =>
+        interviewRow.Status == InterviewStatuses.Completed ? InterviewPhases.Completed
+        : interviewRow.Status != InterviewStatuses.Scheduled || confirmedStart is not { } start
+            ? InterviewPhases.AwaitingSelection
+        : now < start ? InterviewPhases.Scheduled
+        : now < start + length ? InterviewPhases.InProgress
+        : InterviewPhases.Ended;
 
     private static async Task<(Application Application, Interview Interview)?> LoadAsync(
         string id, ExpertHubDbContext db, CancellationToken ct)
@@ -674,7 +716,8 @@ public static class InterviewEndpoints
         Application application,
         Interview interviewRow,
         Guid viewerUserId,
-        CancellationToken ct)
+        CancellationToken ct,
+        TimeSpan? length = null)
     {
         var applicant = await db.Users.SingleAsync(u => u.UserId == application.ApplicantUserId, ct);
         var acceptedServices = await AcceptedServicesAsync(db, application.ApplicationId, ct);
@@ -688,14 +731,23 @@ public static class InterviewEndpoints
         var confirmed = interviewRow.ConfirmedSlotId is { } slotId
             ? await db.InterviewSlots.FirstOrDefaultAsync(s => s.SlotId == slotId, ct)
             : null;
-        var firstSlot = confirmed ?? await db.InterviewSlots
+        var proposed = await db.InterviewSlots
             .Where(s => s.InterviewId == interviewRow.InterviewId && !s.IsSuperseded)
             .OrderBy(s => s.StartsAt)
-            .FirstOrDefaultAsync(ct);
+            .Select(s => s.StartsAt)
+            .ToListAsync(ct);
+        var phase = PhaseOf(
+            interviewRow, confirmed?.StartsAt, length ?? InterviewMeeting.Length(null), DateTime.UtcNow);
 
         var result = await ServiceResultsAsync(db, application.ApplicationId, interviewRow, ct);
 
         var mine = evaluations.FirstOrDefault(e => e.EvaluatorUserId == viewerUserId);
+        var blocked = mine is null ? "not-member"
+            : mine.SubmittedAt is not null ? "already-responded"
+            : phase == InterviewPhases.AwaitingSelection ? "awaiting-selection"
+            : phase == InterviewPhases.Scheduled ? "not-started"
+            : phase == InterviewPhases.Completed ? "completed"
+            : null;
         var isDecider = await IsScreeningDeciderAsync(db, application.ApplicationId, viewerUserId, ct);
         var fullNoShow = interviewRow.Status == InterviewStatuses.Completed
             && await IsFullNoShowAsync(db, interviewRow.InterviewId, ct);
@@ -722,9 +774,10 @@ public static class InterviewEndpoints
             acceptedServices,
             new TicketWire(
                 interviewRow.TicketNumber ?? string.Empty,
-                firstSlot is null ? string.Empty : ApplicationEndpoints.Iso(firstSlot.StartsAt),
+                confirmed is null ? null : ApplicationEndpoints.Iso(confirmed.StartsAt),
                 interviewRow.MeetingUrl,
-                interviewRow.RescheduleCount),
+                interviewRow.RescheduleCount,
+                [.. proposed.Select(ApplicationEndpoints.Iso)]),
             new ModelWire(
                 model.Version,
                 [.. axes.Select(a => new AxisWire(
@@ -751,8 +804,7 @@ public static class InterviewEndpoints
             result,
             new InterviewViewerWire(
                 mine?.EvaluatorUserId.ToString(),
-                CanEvaluate: mine is not null && mine.SubmittedAt is null
-                    && interviewRow.Status == InterviewStatuses.Scheduled,
+                CanEvaluate: blocked is null,
                 CanDecide: isDecider && interviewRow.DecisionKind is null
                     && interviewRow.Status == InterviewStatuses.Completed,
                 CanReschedule: interviewRow.DecisionKind is null
@@ -761,11 +813,13 @@ public static class InterviewEndpoints
                 CanReject: isDecider && interviewRow.DecisionKind is null
                     && (interviewRow.Status == InterviewStatuses.Completed
                         || interviewRow.NoShowRescheduleCount > 0),
-                FullNoShow: fullNoShow),
+                FullNoShow: fullNoShow,
+                EvaluationBlockedReason: blocked),
             decision,
             await ExemptedServicesAsync(db, application.ApplicationId, ct),
             interviewRow.RescheduleRequestedAt is { } requestedAt
                 ? new RescheduleRequestWire(ApplicationEndpoints.Iso(requestedAt), interviewRow.RescheduleNote)
-                : null);
+                : null,
+            phase);
     }
 }

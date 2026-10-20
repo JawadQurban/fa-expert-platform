@@ -69,6 +69,48 @@ describe('EH-INT-06a — Agreement Preparation & Internal Approval', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows the preparer the applicant’s modification request and the cancelled chain (UAT RUN-015)', async () => {
+    injectProvider({
+      prepared: true,
+      applicantModificationRequest: {
+        note: 'تعديل البند 3',
+        requestedAt: '2026-07-29T09:00:00Z',
+        requestedByName: 'سارة العتيبي',
+      },
+      previousSequences: [
+        {
+          id: 'seq-old',
+          createdAt: '2026-07-20T09:00:00Z',
+          voidedAt: '2026-07-29T09:00:00Z',
+          members: [
+            {
+              approverId: 'old-signer',
+              name: 'الموقّع السابق',
+              roleTitle: { ar: 'مدير', en: 'Manager' },
+              obligation: 'mandatory',
+              isSigner: true,
+              position: 1,
+              state: 'signed',
+              decidedAt: '2026-07-21T09:00:00Z',
+              note: null,
+            },
+          ],
+        },
+      ],
+    });
+    await renderAgreement();
+
+    expect(await screen.findByText(content.applicantRequest.title)).toBeInTheDocument();
+    expect(screen.getByText('«تعديل البند 3»')).toBeInTheDocument();
+    const previous = within(
+      screen
+        .getByRole('heading', { name: content.previousSequences.heading })
+        .closest('section') as HTMLElement
+    );
+    expect(previous.getByText('الموقّع السابق')).toBeInTheDocument();
+    expect(previous.getByText(content.sequence.states.signed)).toBeInTheDocument();
+  });
+
   it('states the agreement covers exactly the approved services (F1/AC-3)', async () => {
     await renderAgreement();
     const services = `${content.services.trainer}، ${content.services.consultant}`;

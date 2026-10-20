@@ -183,7 +183,14 @@ export default function AddServicePage() {
     }
     const errs: Record<string, string> = {};
     for (const field of deltaFields) {
-      const msg = validateFieldValue(field, values[field.id], [selectedService], locale, messages);
+      const msg = validateFieldValue(
+        field,
+        values[field.id],
+        [selectedService],
+        locale,
+        messages,
+        values
+      );
       if (msg != null) {
         errs[field.id] = msg;
       }
@@ -221,11 +228,24 @@ export default function AddServicePage() {
       setBusy(false);
       if (res.ok) {
         // RB-03 — with no active agreement the request comes back rejected.
-        setResult({ requestId: res.value.requestId, rejected: res.value.status === 'rejected' });
+        // BUG-019 — the trainer is told the request's NUMBER, not its internal id.
+        setResult({
+          requestId: res.value.reference ?? res.value.requestId,
+          rejected: res.value.status === 'rejected',
+        });
         setPhase('submitted');
       } else {
+        // BUG-022 — every 409 used to read «already approved», a pending
+        // request included. The server's code says which conflict it is.
+        const conflict = res.error.status === 409 ? res.error.message : null;
         setActionFailed(
-          res.error.status === 409 ? content.errors.duplicate : content.errors.submitFailed
+          conflict === 'service-request-pending'
+            ? content.errors.pending
+            : conflict === 'service-already-approved'
+              ? content.errors.duplicate
+              : conflict === 'application-not-eligible'
+                ? content.errors.notEligibleBody
+                : content.errors.submitFailed
         );
       }
     });
@@ -461,6 +481,7 @@ export default function AddServicePage() {
                       key={field.id}
                       field={field}
                       value={values[field.id]}
+                      values={values}
                       error={fieldErrors[field.id]}
                       services={[selectedService]}
                       locale={locale}

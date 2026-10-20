@@ -98,7 +98,7 @@ public sealed class Cap04Tests
         // BR-0404 / J-14/F1/AC-1 — the SAME application-form schema.
         Assert.Equal(FormSchemaVersions.Current,
             profile.GetProperty("formSchema").GetProperty("version").GetString());
-        Assert.Equal(57, profile.GetProperty("formSchema").GetProperty("fields").GetArrayLength());
+        Assert.Equal(59, profile.GetProperty("formSchema").GetProperty("fields").GetArrayLength());
         // The values came across from what they already answered.
         Assert.Equal("قيمة تجريبية",
             profile.GetProperty("fieldValues").GetProperty("responsibilities").GetString());
@@ -297,6 +297,70 @@ public sealed class Cap04Tests
         Assert.Equal("suspended", row.GetProperty("fileStatus").GetString());
     }
 
+    [Fact]
+    public async Task Staff_holding_F0411_set_the_file_status_by_hand_and_it_survives_the_agreement()
+    {
+        /*
+         * RUN-025 — «لا يوجد تحكم لضبط حالة الملف يدويًا». Owner ruling
+         * 2026-10-20 extends `P-244`: a manual status, with a reason, that the
+         * agreement-derived one does not silently overwrite.
+         */
+        using var applicant = await SignInAsync("cap04-f0411", "مدرب يدوي", null);
+        var (trainerId, _) = await ActivatedTrainerAsync(applicant, "cap04-f0411");
+        using var manager = await SignInAsync("cap04-f0411-boss", "مدير", RoleCode.Manager);
+        var path = $"/api/v1/internal/trainers/{trainerId}/file-status";
+        // The page shows the control only to a holder of F-0411.
+        Assert.True((await GetAsync(manager, $"/api/v1/internal/trainers/{trainerId}"))
+            .GetProperty("canSetFileStatus").GetBoolean());
+
+        // The reason is mandatory, and only the union's values are accepted.
+        var noReason = await manager.PostAsJsonAsync(path, new { status = "suspended", reason = " " });
+        Assert.Equal(HttpStatusCode.BadRequest, noReason.StatusCode);
+        var unknown = await manager.PostAsJsonAsync(path, new { status = "banned", reason = "x" });
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+
+        // The matrix decides: a centre coordinator does not hold F-0411.
+        using var coordinator = await SignInAsync(
+            "cap04-f0411-coord", "منسق", RoleCode.CentreCoordinator);
+        var refused = await coordinator.PostAsJsonAsync(path, new { status = "suspended", reason = "x" });
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+
+        var set = await PostAsync(manager, path, new { status = "suspended", reason = "مخالفة" });
+        Assert.Equal("suspended", set.GetProperty("fileStatus").GetString());
+        Assert.True(set.GetProperty("fileStatusManual").GetBoolean());
+
+        // The same request twice is a 409, not a second audit entry.
+        var again = await manager.PostAsJsonAsync(path, new { status = "suspended", reason = "مخالفة" });
+        Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
+
+        // The trainer base agrees, and the trail says who, from, to and why.
+        using var staff = await SignInAsync("cap04-f0411-staff", "موظف", RoleCode.Staff);
+        var search = await GetAsync(staff, "/api/v1/internal/trainers/");
+        Assert.Equal("suspended", search.GetProperty("items").EnumerateArray()
+            .Single(r => r.GetProperty("trainerId").GetString() == trainerId.ToString())
+            .GetProperty("fileStatus").GetString());
+        await using (var db = _database.CreateContext())
+        {
+            var entry = await db.AuditEntries.SingleAsync(
+                a => a.Action == "file-status-set" && a.EntityId == trainerId);
+            var after = JsonDocument.Parse(entry.AfterState!).RootElement;
+            Assert.Equal("مخالفة", after.GetProperty("reason").GetString());
+            Assert.Equal("suspended", after.GetProperty("fileStatusOverride").GetString());
+
+            // ⚠️ The agreement changing afterwards does not undo it.
+            var agreement = await db.Agreements.FirstAsync(a => a.Status == AgreementStatuses.Active);
+            agreement.Status = AgreementStatuses.Suspended;
+            await db.SaveChangesAsync();
+        }
+        var manual = await PostAsync(staff, path, new { status = "active", reason = "تمت التسوية" });
+        Assert.Equal("active", manual.GetProperty("fileStatus").GetString());
+
+        // `automatic` hands the file back to its (now suspended) agreement.
+        var cleared = await PostAsync(staff, path, new { status = "automatic", reason = "إلغاء" });
+        Assert.Equal("suspended", cleared.GetProperty("fileStatus").GetString());
+        Assert.False(cleared.GetProperty("fileStatusManual").GetBoolean());
+    }
+
     /* ── J-14 — editability is per field, and re-checked on write ──────────── */
 
     [Fact]
@@ -448,6 +512,76 @@ public sealed class Cap04Tests
             (await anonymous.GetAsync($"/api/v1/directory/{trainerId}/photo")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound,
             (await anonymous.GetAsync("/api/v1/directory/not-a-guid/photo")).StatusCode);
+
+        // ⚠️ An SVG claiming to be an image is stored XSS on this origin — refused.
+        await SeedPhotoAsync(trainerId,
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>"u8.ToArray(),
+            "image/svg+xml");
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await anonymous.GetAsync($"/api/v1/directory/{trainerId}/photo")).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_public_photo_is_typed_from_its_bytes_not_the_stored_mime()
+    {
+        /*
+         * The file document store has no MIME: it answers
+         * `application/octet-stream` for everything, so every public photo was
+         * a 404 there. The type now comes from the bytes, and the response
+         * forbids the browser from sniffing a different one.
+         */
+        using var applicant = await SignInAsync("cap04-photo-sniff", "مدرب", null);
+        var (trainerId, _) = await ActivatedTrainerAsync(applicant, "cap04-photo-sniff");
+        await PostAsync(applicant, "/api/v1/me/profile/visibility", new { consent = true });
+        var jpeg = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46 };
+        await SeedPhotoAsync(trainerId, jpeg, "application/octet-stream");
+
+        using var anonymous = TestOidc.CreateClient(_configured!);
+        using var photo = await anonymous.GetAsync($"/api/v1/directory/{trainerId}/photo");
+        Assert.Equal(HttpStatusCode.OK, photo.StatusCode);
+        Assert.Equal("image/jpeg", photo.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("nosniff", photo.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal(jpeg, await photo.Content.ReadAsByteArrayAsync());
+    }
+
+    [Fact]
+    public async Task A_trainer_replaces_their_cv_under_the_application_cv_rule()
+    {
+        // RUN-027 — the only upload was «إضافة شهادة», so a new CV became a certificate.
+        using var applicant = await SignInAsync("cap04-cv", "مدرب", null);
+        var (_, applicationId) = await ActivatedTrainerAsync(applicant, "cap04-cv");
+        var before = await GetAsync(applicant, "/api/v1/me/profile");
+        Assert.Equal("cv.pdf", before.GetProperty("cv").GetProperty("name").GetString());
+        // Certificates are the professional-certificate slot only — the CV,
+        // photo and degree no longer appear as certificates to remove.
+        Assert.Equal(["professional-certificate.pdf"],
+            before.GetProperty("certificates").EnumerateArray().Select(c => c.GetProperty("name").GetString()));
+
+        using (var wrong = new MultipartFormDataContent())
+        {
+            wrong.Add(new ByteArrayContent("plain"u8.ToArray()), "file", "cv.txt");
+            Assert.Equal((HttpStatusCode)422,
+                (await applicant.PostAsync("/api/v1/me/profile/cv", wrong)).StatusCode);
+        }
+
+        using var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent("%PDF-1.4 cv"u8.ToArray());
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        content.Add(file, "file", "new-cv.pdf");
+        var response = await applicant.PostAsync("/api/v1/me/profile/cv", content);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var after = JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync());
+        Assert.Equal("new-cv.pdf", after.GetProperty("cv").GetProperty("name").GetString());
+        Assert.Equal(["professional-certificate.pdf"],
+            after.GetProperty("certificates").EnumerateArray().Select(c => c.GetProperty("name").GetString()));
+
+        // Replaced, not added: the application holds one CV.
+        await using var db = _database.CreateContext();
+        var cvs = await db.ApplicationAttachments
+            .Where(a => a.ApplicationId == Guid.Parse(applicationId) && a.RuleCode == "cv")
+            .Select(a => a.FileName)
+            .ToListAsync();
+        Assert.Equal(["new-cv.pdf"], cvs);
     }
 
     private async Task SeedPhotoAsync(Guid trainerId, byte[] bytes, string mimeType)
@@ -504,9 +638,37 @@ public sealed class Cap04Tests
         Assert.DoesNotContain(afterSuspension.GetProperty("items").EnumerateArray(),
             t => t.GetProperty("id").GetString() == trainerId.ToString());
         Assert.Equal(HttpStatusCode.NotFound, (await visitor.GetAsync($"/api/v1/directory/{trainerId}")).StatusCode);
-        // A specialty filter has nothing behind it — refused, not «nobody».
-        Assert.Equal(HttpStatusCode.BadRequest,
-            (await visitor.GetAsync("/api/v1/directory?page=1&pageSize=10&specialty=finance")).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_directory_filters_by_declared_domain_and_matches_every_word_of_a_name()
+    {
+        /*
+         * RUN-031 — the public directory had a name search only; RUN-029 —
+         * a two-word search found nobody. The specialty is the «المجال» the
+         * trainer declared (the fixture answers every select with its first
+         * option, `dom-001`), and a search matches when every word appears.
+         */
+        using var applicant = await SignInAsync("cap04-dom", "سارة العتيبي", null);
+        var (trainerId, _) = await ActivatedTrainerAsync(applicant, "cap04-dom");
+        var consented = await PostAsync(applicant, "/api/v1/me/profile/visibility", new { consent = true });
+        // RUN-005 — the profile states whether the directory lists them NOW.
+        Assert.True(consented.GetProperty("listedInDirectory").GetBoolean());
+        Assert.Equal(["dom-001"],
+            consented.GetProperty("specialties").EnumerateArray().Select(e => e.GetString()));
+        using var visitor = TestOidc.CreateClient(_configured!);
+
+        async Task<IReadOnlyList<string?>> IdsAsync(string query) =>
+            [.. (await GetAsync(visitor, $"/api/v1/directory?page=1&pageSize=10&{query}"))
+                .GetProperty("items").EnumerateArray().Select(t => t.GetProperty("id").GetString())];
+
+        var card = (await GetAsync(visitor, "/api/v1/directory?page=1&pageSize=10"))
+            .GetProperty("items").EnumerateArray().Single();
+        Assert.Equal(["dom-001"], card.GetProperty("specialties").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal([trainerId.ToString()], await IdsAsync("specialty=dom-001"));
+        Assert.Empty(await IdsAsync("specialty=dom-002"));
+        Assert.Equal([trainerId.ToString()], await IdsAsync($"search={Uri.EscapeDataString("العتيبي سارة")}"));
+        Assert.Empty(await IdsAsync($"search={Uri.EscapeDataString("سارة الشمري")}"));
     }
 
     [Fact]
@@ -611,7 +773,6 @@ public sealed class Cap04Tests
         foreach (var (query, refusal) in new[]
         {
             ("specialty=finance", "specialty-filter-unavailable"),
-            ("domain=dom-003", "domain-filter-unavailable"),
             ("minEvaluation=3", "min-evaluation-unavailable"),
         })
         {
@@ -621,7 +782,60 @@ public sealed class Cap04Tests
         }
         Assert.Empty(byStatus.GetProperty("items").EnumerateArray());
 
+        /*
+         * RUN-029 — four defects on this one search:
+         * - «التخصصات» was empty for everybody: it is the declared «المجال».
+         * - the domain filter was refused: it filters by that code now.
+         * - two words found nobody: every word must appear, in any order.
+         * - «at least 1 certificate» counted the DEGREE certificate, so it
+         *   returned trainers with no professional certificate at all. The
+         *   fixture holds one of each, so the count is 1, not 2.
+         */
+        Assert.Equal(["dom-001"], row.GetProperty("specialties").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal(1, row.GetProperty("certificationCount").GetInt32());
+        async Task<int> CountAsync(string query) =>
+            (await GetAsync(staff, $"/api/v1/internal/trainers/?{query}"))
+                .GetProperty("items").GetArrayLength();
+        Assert.Equal(1, await CountAsync("domain=dom-001"));
+        Assert.Equal(0, await CountAsync("domain=dom-003"));
+        Assert.Equal(1, await CountAsync($"search={Uri.EscapeDataString("الشمري  خالد")}"));
+        Assert.Equal(1, await CountAsync("minCertifications=1"));
+        Assert.Equal(0, await CountAsync("minCertifications=2"));
+
         var detail = await GetAsync(staff, $"/api/v1/internal/trainers/{trainerId}");
+
+        /*
+         * RUN-017 — the comprehensive profile showed email, city and a handful
+         * of facts. It now carries the approved application in full, section
+         * by section with select answers by LABEL, every attachment, and the
+         * bank data for a holder of F-0301.
+         */
+        var sections = detail.GetProperty("applicationSections").EnumerateArray().ToList();
+        var personal = sections.Single(s => s.GetProperty("id").GetString() == "personal");
+        string? Answer(JsonElement section, string id) => section.GetProperty("fields").EnumerateArray()
+            .Single(f => f.GetProperty("id").GetString() == id).GetProperty("value").GetString();
+        Assert.Equal("1012345678", Answer(personal, "idNumber"));
+        Assert.Equal("تقنية معلومات وادارة وقيادة", Answer(personal, "domain"));
+        Assert.Equal("دبلوم", Answer(
+            sections.Single(s => s.GetProperty("id").GetString() == "education"), "qualificationType"));
+        Assert.Contains(sections, s => s.GetProperty("id").GetString() == "availability");
+        Assert.Contains(detail.GetProperty("attachments").EnumerateArray(),
+            a => a.GetProperty("name").GetString() == "cv.pdf");
+        Assert.Equal(["professional-certificate.pdf"],
+            detail.GetProperty("certifications").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal("SA0380000000608010167519",
+            detail.GetProperty("bankData").GetProperty("iban").GetString());
+        await using (var db = _database.CreateContext())
+        {
+            // Without F-0301 the bank data is not served at all.
+            var staffRole = await db.Roles.SingleAsync(r => r.Code == RoleCode.Staff);
+            var agreementFeature = await db.Permissions.SingleAsync(p => p.FeatureCode == "F-0301");
+            db.RolePermissions.Remove(await db.RolePermissions.SingleAsync(
+                g => g.RoleId == staffRole.RoleId && g.PermissionId == agreementFeature.PermissionId));
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal(JsonValueKind.Null,
+            (await GetAsync(staff, $"/api/v1/internal/trainers/{trainerId}")).GetProperty("bankData").ValueKind);
         var card = detail.GetProperty("identityCard");
         // J-15 «Identity Card Template Fields» — every row from the profile.
         // The application answered every select with its first option.

@@ -46,6 +46,7 @@ import { formatDate as formatLocaleDate } from '../../shared/formatting';
 
 const STATUS_VARIANT: Readonly<Record<AgreementStatus, TagVariant>> = {
   active: 'success',
+  'not-started': 'information',
   suspended: 'warning',
   expired: 'error',
   ended: 'neutral',
@@ -254,10 +255,12 @@ export default function AgreementsPage() {
               }
               options={[
                 { value: 'all', label: content.filters.allOption },
-                ...(['active', 'suspended', 'expired', 'ended'] as const).map((status) => ({
-                  value: status,
-                  label: content.statuses[status],
-                })),
+                ...(['active', 'not-started', 'suspended', 'expired', 'ended'] as const).map(
+                  (status) => ({
+                    value: status,
+                    label: content.statuses[status],
+                  })
+                ),
               ]}
             />
             <Select

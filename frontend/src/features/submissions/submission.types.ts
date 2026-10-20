@@ -74,8 +74,13 @@ export type SubmissionRoundDecision =
 /** F2/AC-3 + AC-4 — one upload and its review. Flat, exactly as served. */
 export interface SubmissionRoundDto {
   readonly roundNumber: number;
-  /** `G26` — the name the submitter chose; the file itself is not stored. */
   readonly fileName: string;
+  /**
+   * Where the stored file opens (RUN-004) — the submitter's own download, or
+   * the coordinator's F-0506 route. `null` only for a round recorded before
+   * files were stored, which holds the name alone.
+   */
+  readonly fileUrl: string | null;
   /** `null` while this round is still awaiting a decision. */
   readonly decision: SubmissionRoundDecision | null;
   /** Present on a `changes_requested` round — the AC says *send a note*. */
@@ -107,7 +112,31 @@ export function syncsToFast(submission: SubmissionDto): boolean {
 
 /** `POST v1/me/submissions/{id}/upload` — the name only (`G26`/`G27`). */
 export interface UploadSubmissionInput {
-  readonly fileName: string;
+  readonly file: File;
+}
+
+/**
+ * RUN-004 — J-01's APPROVED document rule (PDF/DOC/DOCX, 1 MB), the one the
+ * API applies to this upload (`AttachmentUploads.DocumentFormats`). Checked
+ * here for an immediate answer; the server re-checks the bytes.
+ */
+export const SUBMISSION_FILE_RULE = {
+  acceptedFormats: ['pdf', 'doc', 'docx'],
+  maxSizeMb: 1,
+} as const;
+
+/** Why a picked file cannot be uploaded — the API's own `reason` codes. */
+export type SubmissionFileProblem = 'format' | 'size';
+
+export function validateSubmissionFile(file: {
+  readonly name: string;
+  readonly size: number;
+}): SubmissionFileProblem | null {
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  if (!(SUBMISSION_FILE_RULE.acceptedFormats as readonly string[]).includes(extension)) {
+    return 'format';
+  }
+  return file.size > SUBMISSION_FILE_RULE.maxSizeMb * 1024 * 1024 ? 'size' : null;
 }
 
 /**

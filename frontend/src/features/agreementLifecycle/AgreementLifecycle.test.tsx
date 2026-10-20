@@ -170,6 +170,54 @@ describe('EH-INT-06 — Agreement Lifecycle (J-12)', () => {
     expect(screen.getByText(content.actions.noneAvailable)).toBeInTheDocument();
   });
 
+  it('UAT RUN-003: a signed agreement not yet in force can be stopped, not renewed', () => {
+    expect(allowedActions('not-started')).toEqual(['suspend', 'end']);
+    expect(content.statuses['not-started']).toBe('لم تبدأ بعد');
+  });
+
+  it('UAT RUN-037: the agreement page shows who signed it, each person’s state, and the applicant', async () => {
+    injectProvider({
+      signing: {
+        sequence: [
+          {
+            approverId: 'u-1',
+            name: 'المراجع الأول',
+            roleTitle: { ar: 'موظف', en: 'Staff' },
+            obligation: 'mandatory',
+            isSigner: false,
+            position: 1,
+            state: 'approved',
+            decidedAt: '2026-08-10T09:00:00Z',
+            note: null,
+          },
+          {
+            approverId: 'u-2',
+            name: 'الموقّع المعتمد',
+            roleTitle: { ar: 'مدير', en: 'Manager' },
+            obligation: 'mandatory',
+            isSigner: true,
+            position: 2,
+            state: 'signed',
+            decidedAt: '2026-08-11T09:00:00Z',
+            note: null,
+          },
+        ],
+        applicantSignatureName: 'سارة العتيبي',
+        applicantSignedAt: '2026-08-12T09:00:00Z',
+      },
+    });
+    await renderAgreement(FIRST_TERM);
+
+    const panel = within(
+      (await screen.findByRole('heading', { name: content.detail.signingHeading })).closest(
+        'section'
+      ) as HTMLElement
+    );
+    expect(panel.getByText('المراجع الأول')).toBeInTheDocument();
+    expect(panel.getByText('الموقّع المعتمد')).toBeInTheDocument();
+    expect(panel.getByText(/وقّع المتقدم \(سارة العتيبي\)/)).toBeInTheDocument();
+  });
+
   it('the state machine is closed: `ended` permits nothing', () => {
     expect(allowedActions('ended')).toEqual([]);
     expect(allowedActions('expired')).toEqual(['renew']);

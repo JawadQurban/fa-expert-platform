@@ -22,6 +22,14 @@ internal static class InterviewMeeting
     /// business decision and not a fact about software.</summary>
     private const int DefaultMinutes = 30;
 
+    /// <summary>How long an interview lasts — the booking's length, and the
+    /// moment after which the interview reads as ended (BUG-032).</summary>
+    internal static TimeSpan Length(IConfiguration? configuration)
+    {
+        var minutes = configuration?.GetValue("Teams:InterviewMinutes", DefaultMinutes) ?? DefaultMinutes;
+        return TimeSpan.FromMinutes(minutes <= 0 ? DefaultMinutes : minutes);
+    }
+
     internal static async Task<Infrastructure.Meetings.MeetingBooking?> ForAsync(
         ExpertHubDbContext db,
         IMeetingProvider meetings,
@@ -76,7 +84,6 @@ internal static class InterviewMeeting
         }
         attendees.AddRange(committeeEmails.Where(e => !string.IsNullOrWhiteSpace(e)));
 
-        var minutes = configuration.GetValue("Teams:InterviewMinutes", DefaultMinutes);
         var language = applicant?.PreferredCommunicationLanguage == "en" ? "en" : "ar";
 
         return new MeetingRequest(
@@ -84,7 +91,7 @@ internal static class InterviewMeeting
                 ? $"Financial Academy — interview {application.Reference}"
                 : $"الأكاديمية المالية — مقابلة {application.Reference}",
             StartsAtUtc: DateTime.SpecifyKind(slot.StartsAt, DateTimeKind.Utc),
-            Duration: TimeSpan.FromMinutes(minutes <= 0 ? DefaultMinutes : minutes),
+            Duration: Length(configuration),
             AttendeeEmails: attendees,
             LanguageTag: language);
     }

@@ -166,6 +166,9 @@ async function fillExperience(user: UserEvent) {
   setText(/جهة العمل/, 'الأكاديمية المالية');
   await pickToday(user, /تاريخ البدء/);
   setText(/المسؤوليات/, 'تقديم الاستشارات المالية');
+  // Mandatory since `dm-gap-01.2026-10-19` (RUN-019) while not working there.
+  await pickToday(user, /تاريخ الانتهاء/);
+  await pickOption(user, /عدد سنوات الخبرة/, 'من 1 إلى 5 سنوات');
 }
 
 async function fillTraining(user: UserEvent) {
@@ -416,6 +419,69 @@ describe('EH-TP-05 — New Application', () => {
     expect(
       (await screen.findAllByText(/حجم الملف يتجاوز الحد الأقصى/)).length
     ).toBeGreaterThanOrEqual(1);
+  }, 40000);
+
+  it('RUN-038 / BUG-003: the date of birth is picked on the Gregorian calendar', async () => {
+    const { user } = await renderFresh();
+    await selectService(user, 'مدرب');
+    await next(user);
+    await pickToday(user, /تاريخ الميلاد/);
+    const toArabicDigits = (n: number) => String(n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
+    const year = new Date().getFullYear();
+    const trigger = screen.getByRole('button', { name: /تاريخ الميلاد/ });
+    // The Gregorian year, in whichever digits the locale renders — not 14xx هـ.
+    expect(trigger.textContent).toMatch(new RegExp(`${year}|${toArabicDigits(year)}`));
+  }, 20000);
+
+  it('RUN-020: a server refusal is shown in Arabic, never as the API English', async () => {
+    // Only the CV is refused — the per-entry certificates on the way must upload.
+    const base = createMockApplicationsProvider({
+      latencyMs: 0,
+      seed: DECIDED_ONLY,
+      draftSeed: null,
+    });
+    setApplicationsServiceForTesting({
+      ...base,
+      uploadAttachment: (ruleId, file, entryId) =>
+        ruleId === 'cv'
+          ? Promise.resolve({
+              ok: false,
+              error: { status: 422, message: 'This document accepts 1 file(s).', reason: 'count' },
+            })
+          : base.uploadAttachment(ruleId, file, entryId),
+    });
+    const { user, container } = await renderPage();
+    await selectService(user, 'مدرب');
+    await next(user);
+    await walkTo(user, container);
+    await screen.findByText(content.attachmentsStep.intro);
+
+    await user.upload(fileInputFor(container, 'cv'), pdf('cv.pdf'));
+    expect(
+      (await screen.findAllByText(content.validation.fileCount(1))).length
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/accepts 1 file/)).not.toBeInTheDocument();
+  }, 40000);
+
+  it('RUN-020: a removal the server refused keeps the file, and says so', async () => {
+    injectProvider({
+      seed: DECIDED_ONLY,
+      draftSeed: null,
+      removeFailWith: { status: 404, message: 'Attachment not found.' },
+    });
+    const { user, container } = await renderPage();
+    await selectService(user, 'مدرب');
+    await next(user);
+    await walkTo(user, container);
+    await screen.findByText(content.attachmentsStep.intro);
+
+    await user.upload(fileInputFor(container, 'cv'), pdf('cv.pdf'));
+    await user.click(
+      await screen.findByRole('button', { name: `${content.attachmentsStep.removeLabel} cv.pdf` })
+    );
+    // The file is still on the draft — the page must not pretend otherwise.
+    expect(await screen.findByText(content.attachmentsStep.removeFailed)).toBeInTheDocument();
+    expect(screen.getByText('cv.pdf')).toBeInTheDocument();
   }, 40000);
 
   it('J-01/F3/AC-4: an accredited trainer is sent to add a service, not to re-apply', async () => {

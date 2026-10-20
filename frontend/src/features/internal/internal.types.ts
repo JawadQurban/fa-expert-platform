@@ -131,4 +131,43 @@ export interface DashboardDto {
   readonly submissionDelta: number | null;
   readonly distribution: readonly DashboardDistributionDto[];
   readonly sla: readonly DashboardSlaDto[];
+  /** BUG-028 — the next confirmed interviews, soonest first. */
+  readonly upcomingInterviews: readonly DashboardInterviewDto[];
+  /** BUG-029 — applicants' reschedule requests still waiting on staff. */
+  readonly rescheduleRequests: readonly DashboardRescheduleDto[];
+  /** BUG-047 — declined offers on the requests the caller can see, newest first. */
+  readonly declinedOffers: readonly DashboardDeclinedOfferDto[];
+}
+
+/**
+ * A trainer declined an assignment offer (J-18/F2, BUG-047). `next-candidate`:
+ * the offer passed to `nextTrainerName`; `rematch`: nobody was left, so the
+ * matching engine has to run again.
+ */
+export interface DashboardDeclinedOfferDto {
+  readonly requestId: string;
+  readonly reference: string;
+  readonly slotNumber: number;
+  readonly trainerName: string;
+  readonly declinedAt: string;
+  readonly outcome: 'next-candidate' | 'rematch';
+  readonly nextTrainerName: string | null;
+}
+
+/** A confirmed interview still ahead — J-06's own record, not a copy. */
+export interface DashboardInterviewDto {
+  readonly applicationId: string;
+  readonly reference: string;
+  readonly applicantName: string;
+  readonly startsAt: string;
+  readonly ticketNumber: string | null;
+}
+
+/** An applicant's reschedule request (J-06/F4) — a «requires action» item. */
+export interface DashboardRescheduleDto {
+  readonly applicationId: string;
+  readonly reference: string;
+  readonly applicantName: string;
+  readonly requestedAt: string;
+  readonly note: string | null;
 }

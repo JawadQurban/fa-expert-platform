@@ -22,6 +22,7 @@ public static partial class OfferService
     /// </summary>
     public static async Task OpenNextOffersAsync(
         ExpertHubDbContext db,
+        NotificationDispatcher dispatcher,
         AssignmentRequest request,
         IReadOnlyList<AssignmentSlot> slots,
         IReadOnlyList<PoolMember> approvedInPreferenceOrder,
@@ -137,6 +138,13 @@ public static partial class OfferService
                 SentAt = now,
                 ResponseDueAt = dueAt,
             });
+            /*
+             * EV-0501 — «عرض إسناد للمرشح الأعلى ترتيبًا». This is the one place
+             * an offer comes into being, and nothing raised the event here, so
+             * routing EV-0501 in the matrix produced nothing at all (RUN-001).
+             * The offered trainer is the record's subject.
+             */
+            await RaiseAsync(dispatcher, db, "EV-0501", slot, ct, next.TrainerId);
         }
     }
 
@@ -420,9 +428,19 @@ public static partial class OfferService
         CancellationToken ct)
     {
         var request = await db.AssignmentRequests.SingleAsync(r => r.RequestId == slot.RequestId, ct);
-        var approved = await ApprovedForAsync(db, request, slot, ct);
+        var source = await SourcePoolAsync(db, request, slot, ct);
+        if (source is null || source.Path == "named")
+        {
+            // UAT `RUN-013`/`BUG-044` — a NAMED person has no backups: J-17 was
+            // skipped for them. Their refusal or lapse puts the slot back into
+            // ordinary matching rather than leaving staff an «exhausted» slot
+            // to re-route by hand.
+            await ReturnToMatchingAsync(db, slot, ct);
+            return;
+        }
+        var approved = await MembersAsync(db, source, ct);
         var wasExhausted = slot.Exhausted;
-        await OpenNextOffersAsync(db, request, [slot], approved, now, ct);
+        await OpenNextOffersAsync(db, dispatcher, request, [slot], approved, now, ct);
         if (slot.Exhausted && !wasExhausted)
         {
             // J-19/F1/AC-2 — a DISTINCT event from one candidate's refusal.
@@ -436,33 +454,108 @@ public static partial class OfferService
     /// else the request's.
     /// </summary>
     public static async Task<List<PoolMember>> ApprovedForAsync(
-        ExpertHubDbContext db, AssignmentRequest request, AssignmentSlot slot, CancellationToken ct)
-    {
-        var pool = await db.CandidatePools
-                .Where(p => p.RequestId == request.RequestId && p.SlotId == slot.SlotId && p.Status == "decided")
-                .OrderByDescending(p => p.SentAt)
-                .FirstOrDefaultAsync(ct)
-            ?? await db.CandidatePools.FirstOrDefaultAsync(
-                p => p.RequestId == request.RequestId && p.SlotId == null, ct);
-        if (pool is null)
-        {
-            return [];
-        }
-        return await db.PoolMembers
+        ExpertHubDbContext db, AssignmentRequest request, AssignmentSlot slot, CancellationToken ct) =>
+        await SourcePoolAsync(db, request, slot, ct) is { } pool ? await MembersAsync(db, pool, ct) : [];
+
+    /// <summary>
+    /// The pool a slot's offers come from: its own latest decided re-routing
+    /// pool, else the request's latest DECIDED pool (a request a slot returned
+    /// to holds several), else the named pool of a partially named request.
+    /// </summary>
+    private static async Task<CandidatePool?> SourcePoolAsync(
+        ExpertHubDbContext db, AssignmentRequest request, AssignmentSlot slot, CancellationToken ct) =>
+        await db.CandidatePools
+            .Where(p => p.RequestId == request.RequestId && p.SlotId == slot.SlotId && p.Status == "decided")
+            .OrderByDescending(p => p.SentAt)
+            .FirstOrDefaultAsync(ct)
+        ?? await db.CandidatePools
+            .Where(p => p.RequestId == request.RequestId && p.SlotId == null && p.Status == "decided")
+            .OrderByDescending(p => p.SentAt)
+            .FirstOrDefaultAsync(ct)
+        ?? await db.CandidatePools
+            .Where(p => p.RequestId == request.RequestId && p.SlotId == null && p.Path == "named")
+            .FirstOrDefaultAsync(ct);
+
+    private static async Task<List<PoolMember>> MembersAsync(
+        ExpertHubDbContext db, CandidatePool pool, CancellationToken ct) =>
+        await db.PoolMembers
             .Where(m => m.PoolId == pool.PoolId && m.Decision == "approved")
             .OrderBy(m => m.PreferenceRank)
             .ToListAsync(ct);
-    }
 
-    public static async Task RaiseAsync(
-        NotificationDispatcher dispatcher, ExpertHubDbContext db, string eventCode,
-        AssignmentSlot slot, CancellationToken ct)
+    /// <summary>
+    /// Puts a slot back into J-17's ordinary matching: nobody is offered it,
+    /// and the request returns to the assignment requests list as `matching`,
+    /// to go through the whole cycle — matching, a pool of three, the
+    /// requesting party's approval, an offer — for the slots left open.
+    /// </summary>
+    public static async Task ReturnToMatchingAsync(
+        ExpertHubDbContext db, AssignmentSlot slot, CancellationToken ct)
     {
         var request = await db.AssignmentRequests.SingleAsync(r => r.RequestId == slot.RequestId, ct);
+        slot.Exhausted = false;
+        request.Status = AssignmentRequestStatuses.Matching;
+    }
+
+    /// <summary>
+    /// How each offer ended, as the people tracking the slot need to read it
+    /// (UAT `BUG-048`): an accepted offer whose engagement later ended is not
+    /// «accepted» any more — it is `withdrawn` (the trainer withdrew after
+    /// confirming), `delinked` (the Academy ended it) or `cancelled` (FAST).
+    /// </summary>
+    public static async Task<Dictionary<Guid, string>> OutcomesAsync(
+        ExpertHubDbContext db, IReadOnlyCollection<AssignmentOffer> offers, CancellationToken ct)
+    {
+        var accepted = offers.Where(o => o.Status == OfferStatuses.Accepted).Select(o => o.OfferId).ToList();
+        var ended = await (
+            from engagement in db.Engagements
+            where accepted.Contains(engagement.OfferId)
+                && (engagement.Status == EngagementStatuses.Withdrawn
+                    || engagement.Status == EngagementStatuses.Cancelled)
+            select new
+            {
+                engagement.OfferId,
+                engagement.Status,
+                Actor = db.EngagementTerminations
+                    .Where(t => t.EngagementId == engagement.EngagementId)
+                    .OrderByDescending(t => t.OccurredAt)
+                    .Select(t => t.Actor)
+                    .FirstOrDefault(),
+            }).ToListAsync(ct);
+        return offers.ToDictionary(o => o.OfferId, o =>
+        {
+            var end = ended.FirstOrDefault(e => e.OfferId == o.OfferId);
+            return end is not null
+                ? end.Status == EngagementStatuses.Cancelled ? "cancelled"
+                    : end.Actor == "staff" ? "delinked" : "withdrawn"
+                : o.Status switch
+                {
+                    OfferStatuses.AwaitingResponse => "awaiting-response",
+                    OfferStatuses.Accepted => "accepted",
+                    OfferStatuses.Rejected => "rejected",
+                    _ => "expired",
+                };
+        });
+    }
+
+    /// <param name="trainerId">The offered trainer (`TRAINER_PROFILE`), when
+    /// the event is about them — they become the record's subject, so an
+    /// audience of «صاحب السجل» reaches them.</param>
+    public static async Task RaiseAsync(
+        NotificationDispatcher dispatcher, ExpertHubDbContext db, string eventCode,
+        AssignmentSlot slot, CancellationToken ct, Guid? trainerId = null)
+    {
+        var request = db.AssignmentRequests.Local.FirstOrDefault(r => r.RequestId == slot.RequestId)
+            ?? await db.AssignmentRequests.SingleAsync(r => r.RequestId == slot.RequestId, ct);
+        Guid? subjectUserId = trainerId is { } id
+            ? await db.TrainerProfiles.Where(t => t.TrainerId == id).Select(t => (Guid?)t.UserId)
+                .FirstOrDefaultAsync(ct)
+            : null;
         await dispatcher.RaiseAsync(
             eventCode,
             new NotificationEventContext(
                 SourceEntityId: slot.SlotId,
+                RecordSubjectUserId: subjectUserId,
                 ActingStaffUserId: request.CreatedBy),
             new Dictionary<string, string>
             {

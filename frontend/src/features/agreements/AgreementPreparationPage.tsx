@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Alert, Loading } from '@ds/composite';
-import { Button } from '@ds/primitives';
+import { Button, Typography } from '@ds/primitives';
 import { Breadcrumbs } from '@ds/shell';
 import { useLocale } from '@i18n/LocaleProvider';
 import type { Result } from '@/types';
@@ -28,6 +28,7 @@ import { SendStatusCard } from './components/SendStatusCard';
 import { SigningDecisionPanel } from './components/SigningDecisionPanel';
 import { SigningSequenceTimeline } from './components/SigningSequenceTimeline';
 import { PageLoadError } from '../../shared/components/PageLoadError';
+import { formatDate } from '../../shared/formatting';
 import { WorkspacePage } from '../../shared/workspace/WorkspacePage';
 import { RecordHead } from '../../shared/workspace/RecordHead';
 import { Panel } from '../../shared/workspace/Panel';
@@ -219,6 +220,21 @@ export default function AgreementPreparationPage() {
         </Alert>
       )}
 
+      {/*
+        UAT RUN-015 — J-11/F1/AC-5: the applicant's note goes back to the
+        preparer, who otherwise cannot tell what to change. Shown until the
+        agreement is sent to them again.
+      */}
+      {detail.applicantModificationRequest != null && stage !== 'sent-to-applicant' && (
+        <Alert tone="warning" surface="tinted" title={content.applicantRequest.title} role="status">
+          {content.applicantRequest.body(
+            detail.applicantModificationRequest.requestedByName,
+            formatDate(detail.applicantModificationRequest.requestedAt, locale)
+          )}{' '}
+          <bdi>«{detail.applicantModificationRequest.note}»</bdi>
+        </Alert>
+      )}
+
       {/* F1/AC-1 — nothing else on the page matters while the gate is closed. */}
       {blocked ? (
         <AgreementGateCard gate={detail.gate} content={content} />
@@ -324,6 +340,31 @@ export default function AgreementPreparationPage() {
                 content={content}
                 locale={locale}
               />
+            </Panel>
+          )}
+
+          {/* UAT RUN-015 — the cancelled chains, as the evidence they are. */}
+          {detail.previousSequences.length > 0 && (
+            <Panel
+              title={content.previousSequences.heading}
+              titleId="eh-agreement-previous-sequences"
+              icon="task-done-01"
+            >
+              {detail.previousSequences.map((previous) => (
+                <section key={previous.id} aria-label={content.previousSequences.heading}>
+                  {previous.voidedAt != null && (
+                    <Typography as="p" variant="text-sm" color="muted">
+                      {content.previousSequences.voidedAt(formatDate(previous.voidedAt, locale))}
+                    </Typography>
+                  )}
+                  <SigningSequenceTimeline
+                    sequence={previous.members}
+                    viewerApproverId={null}
+                    content={content}
+                    locale={locale}
+                  />
+                </section>
+              ))}
             </Panel>
           )}
 

@@ -210,6 +210,26 @@ export interface AgreementDetailDto {
   readonly viewer: AgreementViewerDto;
   /** The latest document version — `null` until the agreement is first prepared. */
   readonly document: AgreementDocumentDto | null;
+  /**
+   * UAT RUN-015 — the applicant's «طلب تعديل» (J-11/F1/AC-5): the note is what
+   * the preparer acts on, so it is shown to them. `null` when none stands.
+   */
+  readonly applicantModificationRequest: ApplicantModificationRequestDto | null;
+  /** UAT RUN-015 — chains voided by a re-preparation, newest first; kept as evidence. */
+  readonly previousSequences: readonly PreviousSigningSequenceDto[];
+}
+
+export interface ApplicantModificationRequestDto {
+  readonly note: string;
+  readonly requestedAt: string;
+  readonly requestedByName: string;
+}
+
+export interface PreviousSigningSequenceDto {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly voidedAt: string | null;
+  readonly members: readonly SigningMemberDto[];
 }
 
 export interface AgreementViewerDto {
@@ -276,14 +296,25 @@ export interface FieldValidationIssue {
   readonly fieldId: string;
 }
 
-/** F1 — every required template field must carry a value before preparation. */
+/** The issue id for an end date that falls before the start date. */
+export const END_BEFORE_START = '__end-before-start';
+
+/**
+ * F1 — every required template field must carry a value before preparation,
+ * and the term may not end before it starts (yyyy-MM-dd compares as text).
+ */
 export function validateAgreementFields(
   schema: readonly AgreementFieldSchema[],
   values: AgreementFieldValues
 ): readonly FieldValidationIssue[] {
-  return schema
+  const missing = schema
     .filter((field) => field.required && (values[field.id] ?? '').trim() === '')
     .map((field) => ({ fieldId: field.id }));
+  const start = (values.startDate ?? '').trim();
+  const end = (values.endDate ?? '').trim();
+  return start !== '' && end !== '' && end < start
+    ? [...missing, { fieldId: END_BEFORE_START }]
+    : missing;
 }
 
 export type SigningValidationCode = 'note-missing' | ESignatureValidationCode;

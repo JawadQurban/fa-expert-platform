@@ -301,5 +301,7 @@
     "signatureMethod": "internal-acceptance",
     "documentFileName": "agreement.pdf",
     "documentUrl": "/v1/attachments/5b3e0d1c-2f4a-4d7e-9a61-8c0f2b7d4e19"
-  }
+  },
+  "applicantModificationRequest": null,
+  "previousSequences": []
 }

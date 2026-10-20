@@ -31,31 +31,16 @@
  * FAST/MTM call — it reads the Expert-Hub-owned projection, which updates
  * automatically from the core profile (`BR-1005`, J-24/F2/AC-2).
  *
- * ⚠️ The specialty taxonomy below is clearly-labelled **mock config**; the
- * authoritative public whitelist is governed by `G12` (still open).
- *
  * ⚠️ **Open:** J-24 and J-15 treat *domain* and *specialization* as distinct
- * concepts, but only specialization is modelled today. `Q16` tracks it — no
- * domain taxonomy is invented here.
+ * concepts (`Q16`). No separate specialty taxonomy exists, so a specialty is
+ * the «المجال» the trainer declared on the application (RUN-029/RUN-031).
  */
 
 /**
- * Specialty taxonomy the cards label (mock config — `G12`). **Not a filter**: no
- * taxonomy maps a real trainer onto a specialty (`Q16`), so the chip rail
- * answered «nobody» and the API now refuses `specialty` with 400.
+ * A specialty: a `SPECIALIZATION_DOMAIN_OPTIONS` code (`dom-NNN`) — the domain
+ * the trainer declared, from the owner's list. Filterable on both surfaces.
  */
-export const DIRECTORY_SPECIALTIES = [
-  'leadership',
-  'finance',
-  'digital-transformation',
-  'data-analytics',
-  'human-resources',
-  'project-management',
-  'cybersecurity',
-  'customer-experience',
-] as const;
-
-export type DirectorySpecialty = (typeof DIRECTORY_SPECIALTIES)[number];
+export type DirectorySpecialty = string;
 
 /**
  * Trainer classification. **Not a public field** — J-24/F2/AC-1 does not list
@@ -109,15 +94,17 @@ export interface PublicTrainerProfileDto extends PublicTrainerSummaryDto {
 /** The Filter-Bar state the directory holds (P-11 public variant). */
 export interface DirectoryFilters {
   readonly search: string;
-  // No `specialty` — see `DIRECTORY_SPECIALTIES` (`Q16`).
+  /** RUN-031 — a domain code (`dom-NNN`), `''` for every field. */
+  readonly specialty: DirectorySpecialty;
 }
 
 export const DEFAULT_DIRECTORY_FILTERS: DirectoryFilters = {
   search: '',
+  specialty: '',
 };
 
 export function hasActiveDirectoryFilters(filters: DirectoryFilters): boolean {
-  return filters.search.trim() !== '';
+  return filters.search.trim() !== '' || filters.specialty !== '';
 }
 
 /** Public directory list query (paging + search). */
@@ -125,8 +112,10 @@ export interface DirectoryQuery {
   /** 1-based page index. */
   readonly page: number;
   readonly pageSize: number;
-  /** Free-text search over the trainer's name — all the API matches. */
+  /** Free-text search over the trainer's name — every word must match. */
   readonly search?: string;
+  /** A domain code (`dom-NNN`) — the trainer's declared «المجال». */
+  readonly specialty?: DirectorySpecialty;
 }
 
 /** `CAP-API-*` public directory response: one page of consented trainers. */

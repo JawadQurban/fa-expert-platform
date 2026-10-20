@@ -1,15 +1,18 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Alert } from '@ds/composite';
-import { Button, TextInput, Typography } from '@ds/primitives';
+import { Button, Select, TextInput, Typography } from '@ds/primitives';
 import type { Locale } from '@/types';
 import type { ProfileContent } from '../profile.content';
 import {
   BANK_DATA_FIELD_ORDER,
   EMPTY_BANK_DATA,
+  bankCountryIso,
   invalidBankDataFields,
   validateBankData,
 } from '../profile.types';
+import { loadBankCountries } from '../profileService';
 import type {
+  BankCountryOption,
   BankDataFieldId,
   BankDataFields,
   BankDataFormatFieldId,
@@ -36,13 +39,19 @@ export function BankDataSection({
   content,
   locale,
   saving,
+  agreementSigned = false,
   onSave,
+  loadCountries = loadBankCountries,
 }: {
   readonly bankData: ProfileBankDataDto;
+  /** UAT RUN-037 — an agreement exists, so «preparation can begin» is stale. */
+  readonly agreementSigned?: boolean;
   readonly content: ProfileContent;
   readonly locale: Locale;
   readonly saving: boolean;
   readonly onSave: (fields: BankDataFields) => void;
+  /** RUN-026 — the «دولة البنك» options; injectable for tests. */
+  readonly loadCountries?: () => Promise<readonly BankCountryOption[]>;
 }) {
   const copy = content.bankData;
   const sectionId = useId();
@@ -67,9 +76,38 @@ export function BankDataSection({
 
   const complete = bankData.state === 'complete';
 
+  /*
+   * RUN-026 — «دولة البنك» is a dropdown over FAST's country list. A value
+   * already in the form (a prefill, typed under another name) is matched to
+   * its option, or cleared: a country the list does not carry cannot be saved.
+   * With no list, the field stays free text.
+   */
+  const [countries, setCountries] = useState<readonly BankCountryOption[]>([]);
+  useEffect(() => {
+    if (complete) {
+      return;
+    }
+    let live = true;
+    void loadCountries().then((loaded) => {
+      if (!live || loaded.length === 0) {
+        return;
+      }
+      setCountries(loaded);
+      setFields((current) => ({
+        ...current,
+        bankCountry:
+          loaded.find((c) => c.labelAr === current.bankCountry || c.labelEn === current.bankCountry)
+            ?.labelAr ?? '',
+      }));
+    });
+    return () => {
+      live = false;
+    };
+  }, [complete, loadCountries]);
+
   const handleSave = () => {
     const found = validateBankData(fields);
-    const malformed = invalidBankDataFields(fields);
+    const malformed = invalidBankDataFields(fields, bankCountryIso(fields.bankCountry, countries));
     setMissing(found);
     setInvalid(malformed);
     if (found.length > 0 || malformed.length > 0) {
@@ -93,7 +131,7 @@ export function BankDataSection({
     return (
       <div className={styles.wrapper}>
         <Alert tone="success" title={copy.completeTitle} role="status">
-          {copy.completeBody}
+          {agreementSigned ? copy.completeBodySigned : copy.completeBody}
         </Alert>
         <dl className={styles.summary}>
           {BANK_DATA_FIELD_ORDER.map((id) => (
@@ -141,20 +179,38 @@ export function BankDataSection({
       )}
 
       <div className={styles.grid}>
-        {BANK_DATA_FIELD_ORDER.map((id) => (
-          <TextInput
-            key={id}
-            label={copy.fields[id]}
-            value={fields[id]}
-            onChange={(event) => {
-              setFields((current) => ({ ...current, [id]: event.target.value }));
-              setMissing((current) => current.filter((entry) => entry !== id));
-              setInvalid((current) => current.filter((entry) => entry !== id));
-            }}
-            requiredField
-            errorText={errorFor(id)}
-          />
-        ))}
+        {BANK_DATA_FIELD_ORDER.map((id) => {
+          const change = (value: string) => {
+            setFields((current) => ({ ...current, [id]: value }));
+            setMissing((current) => current.filter((entry) => entry !== id));
+            setInvalid((current) => current.filter((entry) => entry !== id));
+          };
+          // ⚠️ «مدينة البنك» stays free text: the repository holds no Saudi
+          // city list to offer, and inventing one is not ours to do.
+          return id === 'bankCountry' && countries.length > 0 ? (
+            <Select
+              key={id}
+              label={copy.fields[id]}
+              options={countries.map((country) => ({
+                value: country.labelAr,
+                label: locale === 'en' ? country.labelEn : country.labelAr,
+              }))}
+              value={fields[id] === '' ? undefined : fields[id]}
+              onValueChange={change}
+              requiredField
+              errorText={errorFor(id)}
+            />
+          ) : (
+            <TextInput
+              key={id}
+              label={copy.fields[id]}
+              value={fields[id]}
+              onChange={(event) => change(event.target.value)}
+              requiredField
+              errorText={errorFor(id)}
+            />
+          );
+        })}
       </div>
 
       {flagged.length > 0 && (

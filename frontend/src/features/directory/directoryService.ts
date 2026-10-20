@@ -47,7 +47,9 @@ export function createHttpDirectoryProvider(
       if (query.search != null && query.search.trim() !== '') {
         params.set('search', query.search.trim());
       }
-      // No `specialty`: the API refuses it with 400 — no taxonomy (`Q16`).
+      if (query.specialty != null && query.specialty !== '') {
+        params.set('specialty', query.specialty);
+      }
       return client.get<DirectoryListDto>(
         `${DIRECTORY_API_VERSION}/directory?${params.toString()}`
       );

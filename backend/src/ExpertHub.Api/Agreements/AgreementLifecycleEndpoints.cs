@@ -58,7 +58,15 @@ internal sealed record LifecycleDetailWire(
     int NextTermYears, string RenewedEndsAt,
     IReadOnlyList<HistoryEntryWire> History,
     string? DocumentUrl,
-    LifecycleViewerWire Viewer);
+    LifecycleViewerWire Viewer,
+    LifecycleSigningWire Signing);
+
+/// <summary>RUN-037 — who signed this agreement, in order, and the applicant's
+/// own acceptance: the record of how it came into force.</summary>
+internal sealed record LifecycleSigningWire(
+    IReadOnlyList<SigningMemberWire> Sequence,
+    string? ApplicantSignatureName,
+    string? ApplicantSignedAt);
 
 internal sealed record LifecycleInputWire(string? Kind, string? Note);
 
@@ -87,6 +95,8 @@ public static class AgreementLifecycleEndpoints
     private static readonly string[] ActiveActions = ["renew", "suspend", "end"];
     private static readonly string[] SuspendedActions = ["reactivate", "end"];
     private static readonly string[] ExpiredActions = ["renew"];
+    /// <summary>Signed, not yet in effect: it can be stopped, not renewed.</summary>
+    private static readonly string[] NotStartedActions = ["suspend", "end"];
     private static readonly string[] NoActions = [];
 
     public static RouteGroupBuilder MapAgreementLifecycleEndpoints(this RouteGroupBuilder v1)
@@ -234,6 +244,7 @@ public static class AgreementLifecycleEndpoints
                 AgreementStatuses.Active => ActiveActions,
                 AgreementStatuses.Suspended => SuspendedActions,
                 AgreementStatuses.Expired => ExpiredActions,
+                AgreementStatuses.NotStarted => NotStartedActions,
                 _ => NoActions,
             };
             if (!allowed.Contains(kind))
@@ -319,11 +330,9 @@ public static class AgreementLifecycleEndpoints
         row.Status is AgreementStatuses.Active or AgreementStatuses.Suspended
             or AgreementStatuses.Ended;
 
-    /// <summary>`expired` is a fact about the calendar, derived on read.</summary>
+    /// <summary>`expired` / `not-started` are facts about the calendar, derived on read.</summary>
     private static string EffectiveStatus(Agreement row, DateTime nowUtc) =>
-        row.Status == AgreementStatuses.Active && row.EndsAt is { } ends && ends < nowUtc
-            ? AgreementStatuses.Expired
-            : row.Status;
+        Profiles.ProfileEndpoints.AgreementStatusWire(row, nowUtc);
 
     private static async Task<IReadOnlyList<int>> ReminderOffsetsAsync(
         ExpertHubDbContext db, CancellationToken ct)
@@ -453,12 +462,29 @@ public static class AgreementLifecycleEndpoints
             [.. events.Select(x => new HistoryEntryWire(
                 x.e.EventId.ToString(), x.e.Kind, ApplicationEndpoints.Iso(x.e.OccurredAt),
                 x.FullNameAr, x.e.Note, x.e.TermYears))],
-            DocumentUrl: null, // G26
+            // BUG-001 — the agreement file staff uploaded at J-10 (`P-333`),
+            // now that documents are stored; null only when none was uploaded.
+            await (
+                from version in db.AgreementDocumentVersions
+                where version.AgreementId == row.AgreementId && version.AttachmentId != null
+                orderby version.VersionNumber descending
+                select version.AttachmentId).FirstOrDefaultAsync(ct) is { } fileId
+                ? Documents.AttachmentUploads.DownloadUrl(fileId)
+                : null,
             new LifecycleViewerWire(
                 CanRenew: effective is AgreementStatuses.Active or AgreementStatuses.Expired,
-                CanSuspend: effective is AgreementStatuses.Active,
-                CanEnd: effective is AgreementStatuses.Active or AgreementStatuses.Suspended,
-                CanReactivate: effective is AgreementStatuses.Suspended));
+                CanSuspend: effective is AgreementStatuses.Active or AgreementStatuses.NotStarted,
+                CanEnd: effective is AgreementStatuses.Active or AgreementStatuses.Suspended
+                    or AgreementStatuses.NotStarted,
+                CanReactivate: effective is AgreementStatuses.Suspended),
+            new LifecycleSigningWire(
+                await AgreementDocuments.ActiveSequenceAsync(db, row.AgreementId, ct) is { } sequence
+                    ? await AgreementEndpoints.SequenceMembersAsync(db, sequence, ct)
+                    : [],
+                row.ApplicantDecisionKind == "sign" ? row.ApplicantSignatureName : null,
+                row.ApplicantDecisionKind == "sign" && row.ApplicantDecidedAt is { } signed
+                    ? ApplicationEndpoints.Iso(signed)
+                    : null));
     }
 
     private static async Task<AgreementTemplateWire> TemplateWireAsync(

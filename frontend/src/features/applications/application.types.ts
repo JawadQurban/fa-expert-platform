@@ -116,4 +116,10 @@ export interface MyApplicationsListDto {
    *  aggregation is momentarily `updating` has no business status yet, so it
    *  counts only toward `totalApplications`. */
   readonly statusCounts: Readonly<Record<ApplicationStatus, number>>;
+  /**
+   * RUN-035 — applications whose interview time is waiting for the applicant
+   * to pick. Their status is already «مقابلة مجدولة», so the counts above
+   * cannot show it; it is an action they owe. Absent from older servers.
+   */
+  readonly awaitingSlotSelection?: number;
 }

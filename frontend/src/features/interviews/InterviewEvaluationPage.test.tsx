@@ -156,7 +156,7 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     expect(screen.getByRole('button', { name: content.decision.forward })).toBeEnabled();
   });
 
-  it('blocks forwarding when no service passed, leaving direct rejection', async () => {
+  it('BUG-033: the pass mark is advisory — forwarding stays open when no service passed', async () => {
     // trainer (84 + 40) / 2 = 62 and consultant (76 + 50) / 2 = 63 — neither passes.
     injectProvider({
       allResponded: true,
@@ -167,11 +167,11 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     const threshold = arNumber(70);
     expect(await screen.findAllByText(content.result.thresholdNotMet(threshold))).toHaveLength(2);
     expect(screen.getByText(content.decision.noPassTitle)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: content.decision.forward })).toBeDisabled();
+    expect(screen.getByRole('button', { name: content.decision.forward })).toBeEnabled();
     expect(screen.getByRole('button', { name: content.decision.reject })).toBeEnabled();
   });
 
-  it('names the services that will not be forwarded when only some passed', async () => {
+  it('names the services forwarded below the pass mark', async () => {
     // trainer (84 + 80) / 2 = 82 passes; consultant (76 + 50) / 2 = 63 does not.
     injectProvider({
       allResponded: true,
@@ -307,6 +307,75 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
 
     expect(await screen.findByText(content.ticket.rescheduledCount(1))).toBeInTheDocument();
     expect(screen.getByText(/INT-/).textContent).toBe(ticketNumber);
+  });
+
+  it('RUN-021: proposes the time as entered and leaves it for the applicant to pick', async () => {
+    const base = createMockInterviewProvider({ latencyMs: 0 });
+    const sent: string[][] = [];
+    setInterviewServiceForTesting({
+      ...base,
+      requestReschedule: (applicationId, input) => {
+        sent.push([...input.slots]);
+        return base.requestReschedule(applicationId, input);
+      },
+    });
+    const { user } = await renderInterview();
+    await user.click(await screen.findByRole('button', { name: content.ticket.reschedule }));
+    const dialog = await screen.findByRole('dialog', { name: content.rescheduleDialog.title });
+    await user.type(
+      within(dialog).getByLabelText(content.rescheduleDialog.slotLabel(1)),
+      '2026-08-05T09:00'
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: content.rescheduleDialog.confirm })
+    );
+
+    // The wall-clock 09:00 the person typed, as the instant they meant —
+    // never the bare value the server would read as 09:00 UTC.
+    await screen.findByText(content.ticket.phases['awaiting-selection']);
+    expect(sent).toEqual([[new Date('2026-08-05T09:00').toISOString()]]);
+    // Proposed, not fixed: the head says the applicant has yet to pick.
+    expect(
+      screen.getByText((text) => text.startsWith(content.ticket.awaitingSelection('')))
+    ).toBeInTheDocument();
+    // RUN-002 — the member is told why they cannot evaluate, not that they
+    // are off the panel.
+    expect(
+      screen.getByText(content.evaluation.blocked['awaiting-selection'].title)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(content.evaluation.notAMemberTitle)).not.toBeInTheDocument();
+  });
+
+  it('RUN-002: a member who already evaluated is told so, not that they are not a member', async () => {
+    injectProvider({ viewer: { memberId: 'stf-01' } });
+    await renderInterview();
+    expect(
+      await screen.findByText(content.evaluation.blocked['already-responded'].title)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(content.evaluation.notAMemberTitle)).not.toBeInTheDocument();
+  });
+
+  it('RUN-036: the evaluation waits for the interview to start', async () => {
+    injectProvider({ now: new Date('2026-07-20T09:00:00Z').getTime() });
+    await renderInterview();
+    expect(
+      await screen.findByText(content.evaluation.blocked['not-started'].title)
+    ).toBeInTheDocument();
+    expect(screen.getByText(content.ticket.phases.scheduled)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: content.evaluation.submit })
+    ).not.toBeInTheDocument();
+  });
+
+  it('BUG-032: an interview whose time has passed reads as ended', async () => {
+    await renderInterview();
+    expect(await screen.findByText(content.ticket.phases.ended)).toBeInTheDocument();
+  });
+
+  it('RUN-036: shows each member’s response without having to open anything', async () => {
+    await renderInterview();
+    const list = await screen.findByRole('list', { name: content.committee.heading });
+    expect(list.closest('details')).toHaveAttribute('open');
   });
 
   it('tells a non-member they cannot evaluate rather than showing an inert form', async () => {

@@ -81,7 +81,14 @@ export interface RequestDetailsDto {
  * gives it "the same effect as rejection". Collapsing them would make the two
  * notifications impossible to tell apart.
  */
-export type OfferOutcome = 'accepted' | 'rejected' | 'expired';
+export type OfferOutcome = 'accepted' | 'rejected' | 'expired' | EndedAfterAcceptance;
+
+/**
+ * UAT `BUG-048` — an accepted offer whose engagement later ended: the trainer
+ * withdrew after confirming (`withdrawn`), the Academy de-linked them
+ * (`delinked`), or FAST cancelled the plan (`cancelled`).
+ */
+export type EndedAfterAcceptance = 'withdrawn' | 'delinked' | 'cancelled';
 
 export type OfferStatus = 'awaiting-response' | OfferOutcome;
 

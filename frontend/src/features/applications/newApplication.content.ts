@@ -74,6 +74,7 @@ export interface NewApplicationContent {
     readonly uploadTooLargeForServer: string;
     /** Appended to an unexpected failure so it can be reported precisely. */
     readonly uploadFailureCode: (status: number) => string;
+    readonly removeFailed: string;
   };
   readonly review: {
     readonly intro: string;
@@ -247,6 +248,7 @@ const ar: NewApplicationContent = {
     uploadTooLargeForServer:
       'حجم الملف أكبر مما يقبله الخادم. جرّب ملفًا أصغر، أو أبلغ الدعم الفني بذلك.',
     uploadFailureCode: (status) => ` (رمز ${status})`,
+    removeFailed: 'تعذّر حذف الملف، وما زال محفوظًا في الطلب. أعد المحاولة.',
   },
   review: {
     intro: 'راجع بيانات طلبك قبل التقديم. يمكنك تعديل أي قسم قبل الإرسال.',
@@ -373,6 +375,7 @@ const ar: NewApplicationContent = {
     invalidValue: 'القيمة المدخلة غير صحيحة.',
     dateNotFuture: 'لا يمكن أن يكون التاريخ في المستقبل.',
     dateNotPast: 'لا يمكن أن يكون التاريخ في الماضي.',
+    dateBeforeStart: 'لا يمكن أن يسبق تاريخ الانتهاء تاريخ البدء.',
     fileFormat: (formats) => `صيغة الملف غير مقبولة. الصيغ المسموحة: ${formats}.`,
     fileSize: (maxMb) => `حجم الملف يتجاوز الحد الأقصى (${maxMb} م.ب).`,
     fileCount: (max) => `الحد الأقصى لعدد الملفات هو ${max}.`,
@@ -433,6 +436,7 @@ const en: NewApplicationContent = {
     uploadTooLargeForServer:
       'The file is larger than the server accepts. Try a smaller one, or report this to support.',
     uploadFailureCode: (status) => ` (code ${status})`,
+    removeFailed: 'The file could not be removed and is still on the application. Try again.',
   },
   review: {
     intro: 'Review your application before submitting. You can edit any section first.',
@@ -560,6 +564,7 @@ const en: NewApplicationContent = {
     invalidValue: 'The entered value is invalid.',
     dateNotFuture: 'The date cannot be in the future.',
     dateNotPast: 'The date cannot be in the past.',
+    dateBeforeStart: 'The end date cannot be before the start date.',
     fileFormat: (formats) => `File format not accepted. Allowed formats: ${formats}.`,
     fileSize: (maxMb) => `The file exceeds the maximum size (${maxMb} MB).`,
     fileCount: (max) => `The maximum number of files is ${max}.`,

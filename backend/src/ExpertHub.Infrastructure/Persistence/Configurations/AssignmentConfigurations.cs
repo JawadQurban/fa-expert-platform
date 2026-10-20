@@ -352,7 +352,10 @@ public sealed class SubmissionRoundConfiguration : IEntityTypeConfiguration<Subm
         builder.Property(r => r.DecidedBy).HasColumnName("decided_by");
         builder.Property(r => r.DecidedAt).HasColumnName("decided_at");
         builder.Property(r => r.UploadedAt).HasColumnName("uploaded_at");
+        builder.Property(r => r.AttachmentId).HasColumnName("attachment_id");
         builder.HasIndex(r => new { r.SubmissionId, r.RoundNumber }).IsUnique();
+        builder.HasOne<Attachment>().WithMany().HasForeignKey(r => r.AttachmentId)
+            .OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<MaterialSubmission>().WithMany().HasForeignKey(r => r.SubmissionId)
             .OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<AppUser>().WithMany().HasForeignKey(r => r.DecidedBy)

@@ -154,7 +154,13 @@ export interface ProfileContent {
     readonly toggleOnDescription: string;
     readonly on: string;
     readonly off: string;
+    /** RUN-005 — no Expert Hub trainer file yet, so nothing to publish. */
+    readonly notEstablished: string;
+    /** RUN-005 — consent on, but the file is not one the directory shows. */
+    readonly consentedNotListed: string;
   };
+  /** RUN-027 — the CV slot, replaced rather than added to. */
+  readonly cv: ProfileContent['certificates'];
   /** J-09/F6 — opens only after preliminary approval. */
   readonly bankData: {
     readonly heading: string;
@@ -162,6 +168,8 @@ export interface ProfileContent {
     readonly requestedBody: string;
     readonly completeTitle: string;
     readonly completeBody: string;
+    /** UAT RUN-037 — once the agreement is signed, preparation is long past. */
+    readonly completeBodySigned: string;
     readonly completedAt: (date: string) => string;
     /** Shown when the form opened with what the Academy already holds. */
     readonly prefilledTitle: string;
@@ -274,6 +282,7 @@ const ar: ProfileContent = {
     agreementLabel: 'حالة الاتفاقية',
     agreementStatuses: {
       active: 'سارية',
+      'not-started': 'لم تبدأ بعد',
       suspended: 'موقوفة',
       expired: 'منتهية',
       ended: 'مُنهاة',
@@ -366,6 +375,29 @@ const ar: ProfileContent = {
     toggleOnDescription: 'ملفك ظاهر حاليًا في الدليل العام.',
     on: 'ظاهر',
     off: 'غير ظاهر',
+    notEstablished:
+      'يتاح الظهور في الدليل العام بعد اعتمادك مدربًا في المنصة وسريان اتفاقيتك، ولا يمكن تفعيله قبل ذلك.',
+    consentedNotListed:
+      'فعّلت الظهور، لكن ملفك لا يظهر في الدليل حاليًا لأن اتفاقيتك ليست سارية. سيظهر تلقائيًا عند سريانها.',
+  },
+  cv: {
+    heading: 'السيرة الذاتية',
+    description: 'سيرتك الذاتية المعتمدة في ملفك. ارفع ملفًا جديدًا ليحل محلها.',
+    empty: 'لا توجد سيرة ذاتية محفوظة.',
+    uploadLabel: 'استبدال السيرة الذاتية',
+    uploadHint: (formats, maxSizeMb) =>
+      `الصيغ المقبولة: ${formats} — الحد الأقصى ${maxSizeMb} ميجابايت.`,
+    browseLabel: 'اختر ملفًا',
+    removeLabel: 'إزالة',
+    uploaded: 'استُبدلت سيرتك الذاتية.',
+    removed: '',
+    formatError: (formats) => `صيغة الملف غير مقبولة. الصيغ المقبولة: ${formats}.`,
+    sizeError: (maxSizeMb) => `حجم الملف أكبر من ${maxSizeMb} ميجابايت.`,
+    refused: 'رُفض الملف: تأكد من صيغته وحجمه.',
+    emptyFile: 'الملف فارغ.',
+    noProfile: 'لا يوجد ملف مدرب بعد لإرفاق السيرة الذاتية به.',
+    ruleUnavailable: 'لا تتوفر قاعدة رفع السيرة الذاتية حاليًا.',
+    failed: 'تعذّر رفع السيرة الذاتية. حاول مرة أخرى.',
   },
   bankData: {
     heading: 'البيانات المصرفية',
@@ -374,6 +406,7 @@ const ar: ProfileContent = {
       'حصل طلبك على الاعتماد المبدئي. استكمل البيانات المصرفية أدناه لتتمكن الأكاديمية من إعداد الاتفاقية. جميع الحقول مطلوبة.',
     completeTitle: 'اكتملت بياناتك المصرفية',
     completeBody: 'تم حفظ بياناتك المصرفية، ويمكن الآن بدء إعداد الاتفاقية.',
+    completeBodySigned: 'بياناتك المصرفية محفوظة لدى الأكاديمية.',
     completedAt: (date) => `حُفظت في ${date}`,
     prefilledTitle: 'عبّأنا الحقول بما لدى الأكاديمية من بياناتك',
     prefilledBody: 'راجعها وعدّل ما تغيّر منها قبل الحفظ. لن يُعتمد شيء منها إلّا بعد تأكيدك.',
@@ -389,7 +422,7 @@ const ar: ProfileContent = {
     },
     requiredError: 'هذا الحقل مطلوب.',
     formatErrors: {
-      iban: 'أدخل رقم آيبان سعوديًا: يبدأ بـ SA ويليه 22 رقمًا (24 خانة).',
+      iban: 'أدخل رقم آيبان صحيحًا لدولة البنك: للسعودية SA ويليه 22 رقمًا (24 خانة)، ولغيرها رمز الدولة ثم رقمَا التحقق وبقية الرقم (15 إلى 34 خانة).',
       swiftCode:
         'أدخل رمز سويفت من 8 أو 11 خانة: 4 أحرف للبنك، وحرفان للدولة، وخانتان للموقع، و3 خانات اختيارية للفرع.',
       accountNumber: 'أدخل رقم الحساب بالأرقام فقط.',
@@ -501,6 +534,7 @@ const en: ProfileContent = {
     agreementLabel: 'Agreement status',
     agreementStatuses: {
       active: 'Active',
+      'not-started': 'Not yet started',
       suspended: 'Suspended',
       expired: 'Expired',
       ended: 'Ended',
@@ -594,6 +628,28 @@ const en: ProfileContent = {
     toggleOnDescription: 'Your profile is currently visible in the public directory.',
     on: 'Visible',
     off: 'Hidden',
+    notEstablished:
+      'Directory visibility becomes available once you are accredited as a trainer on the platform and your agreement is in force.',
+    consentedNotListed:
+      'You turned visibility on, but your profile is not in the directory right now because your agreement is not in force. It will appear automatically once it is.',
+  },
+  cv: {
+    heading: 'CV',
+    description: 'The CV on your profile. Upload a new file to replace it.',
+    empty: 'No CV on file.',
+    uploadLabel: 'Replace CV',
+    uploadHint: (formats, maxSizeMb) => `Accepted formats: ${formats} — up to ${maxSizeMb} MB.`,
+    browseLabel: 'Choose a file',
+    removeLabel: 'Remove',
+    uploaded: 'Your CV was replaced.',
+    removed: '',
+    formatError: (formats) => `This file type is not accepted. Accepted: ${formats}.`,
+    sizeError: (maxSizeMb) => `The file is larger than ${maxSizeMb} MB.`,
+    refused: 'The file was refused: check its format and size.',
+    emptyFile: 'The file is empty.',
+    noProfile: 'There is no trainer file yet to attach a CV to.',
+    ruleUnavailable: 'The CV upload rule is not available right now.',
+    failed: 'The CV could not be uploaded. Try again.',
   },
   bankData: {
     heading: 'Bank data',
@@ -602,6 +658,7 @@ const en: ProfileContent = {
       'Your application received preliminary approval. Complete the bank data below so the Academy can prepare your agreement. Every field is required.',
     completeTitle: 'Your bank data is complete',
     completeBody: 'Your bank details are saved. Agreement preparation can now begin.',
+    completeBodySigned: 'Your bank details are on file with the Academy.',
     completedAt: (date) => `Saved on ${date}`,
     prefilledTitle: 'We filled these in from your Financial Academy record',
     prefilledBody:
@@ -618,7 +675,7 @@ const en: ProfileContent = {
     },
     requiredError: 'This field is required.',
     formatErrors: {
-      iban: 'Enter a Saudi IBAN: "SA" followed by 22 digits (24 characters).',
+      iban: 'Enter a valid IBAN for the bank country: for Saudi Arabia "SA" followed by 22 digits (24 characters); otherwise the country code, two check digits and the account (15 to 34 characters).',
       swiftCode:
         'Enter an 8- or 11-character SWIFT code: 4-letter bank, 2-letter country, 2-character location, and an optional 3-character branch.',
       accountNumber: 'Enter the account number using digits only.',

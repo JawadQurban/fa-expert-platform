@@ -4,7 +4,9 @@ import { getMyApplicationsContent } from '../applications/myApplications.content
 import { getScreeningContent } from '../screening/screening.content';
 import type { RejectionReasonId } from '../screening/screening.types';
 import type {
+  EvaluationBlockedReason,
   EvaluationValidationCode,
+  InterviewPhase,
   InterviewRecommendation,
   MemberResponseState,
 } from './interview.types';
@@ -37,6 +39,10 @@ export interface InterviewsContent {
     readonly reschedule: string;
     readonly rescheduleRequestedTitle: string;
     readonly rescheduleRequestedBody: (note: string | null) => string;
+    /** RUN-021 — no time is fixed until the applicant picks one. */
+    readonly awaitingSelection: (proposed: string) => string;
+    /** BUG-032 — the derived interview state, shown on the head. */
+    readonly phases: Readonly<Record<InterviewPhase, string>>;
   };
   readonly committee: {
     readonly heading: string;
@@ -75,6 +81,16 @@ export interface InterviewsContent {
     readonly nonAttendanceRecordedBody: string;
     readonly notAMemberTitle: string;
     readonly notAMemberBody: string;
+    /**
+     * RUN-002 — why a member cannot evaluate right now. Each reason has its
+     * own words; «not a member» is kept for the one case it is true.
+     */
+    readonly blocked: Readonly<
+      Record<
+        Exclude<EvaluationBlockedReason, 'not-member'>,
+        { readonly title: string; readonly body: (scheduled: string) => string }
+      >
+    >;
   };
   readonly didNotAttendDialog: {
     readonly title: string;
@@ -193,6 +209,14 @@ const ar: InterviewsContent = {
       note == null
         ? 'لا تناسب المتقدمَ المواعيدُ المقترحة. اقترح مواعيد جديدة عبر «إعادة الجدولة».'
         : `لا تناسب المتقدمَ المواعيدُ المقترحة، وكتب: «${note}». اقترح مواعيد جديدة عبر «إعادة الجدولة».`,
+    awaitingSelection: (proposed) => `بانتظار اختيار المتقدم للموعد — المقترح: ${proposed}`,
+    phases: {
+      'awaiting-selection': 'بانتظار اختيار الموعد',
+      scheduled: 'مجدولة',
+      'in-progress': 'جارية',
+      ended: 'منتهية',
+      completed: 'مكتملة التقييم',
+    },
   },
   committee: {
     heading: 'ردود أعضاء اللجنة',
@@ -240,6 +264,26 @@ const ar: InterviewsContent = {
     nonAttendanceRecordedBody: 'استُثني تقييمك من الاحتساب ولم يُحسب صفرًا.',
     notAMemberTitle: 'لست عضوًا في لجنة هذه المقابلة',
     notAMemberBody: 'يمكنك متابعة ردود الأعضاء والنتيجة، دون تقديم تقييم.',
+    blocked: {
+      'already-responded': {
+        title: 'تم تسجيل تقييمك',
+        body: () => 'سجّلت ردّك على هذه المقابلة. يمكنك متابعة ردود بقية الأعضاء والنتيجة.',
+      },
+      'awaiting-selection': {
+        title: 'بانتظار تأكيد موعد المقابلة',
+        body: () =>
+          'أنت عضو في لجنة هذه المقابلة. يُتاح التقييم بعد أن يختار المتقدم موعدًا ويحين وقته.',
+      },
+      'not-started': {
+        title: 'لم يحن موعد المقابلة بعد',
+        body: (scheduled) =>
+          `أنت عضو في لجنة هذه المقابلة. يُتاح التقييم عند بدء المقابلة في ${scheduled}.`,
+      },
+      completed: {
+        title: 'اكتمل تقييم المقابلة',
+        body: () => 'ردّ جميع أعضاء اللجنة واحتُسبت النتيجة.',
+      },
+    },
   },
   didNotAttendDialog: {
     title: 'تأكيد عدم الحضور',
@@ -273,7 +317,7 @@ const ar: InterviewsContent = {
     blockedBody: 'يتاح اتخاذ القرار بعد رد جميع أعضاء اللجنة واحتساب النتيجة.',
     noPassTitle: 'لا توجد خدمة ناجحة',
     noPassBody:
-      'لم تبلغ أي خدمة حد النجاح، لذلك لا يمكن التحويل إلى لجنة الاعتماد. الإجراء المتاح هو الرفض المباشر.',
+      'لم تبلغ أي خدمة حد النجاح. حد النجاح استرشادي: يمكنك التحويل إلى لجنة الاعتماد أو الرفض، والقرار لك.',
     noShowTitle: 'لم يحضر أي من أعضاء اللجنة',
     noShowBody:
       'سجّل جميع أعضاء اللجنة عدم الحضور. يمكنك إعادة جدولة المقابلة دون حد لعدد المرات، أو رفض الطلب مباشرة.',
@@ -285,7 +329,7 @@ const ar: InterviewsContent = {
     title: 'تأكيد التحويل إلى لجنة الاعتماد',
     body: 'سيُحوَّل الطلب إلى لجنة الاعتماد مرفقًا بنتيجة الفرز ونتيجة المقابلة المجمّعة.',
     notPassedNote: (services) =>
-      `لن تُحوَّل الخدمات التي لم تجتز حد النجاح وتُغلق دون اعتماد: ${services}.`,
+      `الخدمات التالية لم تبلغ حد النجاح، وستُحوَّل مع نتيجتها إلى لجنة الاعتماد: ${services}.`,
     confirm: 'تأكيد التحويل',
     cancel: 'إلغاء',
   },
@@ -361,6 +405,15 @@ const en: InterviewsContent = {
       note == null
         ? 'None of the proposed times suit the applicant. Propose new times with “Reschedule”.'
         : `None of the proposed times suit the applicant, who wrote: “${note}”. Propose new times with “Reschedule”.`,
+    awaitingSelection: (proposed) =>
+      `Waiting for the applicant to pick a time — proposed: ${proposed}`,
+    phases: {
+      'awaiting-selection': 'Awaiting time selection',
+      scheduled: 'Scheduled',
+      'in-progress': 'In progress',
+      ended: 'Ended',
+      completed: 'Evaluation complete',
+    },
   },
   committee: {
     heading: 'Committee responses',
@@ -414,6 +467,27 @@ const en: InterviewsContent = {
     notAMemberTitle: 'You are not on this interview committee',
     notAMemberBody:
       'You can follow the member responses and the result, but cannot submit an evaluation.',
+    blocked: {
+      'already-responded': {
+        title: 'Your evaluation is recorded',
+        body: () =>
+          'You have responded to this interview. You can follow the other members and the result.',
+      },
+      'awaiting-selection': {
+        title: 'Waiting for the interview time to be confirmed',
+        body: () =>
+          'You are on this interview committee. Evaluation opens once the applicant picks a time and it arrives.',
+      },
+      'not-started': {
+        title: 'The interview has not started yet',
+        body: (scheduled) =>
+          `You are on this interview committee. Evaluation opens when the interview starts, on ${scheduled}.`,
+      },
+      completed: {
+        title: 'The interview evaluation is complete',
+        body: () => 'Every committee member has responded and the result is calculated.',
+      },
+    },
   },
   didNotAttendDialog: {
     title: 'Confirm non-attendance',
@@ -450,7 +524,7 @@ const en: InterviewsContent = {
       'The decision becomes available once every committee member has responded and the result is calculated.',
     noPassTitle: 'No service passed',
     noPassBody:
-      'No service reached the pass mark, so the application cannot be forwarded to the approval committee. Direct rejection is the available action.',
+      'No service reached the pass mark. The pass mark is advisory: you can forward to the approval committee or reject, and the decision is yours.',
     noShowTitle: 'No committee member attended',
     noShowBody:
       'Every committee member recorded that they did not attend. You can reschedule the interview, as many times as needed, or reject the application directly.',
@@ -462,7 +536,7 @@ const en: InterviewsContent = {
     title: 'Confirm forwarding to the approval committee',
     body: 'The application will be forwarded with its screening result and the consolidated interview result.',
     notPassedNote: (services) =>
-      `Services that did not pass are not forwarded and close without accreditation: ${services}.`,
+      `These services did not reach the pass mark and are forwarded to the approval committee with their result: ${services}.`,
     confirm: 'Confirm forwarding',
     cancel: 'Cancel',
   },

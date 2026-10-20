@@ -17,7 +17,7 @@ namespace ExpertHub.Api.Notifications;
  *   POST v1/internal/notifications/templates          (create)
  *   POST v1/internal/notifications/templates/{id}     (edit)
  *   POST v1/internal/notifications/templates/{id}/approve
- *   GET  v1/internal/notifications/log?q=&status=&channel=
+ *   GET  v1/internal/notifications/log?q=&status=&channel=&from=&to=
  *   GET  v1/internal/sla
  *   POST v1/internal/sla/{slaId}
  *
@@ -97,6 +97,9 @@ internal sealed record SlaInputWire(
 public static class NotificationEndpoints
 {
     private static readonly JsonSerializerOptions PlainJson = new();
+
+    /// <summary>Saudi Arabia keeps no daylight saving — `BusinessCalendar`'s rule.</summary>
+    private static readonly TimeSpan RiyadhOffset = TimeSpan.FromHours(3);
 
     /// <summary>Mounts under the version group; internal-role sessions only.</summary>
     public static RouteGroupBuilder MapNotificationEndpoints(this RouteGroupBuilder v1)
@@ -264,6 +267,8 @@ public static class NotificationEndpoints
             string? q,
             string? status,
             string? channel,
+            DateOnly? from,
+            DateOnly? to,
             ExpertHubDbContext db,
             CancellationToken ct) =>
         {
@@ -278,6 +283,18 @@ public static class NotificationEndpoints
             if (!string.IsNullOrWhiteSpace(channel))
             {
                 query = query.Where(x => x.entry.Channel == channel);
+            }
+            // RUN-023 — a date range, read as Riyadh calendar days (the days
+            // the log is displayed in), both ends inclusive.
+            if (from is { } fromDay)
+            {
+                var fromUtc = fromDay.ToDateTime(TimeOnly.MinValue) - RiyadhOffset;
+                query = query.Where(x => x.entry.SentAt >= fromUtc);
+            }
+            if (to is { } toDay)
+            {
+                var toUtc = toDay.AddDays(1).ToDateTime(TimeOnly.MinValue) - RiyadhOffset;
+                query = query.Where(x => x.entry.SentAt < toUtc);
             }
             if (!string.IsNullOrWhiteSpace(q))
             {

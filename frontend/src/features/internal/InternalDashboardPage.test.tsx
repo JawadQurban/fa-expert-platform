@@ -46,6 +46,36 @@ describe('EH-INT-01 — Internal Dashboard', () => {
     }
   });
 
+  it('BUG-029: a waiting reschedule request is listed and opens the interview page', async () => {
+    await renderDashboard();
+    const list = await screen.findByRole('list', { name: content.interviews.rescheduleHeading });
+    expect(within(list).getByText('م. خالد الشهري')).toBeInTheDocument();
+    expect(within(list).getByText('تعارض مع موعد سفر')).toBeInTheDocument();
+    expect(
+      within(list).getByRole('link', { name: content.interviews.open('م. خالد الشهري') })
+    ).toHaveAttribute('href', expertHubPaths.internalApplicationInterview('app-004'));
+  });
+
+  it('BUG-047: a declined offer says who declined and where the seat went', async () => {
+    await renderDashboard();
+    const copy = content.declinedOffers;
+    const list = await screen.findByRole('list', { name: copy.heading });
+    expect(within(list).getByText('أ. فهد الدوسري')).toBeInTheDocument();
+    expect(within(list).getByText(copy.movedTo('م. نورة السبيعي'))).toBeInTheDocument();
+    expect(within(list).getByText(copy.rematch)).toBeInTheDocument();
+    expect(within(list).getByRole('link', { name: copy.open('AR-2026-00002') })).toHaveAttribute(
+      'href',
+      expertHubPaths.internalAssignmentMatching('req-002')
+    );
+  });
+
+  it('BUG-028: the next confirmed interviews are listed with their ticket', async () => {
+    await renderDashboard();
+    const list = await screen.findByRole('list', { name: content.interviews.upcomingHeading });
+    expect(within(list).getByText('أ. ريم القحطاني')).toBeInTheDocument();
+    expect(within(list).getByText(content.interviews.ticket('INT-2026-0007'))).toBeInTheDocument();
+  });
+
   it('a metric tile drills into the inbox filtered by its status', async () => {
     await renderDashboard();
     const tile = await screen.findByRole('link', {

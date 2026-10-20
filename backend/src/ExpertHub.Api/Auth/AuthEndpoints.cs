@@ -1,4 +1,6 @@
 using ExpertHub.Api.Configuration;
+using ExpertHub.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.WebUtilities;
@@ -117,9 +119,15 @@ public static class AuthEndpoints
             // fall back to the email, then the subject, so the header always
             // shows something a person recognizes.
             var userId = principal.FindFirst(ExpertHubClaims.Subject)?.Value ?? string.Empty;
-            var displayName = principal.Identity?.Name
-                ?? principal.FindFirst("email")?.Value
-                ?? userId;
+            // RUN-033: the token's name is FAST's login (`JawadQurban`) or the
+            // national id; the Arabic name imported from FAST at sign-in is on
+            // APP_USER, so prefer it whenever it is a real name.
+            var storedName = await StoredNameAsync(http, userId);
+            var displayName = !string.IsNullOrWhiteSpace(storedName) && storedName != userId
+                ? storedName
+                : principal.Identity?.Name
+                    ?? principal.FindFirst("email")?.Value
+                    ?? userId;
 
             return Results.Ok(new SessionResponse(
                 UserId: userId,
@@ -157,6 +165,26 @@ public static class AuthEndpoints
         });
 
         return group;
+    }
+
+    /// <summary>The Arabic name APP_USER holds for the session's subject, or
+    /// null when there is none or no database to ask (the testing server).</summary>
+    private static async Task<string?> StoredNameAsync(HttpContext http, string subject)
+    {
+        try
+        {
+            return await http.RequestServices.GetRequiredService<ExpertHubDbContext>().Users
+                .Where(u => u.ExternalIdentityId == subject)
+                .Select(u => u.FullNameAr)
+                .FirstOrDefaultAsync(http.RequestAborted)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException
+            || !http.RequestAborted.IsCancellationRequested)
+        {
+            // The token's own name is still a name; a greeting is not worth a 500.
+            return null;
+        }
     }
 
     /// <summary>

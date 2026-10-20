@@ -118,6 +118,8 @@ export interface SpeakersContent {
       readonly required: (label: string) => string;
       readonly tooLong: (label: string, max: string) => string;
       readonly saveFailed: string;
+      readonly duplicate: string;
+      readonly saveAnyway: string;
     };
     readonly create: string;
     readonly save: string;
@@ -274,6 +276,8 @@ const ar: SpeakersContent = {
       required: (label) => `${label}: هذا الحقل مطلوب.`,
       tooLong: (label, max) => `${label}: لا يتجاوز ${max} حرف.`,
       saveFailed: 'تعذّر حفظ سجل المتحدث. حاول مرة أخرى.',
+      duplicate: 'يوجد سجل متحدث بنفس الاسم الأول والأخير. تأكد أنه ليس الشخص نفسه قبل الإضافة.',
+      saveAnyway: 'إضافة على أي حال',
     },
     create: 'إضافة المتحدث',
     save: 'حفظ التعديلات',
@@ -422,6 +426,9 @@ const en: SpeakersContent = {
       required: (label) => `${label}: this field is required.`,
       tooLong: (label, max) => `${label}: no more than ${max} characters.`,
       saveFailed: 'The speaker record could not be saved. Please try again.',
+      duplicate:
+        'A speaker with the same first and last name already exists. Make sure it is not the same person before adding.',
+      saveAnyway: 'Add anyway',
     },
     create: 'Add the speaker',
     save: 'Save changes',

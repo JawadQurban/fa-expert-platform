@@ -44,6 +44,7 @@ export interface TrainerSearchContent {
     readonly searchPlaceholder: string;
     readonly serviceLabel: string;
     readonly fileStatusLabel: string;
+    readonly domainLabel: string;
     readonly minCertificationsLabel: string;
     readonly allOption: string;
     /** Introduces the row of currently-applied filters. */
@@ -75,6 +76,9 @@ export interface TrainerSearchContent {
     readonly breadcrumbLabel: string;
     readonly breadcrumbSearch: string;
     readonly personalHeading: string;
+    readonly applicationHeading: string;
+    readonly applicationDescription: string;
+    readonly applicationEmpty: string;
     /** `P-331` — the approved short bio. */
     readonly bioHeading: string;
     readonly emailLabel: string;
@@ -97,6 +101,20 @@ export interface TrainerSearchContent {
     readonly agreementHeading: string;
     readonly agreementNone: string;
     readonly agreementTerm: (start: string, end: string) => string;
+    /** RUN-025 / `F-0411` — the manual file-status control. */
+    readonly fileStatusControl: {
+      readonly heading: string;
+      readonly description: string;
+      readonly statusLabel: string;
+      readonly automatic: string;
+      readonly reasonLabel: string;
+      readonly submit: string;
+      readonly manualTag: string;
+      readonly reasonRequired: string;
+      readonly saved: string;
+      readonly conflict: string;
+      readonly failed: string;
+    };
   };
 
   /** F2 — the Identity Card. */
@@ -163,6 +181,7 @@ const ar: TrainerSearchContent = {
     searchPlaceholder: 'اكتب اسم المدرب',
     serviceLabel: 'الخدمة',
     fileStatusLabel: 'حالة الملف',
+    domainLabel: 'مجال التخصص',
     minCertificationsLabel: 'الحد الأدنى لعدد الشهادات',
     allOption: 'الكل',
     activeHeading: 'التصفية النشطة:',
@@ -198,6 +217,9 @@ const ar: TrainerSearchContent = {
     breadcrumbLabel: 'مسار التنقل',
     breadcrumbSearch: 'قاعدة المدربين',
     personalHeading: 'البيانات الشخصية',
+    applicationHeading: 'بيانات الطلب المعتمد',
+    applicationDescription: 'كل ما اعتُمد عليه المدرب، قسمًا قسمًا.',
+    applicationEmpty: 'لا توجد بيانات طلب محفوظة لهذا المدرب.',
     bioHeading: 'النبذة المختصرة المعتمدة',
     emailLabel: 'البريد الإلكتروني',
     phoneLabel: 'رقم الجوال',
@@ -218,6 +240,20 @@ const ar: TrainerSearchContent = {
     agreementHeading: 'الاتفاقية',
     agreementNone: 'لا توجد اتفاقية مرتبطة.',
     agreementTerm: (start, end) => `من ${start} إلى ${end}`,
+    fileStatusControl: {
+      heading: 'ضبط حالة الملف',
+      description:
+        'تُحدَّد حالة الملف تلقائيًا من الاتفاقية. الحالة المضبوطة يدويًا تبقى سارية حتى تُغيَّر أو تُعاد إلى التلقائية، وتُسجَّل مع سببها في سجل التدقيق.',
+      statusLabel: 'الحالة',
+      automatic: 'تلقائية (من الاتفاقية)',
+      reasonLabel: 'سبب التغيير',
+      submit: 'حفظ الحالة',
+      manualTag: 'مضبوطة يدويًا',
+      reasonRequired: 'اكتب سبب التغيير.',
+      saved: 'حُفظت حالة الملف.',
+      conflict: 'الملف على هذه الحالة بالفعل، أو غيّرها شخص آخر للتو. حدّث الصفحة.',
+      failed: 'تعذّر حفظ حالة الملف. حاول مجددًا.',
+    },
   },
 
   identityCard: {
@@ -281,6 +317,7 @@ const en: TrainerSearchContent = {
     searchPlaceholder: 'Type a trainer name',
     serviceLabel: 'Service',
     fileStatusLabel: 'File status',
+    domainLabel: 'Specialization domain',
     minCertificationsLabel: 'Minimum certifications',
     allOption: 'All',
     activeHeading: 'Active filters:',
@@ -316,6 +353,9 @@ const en: TrainerSearchContent = {
     breadcrumbLabel: 'Breadcrumb',
     breadcrumbSearch: 'Trainer database',
     personalHeading: 'Personal details',
+    applicationHeading: 'Approved application data',
+    applicationDescription: 'Everything the trainer was accredited on, section by section.',
+    applicationEmpty: 'No application data is on file for this trainer.',
     bioHeading: 'Approved short bio',
     emailLabel: 'Email',
     phoneLabel: 'Mobile',
@@ -336,6 +376,21 @@ const en: TrainerSearchContent = {
     agreementHeading: 'Agreement',
     agreementNone: 'No linked agreement.',
     agreementTerm: (start, end) => `${start} to ${end}`,
+    fileStatusControl: {
+      heading: 'Set the file status',
+      description:
+        'The file status follows the agreement automatically. A status set by hand stays in force until it is changed or returned to automatic, and is recorded with its reason in the audit log.',
+      statusLabel: 'Status',
+      automatic: 'Automatic (from the agreement)',
+      reasonLabel: 'Reason for the change',
+      submit: 'Save status',
+      manualTag: 'Set manually',
+      reasonRequired: 'Enter the reason for the change.',
+      saved: 'The file status was saved.',
+      conflict:
+        'The file already has this status, or someone else just changed it. Refresh the page.',
+      failed: 'The file status could not be saved. Try again.',
+    },
   },
 
   identityCard: {

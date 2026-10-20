@@ -72,7 +72,11 @@ export interface AgreementLifecycleContent {
     readonly renewalCountLabel: string;
     readonly renewalCountValue: (count: number) => string;
     readonly documentUnavailable: string;
+    readonly openDocument: string;
     readonly historyHeading: string;
+    readonly signingHeading: string;
+    readonly signingNone: string;
+    readonly applicantSigned: (name: string, date: string) => string;
     readonly historyKinds: Readonly<Record<string, string>>;
     readonly historyEntry: (name: string, date: string) => string;
     readonly historyTerm: (years: number) => string;
@@ -185,6 +189,7 @@ const ar: AgreementLifecycleContent = {
   },
   statuses: {
     active: 'سارية',
+    'not-started': 'لم تبدأ بعد',
     suspended: 'موقوفة',
     expired: 'منتهية',
     ended: 'مُنهاة',
@@ -219,8 +224,12 @@ const ar: AgreementLifecycleContent = {
     termValue: (start, end) => `من ${start} إلى ${end}`,
     renewalCountLabel: 'عدد مرات التجديد',
     renewalCountValue: (count) => (count === 0 ? 'لم تُجدَّد بعد' : `${fmtAr(count)}`),
-    documentUnavailable: 'تنزيل نسخة الاتفاقية غير متاح حاليًا.',
+    documentUnavailable: 'لا يوجد ملف مرفوع لهذه الاتفاقية.',
+    openDocument: 'عرض ملف الاتفاقية',
     historyHeading: 'سجل الاتفاقية',
+    signingHeading: 'تسلسل التوقيع',
+    signingNone: 'لا يوجد تسلسل توقيع مسجّل لهذه الاتفاقية.',
+    applicantSigned: (name, date) => `وقّع المتقدم (${name}) على الاتفاقية في ${date}.`,
     historyKinds: {
       activated: 'تفعيل الاتفاقية',
       renewed: 'تجديد الاتفاقية',
@@ -354,6 +363,7 @@ const en: AgreementLifecycleContent = {
   },
   statuses: {
     active: 'Active',
+    'not-started': 'Not yet started',
     suspended: 'Suspended',
     expired: 'Expired',
     ended: 'Ended',
@@ -386,8 +396,12 @@ const en: AgreementLifecycleContent = {
     termValue: (start, end) => `${start} to ${end}`,
     renewalCountLabel: 'Times renewed',
     renewalCountValue: (count) => (count === 0 ? 'Not renewed yet' : `${count}`),
-    documentUnavailable: 'Downloading the agreement document is not available yet.',
+    documentUnavailable: 'No file was uploaded for this agreement.',
+    openDocument: 'Open the agreement file',
     historyHeading: 'Agreement history',
+    signingHeading: 'Signing sequence',
+    signingNone: 'No signing sequence is recorded for this agreement.',
+    applicantSigned: (name, date) => `The applicant (${name}) signed the agreement on ${date}.`,
     historyKinds: {
       activated: 'Agreement activated',
       renewed: 'Agreement renewed',

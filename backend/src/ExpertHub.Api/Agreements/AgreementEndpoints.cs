@@ -56,6 +56,13 @@ internal sealed record SigningTemplateMemberWire(string ApproverId, string Oblig
 internal sealed record SigningTemplateWire(
     string Id, string Name, IReadOnlyList<SigningTemplateMemberWire> Members);
 
+/// <summary>RUN-015 — the applicant's «طلب تعديل»: what they asked, who, when.</summary>
+internal sealed record ApplicantModificationRequestWire(string Note, string RequestedAt, string RequestedByName);
+
+/// <summary>RUN-015 — a chain voided by a re-preparation, kept as evidence.</summary>
+internal sealed record PreviousSequenceWire(
+    string Id, string CreatedAt, string? VoidedAt, IReadOnlyList<SigningMemberWire> Members);
+
 internal sealed record AgreementDetailWire(
     string ApplicationId, string Reference, string ApplicantName,
     IReadOnlyList<string> ApprovedServices,
@@ -71,7 +78,9 @@ internal sealed record AgreementDetailWire(
     bool SignaturesAttached,
     string? SentToApplicantAt,
     AgreementViewerWire Viewer,
-    AgreementDocumentWire? Document);
+    AgreementDocumentWire? Document,
+    ApplicantModificationRequestWire? ApplicantModificationRequest,
+    IReadOnlyList<PreviousSequenceWire> PreviousSequences);
 
 /// <summary>`DocumentAttachmentId` — `P-333`: the trainer's agreement file,
 /// uploaded first through <c>POST v1/internal/attachments</c> with purpose
@@ -161,6 +170,12 @@ public static class AgreementEndpoints
                 values.TryGetValue(f.Id, out var v) ? v : null)))
             {
                 return Results.Problem(statusCode: 400, detail: "required-field-missing");
+            }
+            if (ApplicantAgreementEndpoints.DateField(values, "startDate") is { } termStart
+                && ApplicantAgreementEndpoints.DateField(values, "endDate") is { } termEnd
+                && termEnd < termStart)
+            {
+                return Results.Problem(statusCode: 400, detail: "end-before-start");
             }
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
             // `P-333` — the document everybody signs is the uploaded file. It
@@ -641,16 +656,9 @@ public static class AgreementEndpoints
                 .Where(s => s.SequenceId == sequence.SequenceId)
                 .OrderBy(s => s.OrderIndex)
                 .ToListAsync(ct);
-        var stepUsers = await db.Users
-            .Where(u => steps.Select(s => s.UserId).Contains(u.UserId))
-            .ToListAsync(ct);
         var signaturesAttached = steps.Count > 0
             && await db.ESignatures.AnyAsync(
                 s => steps.Select(x => x.SignatoryId).Contains(s.SignatoryId), ct);
-        var titles = await (
-            from userRole in db.UserRoles
-            join role in db.Roles on userRole.RoleId equals role.RoleId
-            select new { userRole.UserId, role.NameAr, role.NameEn }).ToListAsync(ct);
         var templates = await db.CommitteeTemplates
             .Where(t => t.Kind == "signing")
             .OrderBy(t => t.Name)
@@ -685,30 +693,7 @@ public static class AgreementEndpoints
                 ? new Dictionary<string, string>()
                 : JsonSerializer.Deserialize<Dictionary<string, string>>(row.FieldValues) ?? [],
             row is null ? [] : await BuildMergedDataAsync(db, row, ct),
-            [.. steps.Select(s =>
-            {
-                var member = stepUsers.First(u => u.UserId == s.UserId);
-                var title = titles.FirstOrDefault(t => t.UserId == member.UserId);
-                var state = s.Decision switch
-                {
-                    "approve" => "approved",
-                    "sign" => "signed",
-                    "request_modification" => "modification-requested",
-                    _ => sequence!.Status == "in-progress" && s.OrderIndex == sequence.CurrentStepIndex
-                        ? "current"
-                        : "waiting",
-                };
-                return new SigningMemberWire(
-                    member.UserId.ToString(),
-                    member.FullNameAr,
-                    new LocalizedTextWire(title?.NameAr ?? "موظف", title?.NameEn ?? "Staff"),
-                    s.Obligation,
-                    s.IsSigner,
-                    s.OrderIndex,
-                    state,
-                    s.ActedAt is { } at ? ApplicationEndpoints.Iso(at) : null,
-                    s.Note);
-            })],
+            sequence is null ? [] : await SequenceMembersAsync(db, sequence, ct),
             await Screening.ScreeningEndpoints.BuildPoolAsync(
                 db, "F-0301", ct),
             [.. templates.Select(t => new SigningTemplateWire(
@@ -732,7 +717,89 @@ public static class AgreementEndpoints
                 CanResubmit: sequence is not null
                     && sequence.Status == "modification-requested"
                     && sequence.CreatedBy == viewerUserId),
-            row is null ? null : await AgreementDocuments.WireAsync(db, row, ct));
+            row is null ? null : await AgreementDocuments.WireAsync(db, row, ct),
+            row is null ? null : await ApplicantModificationRequestAsync(db, row, ct),
+            row is null ? [] : await PreviousSequencesAsync(db, row.AgreementId, ct));
+    }
+
+    /// <summary>
+    /// A chain's members in order, each with their state — the one reading
+    /// the J-10 page, its voided history and the lifecycle page share.
+    /// </summary>
+    internal static async Task<IReadOnlyList<SigningMemberWire>> SequenceMembersAsync(
+        ExpertHubDbContext db, SigningSequenceRecord sequence, CancellationToken ct)
+    {
+        var steps = await db.Signatories
+            .Where(s => s.SequenceId == sequence.SequenceId)
+            .OrderBy(s => s.OrderIndex)
+            .ToListAsync(ct);
+        var userIds = steps.Select(s => s.UserId).ToList();
+        var users = await db.Users.Where(u => userIds.Contains(u.UserId)).ToListAsync(ct);
+        var titles = await (
+            from userRole in db.UserRoles
+            join role in db.Roles on userRole.RoleId equals role.RoleId
+            where userIds.Contains(userRole.UserId)
+            select new { userRole.UserId, role.NameAr, role.NameEn }).ToListAsync(ct);
+        return [.. steps.Select(s =>
+        {
+            var member = users.First(u => u.UserId == s.UserId);
+            var title = titles.FirstOrDefault(t => t.UserId == member.UserId);
+            var state = s.Decision switch
+            {
+                "approve" => "approved",
+                "sign" => "signed",
+                "request_modification" => "modification-requested",
+                _ => sequence.Status == "in-progress" && s.OrderIndex == sequence.CurrentStepIndex
+                    ? "current"
+                    : "waiting",
+            };
+            return new SigningMemberWire(
+                member.UserId.ToString(),
+                member.FullNameAr,
+                new LocalizedTextWire(title?.NameAr ?? "موظف", title?.NameEn ?? "Staff"),
+                s.Obligation,
+                s.IsSigner,
+                s.OrderIndex,
+                state,
+                s.ActedAt is { } at ? ApplicationEndpoints.Iso(at) : null,
+                s.Note);
+        })];
+    }
+
+    /// <summary>RUN-015 — the applicant's modification request, for the
+    /// preparer who has to act on it; null once the applicant decided again.</summary>
+    private static async Task<ApplicantModificationRequestWire?> ApplicantModificationRequestAsync(
+        ExpertHubDbContext db, Agreement row, CancellationToken ct)
+    {
+        if (row.ApplicantDecisionKind != "request-modification" || row.ApplicantDecidedAt is null)
+        {
+            return null;
+        }
+        var applicant = await db.Users.SingleAsync(u => u.UserId == row.TrainerUserId, ct);
+        return new ApplicantModificationRequestWire(
+            row.ApplicantDecisionNote ?? string.Empty,
+            ApplicationEndpoints.Iso(row.ApplicantDecidedAt.Value),
+            applicant.FullNameAr);
+    }
+
+    /// <summary>RUN-015 — every voided chain, newest first.</summary>
+    private static async Task<IReadOnlyList<PreviousSequenceWire>> PreviousSequencesAsync(
+        ExpertHubDbContext db, Guid agreementId, CancellationToken ct)
+    {
+        var voided = await db.SigningSequences
+            .Where(s => s.AgreementId == agreementId && s.VoidedAt != null)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(ct);
+        var result = new List<PreviousSequenceWire>(voided.Count);
+        foreach (var sequence in voided)
+        {
+            result.Add(new PreviousSequenceWire(
+                sequence.SequenceId.ToString(),
+                ApplicationEndpoints.Iso(sequence.CreatedAt),
+                sequence.VoidedAt is { } at ? ApplicationEndpoints.Iso(at) : null,
+                await SequenceMembersAsync(db, sequence, ct)));
+        }
+        return result;
     }
 
     internal static void LogEvent(

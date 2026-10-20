@@ -38,6 +38,7 @@ export interface AgreementsContent {
     readonly documentLabel: string;
     readonly documentHint: string;
     readonly documentRequired: string;
+    readonly endBeforeStart: string;
     readonly documentFormatError: string;
     readonly documentSizeError: string;
     readonly documentUploadFailed: string;
@@ -145,6 +146,15 @@ export interface AgreementsContent {
     readonly confirm: string;
     readonly cancel: string;
   };
+  /** UAT RUN-015 — the applicant's modification request and the voided chains. */
+  readonly applicantRequest: {
+    readonly title: string;
+    readonly body: (name: string, date: string) => string;
+  };
+  readonly previousSequences: {
+    readonly heading: string;
+    readonly voidedAt: (date: string) => string;
+  };
   readonly modificationBanner: {
     readonly title: string;
     readonly body: (name: string) => string;
@@ -204,6 +214,7 @@ const ar: AgreementsContent = {
     documentHint:
       'ارفع اتفاقية هذا المدرب كما أعددتها — PDF أو DOC أو DOCX، بحد أقصى 1 ميجابايت. هذا الملف هو ما يطّلع عليه الموقّعون والمتقدم ويوقّعون عليه.',
     documentRequired: 'ارفع ملف الاتفاقية قبل الحفظ.',
+    endBeforeStart: 'تاريخ نهاية الاتفاقية يجب أن يكون بعد تاريخ بدايتها.',
     documentFormatError: 'الصيغ المقبولة: PDF أو DOC أو DOCX.',
     documentSizeError: 'حجم الملف أكبر من 1 ميجابايت.',
     documentUploadFailed: 'تعذّر رفع الملف. حاول مرة أخرى.',
@@ -329,6 +340,14 @@ const ar: AgreementsContent = {
     confirm: 'إرسال طلب التعديل',
     cancel: 'إلغاء',
   },
+  applicantRequest: {
+    title: 'طلب المتقدم تعديل الاتفاقية',
+    body: (name, date) => `طلب ${name} بتاريخ ${date} تعديل الاتفاقية بالملاحظة التالية:`,
+  },
+  previousSequences: {
+    heading: 'تسلسلات التوقيع السابقة (ملغاة)',
+    voidedAt: (date) => `أُلغي في ${date}`,
+  },
   modificationBanner: {
     title: 'طلب تعديل قائم',
     body: (name) => `طلب ${name} تعديلًا على الاتفاقية.`,
@@ -389,6 +408,7 @@ const en: AgreementsContent = {
     documentHint:
       "Upload this trainer's agreement as you prepared it — PDF, DOC or DOCX, up to 1 MB. This file is what the signers and the applicant read and sign.",
     documentRequired: 'Upload the agreement file before saving.',
+    endBeforeStart: 'The agreement end date must be after its start date.',
     documentFormatError: 'Accepted formats: PDF, DOC or DOCX.',
     documentSizeError: 'The file is larger than 1 MB.',
     documentUploadFailed: 'The file could not be uploaded. Please try again.',
@@ -516,6 +536,14 @@ const en: AgreementsContent = {
     noteLabel: 'Note',
     confirm: 'Send the modification request',
     cancel: 'Cancel',
+  },
+  applicantRequest: {
+    title: 'The applicant asked for changes',
+    body: (name, date) => `${name} asked on ${date} for the agreement to be changed:`,
+  },
+  previousSequences: {
+    heading: 'Previous signing sequences (cancelled)',
+    voidedAt: (date) => `Cancelled on ${date}`,
   },
   modificationBanner: {
     title: 'Modification requested',

@@ -147,6 +147,10 @@ describe('J-18 contract — offers, "My Engagements" and slot tracking against t
     const { user } = await renderPortal();
 
     await user.click(screen.getByRole('button', { name: content.offers.accept }));
+    // UAT `BUG-044` — the final answer is confirmed first.
+    await user.click(
+      await screen.findByRole('button', { name: content.offers.confirmDialog.accept.confirm })
+    );
 
     expect(await screen.findByText(content.offers.acceptedTitle)).toBeInTheDocument();
     expect(posts).toEqual([{ path: RESPOND, body: { response: 'accept' } }]);
@@ -160,6 +164,10 @@ describe('J-18 contract — offers, "My Engagements" and slot tracking against t
     const { user } = await renderPortal();
 
     await user.click(screen.getByRole('button', { name: content.offers.reject }));
+    // UAT `BUG-044` — the final answer is confirmed first.
+    await user.click(
+      await screen.findByRole('button', { name: content.offers.confirmDialog.reject.confirm })
+    );
 
     expect(await screen.findByText(content.offers.goneTitle)).toBeInTheDocument();
   });

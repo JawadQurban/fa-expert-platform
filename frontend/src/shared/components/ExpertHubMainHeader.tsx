@@ -17,6 +17,7 @@ import searchIconRaw from '@/assets/icons/search-01-stroke.svg?raw';
 import translationIconRaw from '@/assets/icons/translation-stroke.svg?raw';
 import userIconRaw from '@/assets/icons/user-stroke.svg?raw';
 import { expertHubPaths } from '../../app/router/paths';
+import { NotificationBell } from '../../features/notifications/NotificationBell';
 import { useExpertHubAuth } from '../../app/auth/AuthProvider';
 import { expertHubBranding } from '../content/branding';
 import {
@@ -320,6 +321,16 @@ export function ExpertHubMainHeader({ variant }: { readonly variant: ExpertHubHe
       <div className={styles.actions}>
         {overflowMenu}
         {localeToggle}
+        {/* RUN-001 — the bell, in the DS Header's own `actions` slot. */}
+        {session != null && (
+          <NotificationBell
+            href={
+              variant === 'internal'
+                ? expertHubPaths.internalMyNotifications
+                : expertHubPaths.notifications
+            }
+          />
+        )}
         {session != null && (
           <AccountMenu
             session={session}

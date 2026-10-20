@@ -51,7 +51,7 @@ export function TrainerCard({
         {trainer.specialties.map((specialty) => (
           <li key={specialty}>
             <Tag variant="neutral" size="sm">
-              {content.specialties[specialty]}
+              {content.specialties[specialty] ?? specialty}
             </Tag>
           </li>
         ))}

@@ -4,6 +4,7 @@ import {
   expectNoA11yViolations,
   renderExpertHubAt,
   screen,
+  waitFor,
   within,
 } from '../../test/renderExpertHub';
 import { expertHubPaths } from '../../app/router/paths';
@@ -80,7 +81,7 @@ describe('EH-PUB-02 — Trainer Directory', () => {
     expect(screen.queryByText('أ. خالد المطيري')).not.toBeInTheDocument();
   });
 
-  it('offers no specialty chip rail, and never sends a specialty to the API (Q16)', async () => {
+  it('RUN-031: filters by the declared specialty domain, sent to the API as its code', async () => {
     // Through the real HTTP provider, so what is asserted is the request itself.
     const paths: string[] = [];
     const emptyPage: DirectoryListDto = {
@@ -103,23 +104,38 @@ describe('EH-PUB-02 — Trainer Directory', () => {
     setDirectoryServiceForTesting(createHttpDirectoryProvider(client));
     const { user } = await renderDirectory();
 
-    // No taxonomy maps a trainer onto a specialty: every chip answered «nobody»,
-    // and the API now refuses the filter with 400 — so none is offered.
-    expect(screen.queryByRole('group', { name: /التخصص/ })).not.toBeInTheDocument();
-    for (const label of Object.values(content.specialties)) {
-      expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument();
-    }
-
     await user.type(screen.getByRole('searchbox', { name: content.filters.searchLabel }), 'سارة');
     expect(paths.length).toBeGreaterThan(1);
+    // Nothing chosen → no specialty sent.
     for (const path of paths) {
       expect(new URLSearchParams(path.split('?')[1]).has('specialty')).toBe(false);
     }
+
+    await user.click(screen.getByRole('combobox', { name: content.filters.specialtyLabel }));
+    await user.click(await screen.findByRole('option', { name: 'التحليل المالي والتمويل' }));
+    await waitFor(() =>
+      expect(new URLSearchParams(paths[paths.length - 1].split('?')[1]).get('specialty')).toBe(
+        'dom-003'
+      )
+    );
     expect([...new URLSearchParams(paths[paths.length - 1].split('?')[1]).keys()].sort()).toEqual([
       'page',
       'pageSize',
       'search',
+      'specialty',
     ]);
+  });
+
+  it('RUN-031: the mock narrows to the trainers who declared that domain', async () => {
+    const result = await createMockDirectoryProvider({ latencyMs: 0 }).listDirectory({
+      page: 1,
+      pageSize: 50,
+      specialty: 'dom-015',
+    });
+    expect(result.ok && result.value.items.length).toBeGreaterThan(0);
+    expect(result.ok && result.value.items.every((t) => t.specialties.includes('dom-015'))).toBe(
+      true
+    );
   });
 
   it('shows the empty state with a working clear-filters action', async () => {

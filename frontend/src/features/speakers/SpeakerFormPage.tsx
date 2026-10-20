@@ -106,6 +106,7 @@ export default function SpeakerFormPage() {
   const [pendingFocus, setPendingFocus] = useState<SpeakerField | null>(null);
   const [busy, setBusy] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [duplicate, setDuplicate] = useState(false);
 
   const uploadAttempt = useRef(0);
   /** Set once a save succeeds, so leaving for the detail page is not "unsaved". */
@@ -283,14 +284,18 @@ export default function SpeakerFormPage() {
     setIssues((current) => current.filter((issue) => issue.field !== field));
   };
 
-  const submit = () => {
+  const submit = (confirmDuplicate = false) => {
     if (busy || photoFile?.status === 'uploading') {
       return;
     }
-    const input = toSpeakerInput(values, photo?.attachmentId ?? null);
+    const input = {
+      ...toSpeakerInput(values, photo?.attachmentId ?? null),
+      ...(confirmDuplicate ? { confirmDuplicate: true } : {}),
+    };
     const found = validateSpeakerInput(input);
     setIssues(found);
     setSaveFailed(false);
+    setDuplicate(false);
     if (found.length > 0) {
       setPendingFocus(found[0].field);
       return;
@@ -304,6 +309,10 @@ export default function SpeakerFormPage() {
         leaving.current = true;
         const state: SpeakerSavedState = { speakerSaved: isEdit ? 'updated' : 'created' };
         void navigate(expertHubPaths.internalSpeaker(result.value.speakerId), { state });
+        return;
+      }
+      if (result.error.status === 409 && result.error.message === 'duplicate-name') {
+        setDuplicate(true);
         return;
       }
       // The server is the authority: a field it names is shown on that field.
@@ -472,6 +481,15 @@ export default function SpeakerFormPage() {
             />
           </div>
         </Panel>
+
+        {duplicate && (
+          <Alert tone="warning" surface="tinted" role="alert">
+            {copy.errors.duplicate}{' '}
+            <Button variant="secondary" size="sm" onClick={() => submit(true)} loading={busy}>
+              {copy.errors.saveAnyway}
+            </Button>
+          </Alert>
+        )}
 
         {saveFailed && (
           <Alert tone="error" surface="tinted" role="alert">

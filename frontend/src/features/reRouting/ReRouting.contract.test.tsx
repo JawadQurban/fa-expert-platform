@@ -79,7 +79,14 @@ const reExhaustedWire = {
 const RUN: MatchingRunDto = {
   model: {
     version: 'v1',
-    weights: { language: 34, 'delivery-mode': 33, evaluation: 33 },
+    weights: {
+      specialization: 33,
+      location: 33,
+      language: 34,
+      'delivery-mode': 33,
+      evaluation: 33,
+      availability: 33,
+    },
     tieBreakNote: null,
   },
   ranked: cycleFixture.pool.members.map((member) => candidate(member.trainerId, member.name)),

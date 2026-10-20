@@ -28,13 +28,15 @@ Covers ranking suitable trainer candidates against a submitted assignment reques
 
 | # | Matching Criterion | Trainer Profile Field | Request Field | Type |
 | --- | --- | --- | --- | --- |
-| 1 | Specialization | Approved specializations | Specialization/Domain (from Program) | Exclusionary |
-| 2 | Geographic Location | Trainer's city | Country/City (from Plan) | Exclusionary (unless online) |
-| 3 | Scheduling Conflict | Trainer's confirmed engagements | Plan start/end date | Exclusionary |
+| 1 | Specialization | Approved specializations | Specialization/Domain (from Program) | Weighted |
+| 2 | Geographic Location | Trainer's city | Country/City (from Plan) | Weighted (scores nothing when online) |
+| 3 | Scheduling Conflict | Trainer's confirmed engagements | Plan start/end date | Exclusionary — **weighted for a Consultant** (`availability`) |
 | 4 | File Status | File status (active) | — | Exclusionary |
 | 5 | Language | Trainer's delivery languages | Language (from Plan) | Weighted |
 | 6 | Delivery Mode | Trainer's preference/capability | Delivery mode (from Plan) | Weighted |
 | 7 | Evaluation/Classification | Trainer's evaluation and classification | — | Weighted |
+
+> **Owner rulings (UAT).** `BUG-038`/`RUN-011` (Notion): «المعايير الاقصائية ٢ فقط: تعارض الارتباط، ملف المدرب غير مفعل.» — only two criteria exclude: a conflicting confirmed engagement and an inactive trainer file. Specialization and location are weighted (33/33, migration `M45`). Chat ruling 2026-10-20: a **consultant's** scheduling conflict lowers their score instead of excluding them — the weighted `availability` row (33, migration `M47`).
 
 ---
 

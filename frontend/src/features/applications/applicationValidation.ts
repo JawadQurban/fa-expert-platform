@@ -33,6 +33,8 @@ export interface ValidationMessages {
   readonly invalidValue: string;
   readonly dateNotFuture: string;
   readonly dateNotPast: string;
+  /** An end date before its start. Optional: a caller without it gets `invalidValue`. */
+  readonly dateBeforeStart?: string;
   readonly fileFormat: (formats: string) => string;
   readonly fileSize: (maxMb: number) => string;
   readonly fileCount: (max: number) => string;
@@ -91,23 +93,36 @@ export function isFieldVisible(
   if (field.visibleFor != null && !field.visibleFor.some((s) => services.includes(s))) {
     return false;
   }
-  const dependsOn = field.dependsOn;
-  if (dependsOn == null) {
-    return true;
-  }
-  const actual = values[dependsOn.fieldId];
-  if (dependsOn.equals !== undefined && actual !== dependsOn.equals) {
-    return false;
-  }
-  return dependsOn.notEquals === undefined || actual !== dependsOn.notEquals;
+  return conditionHolds(field.dependsOn, values);
 }
 
-/** `BR-0104`: required when required by at least one selected service. */
+function conditionHolds(
+  condition: ApplicationFieldSchema['dependsOn'],
+  values: Readonly<Record<string, ApplicationFieldValue>>
+): boolean {
+  if (condition == null) {
+    return true;
+  }
+  const actual = values[condition.fieldId];
+  if (condition.equals !== undefined && actual !== condition.equals) {
+    return false;
+  }
+  return condition.notEquals === undefined || actual !== condition.notEquals;
+}
+
+/**
+ * `BR-0104`: required when required by at least one selected service — and,
+ * for a field with `requiredWhen`, only while that condition holds on `values`.
+ */
 export function isFieldRequired(
   field: ApplicationFieldSchema,
-  services: readonly ApplicationService[]
+  services: readonly ApplicationService[],
+  values: Readonly<Record<string, ApplicationFieldValue>> = {}
 ): boolean {
-  return field.requiredFor.some((s) => services.includes(s));
+  return (
+    field.requiredFor.some((s) => services.includes(s)) &&
+    conditionHolds(field.requiredWhen, values)
+  );
 }
 
 /** The selected services that make this field required (the "why required" hint). */
@@ -304,9 +319,11 @@ export function validateFieldValue(
   value: ApplicationFieldValue | undefined,
   services: readonly ApplicationService[],
   locale: Locale,
-  messages: ValidationMessages
+  messages: ValidationMessages,
+  /** The values the field sits among (its entry's, or the flat form's) — for `notBefore` and `requiredWhen`. */
+  siblings: Readonly<Record<string, ApplicationFieldValue>> = {}
 ): string | null {
-  const required = isFieldRequired(field, services);
+  const required = isFieldRequired(field, services, siblings);
   const text = typeof value === 'string' ? value.trim() : '';
   // Emptiness is per-type: a checkbox is "empty" unless ticked, a multi-select
   // unless at least one option is chosen, everything else unless text exists.
@@ -332,6 +349,13 @@ export function validateFieldValue(
     const bound = dateBoundError(field, text, messages);
     if (bound != null) {
       return bound;
+    }
+    // ISO dates compare as strings; a sibling that is empty or malformed is
+    // that field's own error, not this one's.
+    const startId = field.validation?.notBefore;
+    const start = startId == null ? undefined : siblings[startId];
+    if (typeof start === 'string' && ISO_DATE.test(start) && text < start) {
+      return messages.dateBeforeStart ?? messages.invalidValue;
     }
   }
   const patternMessage =
@@ -363,6 +387,8 @@ export function validateFieldValue(
  * A date field's bounds. `'today'` is resolved when the check runs, never when
  * the schema is written.
  */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 function dateBoundError(
   field: ApplicationFieldSchema,
   text: string,
@@ -374,7 +400,7 @@ function dateBoundError(
   const localDate = (date: string) =>
     new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T00:00:00` : date);
   const value = localDate(text);
-  if (Number.isNaN(value.getTime())) {
+  if (!ISO_DATE.test(text) || Number.isNaN(value.getTime())) {
     return messages.invalidValue;
   }
   const resolve = (bound: string) =>
@@ -451,7 +477,8 @@ export function validateCompleteness(
             entry.values[field.id],
             draft.services,
             locale,
-            messages
+            messages,
+            entry.values
           );
           if (message != null) {
             fieldErrors[entryFieldKey(entry.entryId, field.id)] = message;
@@ -474,7 +501,8 @@ export function validateCompleteness(
         draft.values[field.id],
         draft.services,
         locale,
-        messages
+        messages,
+        draft.values
       );
       if (message != null) {
         fieldErrors[field.id] = message;

@@ -201,6 +201,17 @@ describe('EH-INT-11 — Speaker records (J-04)', () => {
     expect(screen.queryByText(form.errors.saveFailed)).not.toBeInTheDocument();
   });
 
+  it('warns about a same-name speaker instead of failing the save (RUN-040)', async () => {
+    injectProvider({ failSaveWith: { status: 409, message: 'duplicate-name' } });
+    const { user } = await renderCreate();
+    await user.type(field(form.fields.firstNameAr), 'سلمان');
+    await user.type(field(form.fields.lastNameAr), 'العمري');
+    await user.click(screen.getByRole('button', { name: form.create }));
+    expect(await screen.findByText(form.errors.duplicate)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: form.errors.saveAnyway })).toBeInTheDocument();
+    expect(screen.queryByText(form.errors.saveFailed)).not.toBeInTheDocument();
+  });
+
   it('reports a save failure that names no field as a save failure', async () => {
     injectProvider({ failSaveWith: { status: 500, message: 'boom' } });
     const { user } = await renderCreate();

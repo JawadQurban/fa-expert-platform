@@ -7,6 +7,7 @@ import {
   type SlotCycleStatus,
 } from './reRouting.types';
 import { arNumber } from '../../shared/formatting';
+import type { MatchExclusionReason, WeightedCriterionId } from '../assignments/matching.types';
 
 /**
  * J-19 copy — Arabic authoritative, English best-effort.
@@ -61,12 +62,10 @@ export interface ReRoutingContent {
   readonly modelVersion: (version: string) => string;
   readonly rankedHeading: string;
   readonly scoreLabel: string;
-  readonly criteria: Readonly<Record<'language' | 'delivery-mode' | 'evaluation', string>>;
+  readonly criteria: Readonly<Record<WeightedCriterionId, string>>;
   readonly excludedHeading: string;
   readonly excludedNote: string;
-  readonly exclusionReasons: Readonly<
-    Record<'specialization' | 'location' | 'schedule-conflict' | 'file-status', string>
-  >;
+  readonly exclusionReasons: Readonly<Record<MatchExclusionReason, string>>;
   readonly manualSearchLabel: string;
   readonly selectedCount: (selected: number, required: number) => string;
   readonly poolSizeNote: (required: number) => string;
@@ -144,8 +143,11 @@ const ar: ReRoutingContent = {
   historyOutcomes: {
     'awaiting-response': 'بانتظار رد المرشح',
     accepted: 'قَبِل العرض',
-    rejected: 'رفض صريح',
+    rejected: 'رفض العرض',
     expired: 'انتهاء المدة دون رد',
+    withdrawn: 'اعتذار بعد التأكيد',
+    delinked: 'إلغاء ارتباط من الأكاديمية',
+    cancelled: 'أُلغي في نظام FAST',
   },
   historyRow: (name, sentOn) => `${name} — أُرسل العرض في ${sentOn}`,
 
@@ -160,17 +162,18 @@ const ar: ReRoutingContent = {
   rankedHeading: 'المرشحون المرتّبون',
   scoreLabel: 'الدرجة',
   criteria: {
+    specialization: 'التخصص',
+    location: 'المدينة',
     language: 'اللغة',
     'delivery-mode': 'نمط التقديم',
     evaluation: 'التقييم والتصنيف',
+    availability: 'عدم تعارض المواعيد',
   },
   excludedHeading: 'مستبعدون',
   excludedNote: 'استُبعد هؤلاء كليًا لعدم استيفاء معيار إقصائي، ولا يمكن ترشيحهم لهذا المقعد.',
   exclusionReasons: {
-    specialization: 'التخصص غير مطابق',
-    location: 'المدينة غير مطابقة',
     'schedule-conflict': 'تعارض مع ارتباط مؤكَّد',
-    'file-status': 'حالة الملف غير نشطة',
+    'file-status': 'ملف المدرب غير مفعّل',
   },
   manualSearchLabel: 'بحث باسم المدرب',
   selectedCount: (selected, required) => `اخترت ${fmtAr(selected)} من ${fmtAr(required)}`,
@@ -253,8 +256,11 @@ const en: ReRoutingContent = {
   historyOutcomes: {
     'awaiting-response': 'Awaiting their answer',
     accepted: 'Accepted',
-    rejected: 'Explicitly rejected',
+    rejected: 'Rejected the offer',
     expired: 'Expired with no response',
+    withdrawn: 'Withdrew after confirming',
+    delinked: 'De-linked by the Academy',
+    cancelled: 'Cancelled in FAST',
   },
   historyRow: (name, sentOn) => `${name} — offered on ${sentOn}`,
 
@@ -269,18 +275,19 @@ const en: ReRoutingContent = {
   rankedHeading: 'Ranked candidates',
   scoreLabel: 'Score',
   criteria: {
+    specialization: 'Specialization',
+    location: 'City',
     language: 'Language',
     'delivery-mode': 'Delivery mode',
     evaluation: 'Evaluation & classification',
+    availability: 'No scheduling conflict',
   },
   excludedHeading: 'Excluded',
   excludedNote:
     'These candidates were excluded entirely for failing an exclusionary criterion, and cannot be nominated for this slot.',
   exclusionReasons: {
-    specialization: 'Specialization does not match',
-    location: 'City does not match',
     'schedule-conflict': 'Conflicts with a confirmed engagement',
-    'file-status': 'File status is not active',
+    'file-status': 'Trainer file is not active',
   },
   manualSearchLabel: 'Search by trainer name',
   selectedCount: (selected, required) => `${selected} of ${required} selected`,

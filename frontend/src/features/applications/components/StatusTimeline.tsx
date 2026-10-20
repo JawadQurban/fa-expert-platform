@@ -23,9 +23,11 @@ export function StatusTimeline({
     id: stage.id,
     label: content.stages[stage.id],
     error: stage.state === 'rejected',
+    // BUG-034 — behind them, but exempted rather than passed.
+    description: stage.state === 'exempted' ? content.timeline.exempted : undefined,
   }));
   const completedIds = timeline
-    .filter((stage) => stage.state === 'complete')
+    .filter((stage) => stage.state === 'complete' || stage.state === 'exempted')
     .map((stage) => stage.id);
 
   return (

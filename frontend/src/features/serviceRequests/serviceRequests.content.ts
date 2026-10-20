@@ -75,6 +75,8 @@ export interface ServiceRequestsContent {
       readonly agreementLabel: string;
       readonly agreementEndsAt: (date: string) => string;
       readonly agreementNone: string;
+      /** BUG-024 — open the trainer's complete profile. */
+      readonly openProfile: string;
     };
   };
 
@@ -214,6 +216,7 @@ const ar: ServiceRequestsContent = {
       agreementLabel: 'الاتفاقية السارية',
       agreementEndsAt: (date) => `تنتهي بتاريخ ${date}`,
       agreementNone: 'لا توجد اتفاقية سارية',
+      openProfile: 'عرض الملف الكامل للمدرب',
     },
   },
 
@@ -358,6 +361,7 @@ const en: ServiceRequestsContent = {
       agreementLabel: 'Active agreement',
       agreementEndsAt: (date) => `Ends on ${date}`,
       agreementNone: 'No active agreement',
+      openProfile: 'Open the trainer’s full profile',
     },
   },
 

@@ -103,6 +103,11 @@ export interface TrainerContextDto {
     readonly status: ProfileAgreementStatus;
     readonly endsAt: string | null;
   } | null;
+  /**
+   * BUG-024 — the `TRAINER_PROFILE` id the internal trainer profile opens by;
+   * `null` when the person has no trainer file yet.
+   */
+  readonly profileId?: string | null;
 }
 
 /** One delta field the trainer supplied (F1/AC-2), ready to read. */

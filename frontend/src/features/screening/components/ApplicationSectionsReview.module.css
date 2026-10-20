@@ -1,5 +1,18 @@
 /* EH-INT-03 form review (J-05/F2/AC-2) — layout-only, token-only (DC-04/DC-23). */
 
+/* DEF-01 — every entry of a repeatable section, one after another. */
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
 .fields {
   margin: 0;
   display: grid;

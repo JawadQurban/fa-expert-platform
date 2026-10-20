@@ -126,7 +126,8 @@ const ar: WithdrawalContent = {
     confirm: 'تأكيد فك الارتباط',
     cancel: 'إلغاء',
     doneTitle: 'فُكّ ارتباط المدرب',
-    doneBody: (slot) => `أُنهي الارتباط على المقعد رقم ${fmtAr(slot)}، وعاد إلى مسار المطابقة.`,
+    doneBody: (slot) =>
+      `أُنهي الارتباط على المقعد رقم ${fmtAr(slot)}، ولم يُرسل العرض لأحد تلقائيًا؛ عاد الطلب إلى قائمة طلبات الإسناد ليمر بدورة الترشيح كاملة.`,
     doneBodyExhausted: (slot) =>
       `أُنهي الارتباط على المقعد رقم ${fmtAr(slot)}، ولم يتبقَّ مرشحون معتمدون له؛ يلزم إعادة توجيهه.`,
     reRouteAction: 'إعادة توجيه هذا المقعد',
@@ -193,7 +194,8 @@ const en: WithdrawalContent = {
     confirm: 'Confirm the de-linking',
     cancel: 'Cancel',
     doneTitle: 'The trainer has been de-linked',
-    doneBody: (slot) => `The engagement on slot ${slot} has ended and returned to matching.`,
+    doneBody: (slot) =>
+      `The engagement on slot ${slot} has ended. Nobody was offered it automatically: the request is back on the assignment requests list for the full nomination cycle.`,
     doneBodyExhausted: (slot) =>
       `The engagement on slot ${slot} has ended, and no approved candidate is left for it; it needs re-routing.`,
     reRouteAction: 'Re-route this slot',

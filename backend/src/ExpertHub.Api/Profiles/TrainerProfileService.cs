@@ -54,6 +54,12 @@ public static class TrainerProfileService
         TrainerProfile profile, Agreement? agreement, DateTime nowUtc, DateTime? lastCompletedEngagementEnd)
     {
         ArgumentNullException.ThrowIfNull(profile);
+        // RUN-025 — a status set by hand under F-0411 wins until it is
+        // changed again, so no later agreement change silently undoes it.
+        if (profile.FileStatusOverride is { } manual)
+        {
+            return manual;
+        }
         if (agreement is null)
         {
             // No agreement governs this file — report what was stored rather
@@ -314,14 +320,52 @@ public static class TrainerProfileService
     }
 
     /// <summary>
-    /// The trainer's specialties, for the directory's filter and cards.
-    /// ⚠️ `G12`/`Q16` — the taxonomy that would map a trainer's declared
-    /// domain onto `DIRECTORY_SPECIALTIES` does not exist, so nothing is
-    /// inferred: an empty list is served rather than a guessed mapping, and
-    /// the directory's specialty filter therefore matches nothing until the
-    /// taxonomy lands. Visible emptiness beats invented data.
+    /// The trainer's specialties, for the directory's filter and cards: the
+    /// «المجال» they declared on the application, as its code in the owner's
+    /// domain list (`dom-NNN`, `specializationDomains.ts`).
     /// </summary>
-    public static IReadOnlyList<string> Specialties() => [];
+    /// <remarks>
+    /// ⚠️ RUN-029/RUN-031 (UAT): the column was empty for every trainer and
+    /// neither surface could filter by field, because no separate specialty
+    /// taxonomy exists (`G12`/`Q16`). The domain list the applicant chose from
+    /// IS an approved reference list, so it is served as-is — nothing is
+    /// mapped or inferred. A domain typed under «أخرى» is free text on no
+    /// list, so it is not a filterable specialty.
+    /// </remarks>
+    public static IReadOnlyList<string> Specialties(string? domainCode) =>
+        domainCode is { Length: > 0 } code && code.StartsWith("dom-", StringComparison.Ordinal)
+            ? [code]
+            : [];
+
+    /// <summary>Each trainer's declared domain code (entry 0 of «المجال»).</summary>
+    public static async Task<Dictionary<Guid, string>> DomainsAsync(
+        ExpertHubDbContext db, Guid[] trainerIds, CancellationToken ct)
+    {
+        var rows = await db.TrainerFieldValues
+            .Where(v => trainerIds.Contains(v.TrainerId) && v.FieldCode == "domain")
+            .ToListAsync(ct);
+        return rows
+            .GroupBy(r => r.TrainerId)
+            .ToDictionary(
+                g => g.Key,
+                g => JsonSerializer.Deserialize<JsonElement>(g.OrderBy(r => r.EntryIndex).First().Value)
+                    is { ValueKind: JsonValueKind.String } value
+                        ? value.GetString() ?? string.Empty
+                        : string.Empty);
+    }
+
+    /// <summary>
+    /// True when every whitespace-separated word of <paramref name="search"/>
+    /// appears in <paramref name="name"/> — so «متحدث اختبار» finds the person
+    /// whose name holds both words, which one substring test never did.
+    /// </summary>
+    public static bool NameMatches(string name, string? search)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        return string.IsNullOrWhiteSpace(search)
+            || search.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                .All(token => name.Contains(token, StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <summary>
     /// The calculated ratings (`02D`) — never the raw MTM value. `pending`

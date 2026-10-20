@@ -44,6 +44,29 @@ describe('EH-TP-02 — My Applications', () => {
     vi.unstubAllGlobals();
   });
 
+  it('BUG-019/BUG-021: add-service is offered here, and a submitted request stays visible with its number', async () => {
+    const provider = createMockApplicationsProvider({ latencyMs: 0 });
+    setApplicationsServiceForTesting(provider);
+    const approved = MOCK_APPLICATIONS.find(
+      (item) => item.status === 'approved' || item.status === 'active'
+    );
+    const submitted = await provider.submitAddServiceRequest(approved?.id ?? '', {
+      service: 'question-writer',
+      values: {},
+      attachments: [],
+    });
+    const reference = submitted.ok ? (submitted.value.reference ?? '') : '';
+
+    await renderPage();
+    const section = await screen.findByRole('region', { name: content.serviceRequests.heading });
+    expect(
+      within(section).getByRole('link', { name: content.serviceRequests.addService })
+    ).toHaveAttribute('href', expertHubPaths.applicationAddService(approved?.id ?? ''));
+    const list = within(section).getByRole('list', { name: content.serviceRequests.listLabel });
+    expect(within(list).getByText(reference)).toBeInTheDocument();
+    expect(within(list).getByText(content.serviceRequests.statuses.pending)).toBeInTheDocument();
+  });
+
   it('renders the page title + description and moves focus to the heading on load', async () => {
     await renderPage();
     const heading = screen.getByRole('heading', { level: 1, name: content.title });
@@ -67,6 +90,27 @@ describe('EH-TP-02 — My Applications', () => {
     // Total = the full mock set, localized digits.
     const expectedTotal = arNumber(MOCK_APPLICATIONS.length);
     expect(within(summary).getByText(expectedTotal)).toBeInTheDocument();
+  });
+
+  it('RUN-035: counts an interview time waiting to be picked as requiring action', async () => {
+    const mock = createMockApplicationsProvider({ seed: DECIDED_ONLY, latencyMs: 0 });
+    setApplicationsServiceForTesting({
+      ...mock,
+      async listMyApplications(query) {
+        const listed = await mock.listMyApplications(query);
+        return listed.ok
+          ? { ok: true, value: { ...listed.value, awaitingSlotSelection: 2 } }
+          : listed;
+      },
+    });
+    await renderPage();
+    const summary = await screen.findByRole('list', { name: content.summary.sectionLabel });
+    const card = within(summary)
+      .getAllByRole('listitem')
+      .find((item) => within(item).queryByText(content.summary.requiresAction) != null);
+    expect(card).toBeDefined();
+    // The decided-only seed has no draft and no agreement pending: the 2 are the picks.
+    expect(within(card as HTMLElement).getByText(arNumber(2))).toBeInTheDocument();
   });
 
   it('renders the applications list with references, and drafts distinctly without one (BR-0107)', async () => {

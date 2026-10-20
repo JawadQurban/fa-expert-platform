@@ -31,8 +31,9 @@ export interface SubmissionService {
   /** `GET v1/me/submissions` — every submission slot of the signed-in person. */
   listMySubmissions(): Promise<Result<readonly SubmissionDto[], ExpertHubApiError>>;
   /**
-   * F1/AC-2 + F4/AC-2 — `POST v1/me/submissions/{id}/upload` with `{ fileName }`.
-   * 400 `file-required` without a name; 409 when no slot is open.
+   * F1/AC-2 + F4/AC-2 — `POST v1/me/submissions/{id}/upload`, the file as
+   * multipart. 422 with `reason` `format` | `size` for a file J-01's document
+   * rule refuses; 409 when no slot is open.
    */
   uploadSubmission(
     submissionId: string,
@@ -68,9 +69,11 @@ export function createHttpSubmissionProvider(
       return client.get<readonly SubmissionDto[]>(`${base}/me/submissions`);
     },
     uploadSubmission(submissionId, input) {
+      const payload = new FormData();
+      payload.append('file', input.file);
       return client.post<SubmissionDto>(
         `${base}/me/submissions/${encodeURIComponent(submissionId)}/upload`,
-        { fileName: input.fileName }
+        payload
       );
     },
     listSubmissions() {

@@ -97,15 +97,28 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
     await user.click(screen.getByRole('button', { name: copy.runEngine }));
     await screen.findByText(copy.excludedHeading);
 
-    // All four exclusionary rows are demonstrated by the seed.
-    expect(screen.getByText(copy.exclusionReasons.specialization)).toBeInTheDocument();
-    expect(screen.getByText(copy.exclusionReasons.location)).toBeInTheDocument();
+    // Both exclusionary rows are demonstrated by the seed — and only those two
+    // exist (owner ruling, UAT `BUG-038`).
     expect(screen.getByText(copy.exclusionReasons['schedule-conflict'])).toBeInTheDocument();
     expect(screen.getByText(copy.exclusionReasons['file-status'])).toBeInTheDocument();
+    expect(Object.keys(copy.exclusionReasons)).toEqual(['schedule-conflict', 'file-status']);
 
     // An excluded candidate is NOT selectable — not merely ranked last.
     const excluded = screen.getByText(copy.excludedHeading).closest('div') as HTMLElement;
     expect(within(excluded).queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it('UAT BUG-038: a different specialization or city lowers the score and never excludes', async () => {
+    const { user } = await renderMatching();
+    await user.click(screen.getByRole('button', { name: copy.runEngine }));
+    await screen.findByText(copy.excludedHeading);
+    const excluded = screen.getByText(copy.excludedHeading).closest('div') as HTMLElement;
+    // The seed's cyber-security specialist and its Jeddah-based trainer are
+    // ranked, selectable candidates.
+    for (const name of ['أ. ماجد الحربي', 'د. لمياء السالم']) {
+      expect(screen.getByRole('checkbox', { name })).toBeInTheDocument();
+      expect(within(excluded).queryByText(name)).not.toBeInTheDocument();
+    }
   });
 
   it('J-17/F1/AC-3: the weighted breakdown behind each rank is visible, and no weight excludes anyone', async () => {
@@ -113,12 +126,20 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
     await user.click(screen.getByRole('button', { name: copy.runEngine }));
     await screen.findByText(/نسخة مبدئية/);
     // Every weighted criterion is named beside the candidates it ranked.
-    for (const criterion of ['language', 'delivery-mode', 'evaluation'] as const) {
+    for (const criterion of [
+      'specialization',
+      'location',
+      'language',
+      'delivery-mode',
+      'evaluation',
+      'availability',
+    ] as const) {
       expect(screen.getAllByText(new RegExp(copy.criteria[criterion])).length).toBeGreaterThan(0);
     }
-    // A trainer who delivers in neither the plan's language nor its mode still
-    // appears — a weighted criterion cannot remove anyone on its own.
-    expect(screen.getAllByRole('checkbox').length).toBe(6);
+    // A trainer who delivers in neither the plan's language nor its mode — or
+    // in another specialization or city — still appears: a weighted criterion
+    // cannot remove anyone on its own.
+    expect(screen.getAllByRole('checkbox').length).toBe(8);
   });
 
   it('DM-GAP-05: the matching model is named as unapproved configuration', async () => {
@@ -131,8 +152,8 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
     const { user } = await renderMatching();
     await user.click(screen.getByRole('button', { name: copy.runEngine }));
     await screen.findByText(/نسخة مبدئية/);
-    // A single ranked list of six, not two lists of three.
-    expect(screen.getAllByRole('checkbox')).toHaveLength(6);
+    // A single ranked list (every eligible trainer), not two lists of three.
+    expect(screen.getAllByRole('checkbox')).toHaveLength(8);
     expect(screen.getByText(copy.selectedCount(0, 6))).toBeInTheDocument();
   });
 
@@ -170,6 +191,27 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
     expect(screen.getAllByRole('button', { name: copy.approve })).toHaveLength(6);
     const buttons = screen.getAllByRole('button').map((b) => b.textContent ?? '');
     expect(buttons.some((label) => /قبول الكل|رفض الكل/.test(label))).toBe(false);
+  });
+
+  it('UAT BUG-041: the requesting party can open each nominated candidate’s full profile', async () => {
+    const { user } = await renderMatching({ viewer: { canMatch: true, canApprove: true } });
+    await runAndSelect(user, 6);
+    await user.click(screen.getByRole('button', { name: copy.sendPool }));
+    const decision =
+      (await screen.findByText(copy.decisionHeading)).closest('section') ?? document.body;
+    const links = within(decision).getAllByRole('link', {
+      name: copy.identityCardLink,
+    });
+    expect(links).toHaveLength(6);
+    expect(links[0].getAttribute('href')).toMatch(/internal\/trainers\/trn-/);
+  });
+
+  it('UAT BUG-040: the whole request is shown where its candidates are matched', async () => {
+    await renderMatching();
+    const panel = screen.getByRole('heading', { name: copy.requestDetailsHeading });
+    expect(panel).toBeInTheDocument();
+    expect(screen.getByText(content.form.serviceTypeLabel)).toBeInTheDocument();
+    expect(screen.getByText(content.form.fields.requiredHeadcount)).toBeInTheDocument();
   });
 
   it('J-17/F4: an undecided candidate blocks the decision', () => {

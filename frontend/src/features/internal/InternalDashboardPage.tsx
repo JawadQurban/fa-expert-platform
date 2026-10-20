@@ -16,6 +16,8 @@ import { MetricTile } from './components/MetricTile';
 import { SlaHealthMeter } from './components/SlaHealthMeter';
 import { StageDistribution } from './components/StageDistribution';
 import { DashboardWorkQueue } from './components/DashboardWorkQueue';
+import { InterviewAgenda } from './components/InterviewAgenda';
+import { DeclinedOffers } from './components/DeclinedOffers';
 import styles from './InternalDashboardPage.module.css';
 import { PageLoadError } from '../../shared/components/PageLoadError';
 import { WorkspacePage } from '../../shared/workspace/WorkspacePage';
@@ -217,6 +219,15 @@ export default function InternalDashboardPage() {
 
             {/* Pipeline health — deadline performance + stage distribution. */}
             <div className={styles.secondary}>
+              {/* BUG-047 — declined offers on the caller's requests. */}
+              <DeclinedOffers rows={data.declinedOffers} content={content} locale={locale} />
+              {/* BUG-029 / BUG-028 — reschedules waiting, then interviews ahead. */}
+              <InterviewAgenda
+                interviews={data.upcomingInterviews}
+                reschedules={data.rescheduleRequests}
+                content={content}
+                locale={locale}
+              />
               <Card className={styles.panelCard}>
                 <div className={styles.sectionHead}>
                   <ItemIcon

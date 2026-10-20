@@ -61,16 +61,16 @@ internal sealed record OfferResponseInputWire(string? Response);
 
 internal sealed record TerminationInputWire(string? Reason, string? Note);
 
+/// <summary>`FileUrl` — where the round's stored file opens (RUN-004); null
+/// only for a round recorded before files were stored.</summary>
 internal sealed record SubmissionRoundWire(
     int RoundNumber, string FileName, string? Decision, string? Note,
-    string? DecidedByName, string? DecidedAt, string UploadedAt);
+    string? DecidedByName, string? DecidedAt, string UploadedAt, string? FileUrl);
 
 internal sealed record SubmissionWire(
     string SubmissionId, string EngagementId, string Kind, string Status,
     string SyncState, string TrainerName, string OpenedAt,
     IReadOnlyList<SubmissionRoundWire> Rounds);
-
-internal sealed record UploadRoundInputWire(string? FileName);
 
 internal sealed record SubmissionDecisionInputWire(string? Decision, string? Note);
 
@@ -89,8 +89,13 @@ public static class EngagementEndpoints
             {
                 return Results.Ok(Array.Empty<OfferWire>());
             }
+            // F2 — the offers AWAITING this trainer's answer, and only those.
+            // An answered offer used to stay here with its accept/reject
+            // buttons (UAT `RUN-013`/`BUG-044`): an accepted one lives on as
+            // an engagement below, a refused or lapsed one is over.
             var offers = await db.AssignmentOffers
-                .Where(o => o.TrainerId == trainer.TrainerId)
+                .Where(o => o.TrainerId == trainer.TrainerId
+                    && o.Status == OfferStatuses.AwaitingResponse)
                 .OrderByDescending(o => o.SentAt)
                 .ToListAsync(ct);
             return Results.Ok(await OfferWiresAsync(db, offers, ct));
@@ -256,14 +261,24 @@ public static class EngagementEndpoints
                 .Where(e => e.TrainerId == trainer.TrainerId)
                 .Select(e => e.EngagementId)
                 .ToListAsync(ct);
-            return Results.Ok(await SubmissionWiresAsync(db, mine, ct));
+            return Results.Ok(await SubmissionWiresAsync(db, mine, internalView: false, ct));
         }).WithName("MySubmissions");
 
+        /*
+         * RUN-004 — the file itself, through the ONE upload pipeline the
+         * application form uses (`AttachmentUploads.StoreAsync`: J-01's
+         * approved document rule, the content-signature check, the configured
+         * document store and the `ATTACHMENT` record). Recording the chosen
+         * file NAME alone accepted any type and size and stored nothing the
+         * coordinator could open.
+         */
         me.MapPost("/submissions/{submissionId}/upload", async (
             string submissionId,
-            UploadRoundInputWire input,
+            HttpRequest request,
             HttpContext http,
             ExpertHubDbContext db,
+            Infrastructure.Documents.IDocumentStore store,
+            Infrastructure.Documents.IUploadScanner scanner,
             CancellationToken ct) =>
         {
             var trainer = await TrainerOfAsync(http, db, ct);
@@ -285,12 +300,20 @@ public static class EngagementEndpoints
             {
                 return Results.Problem(statusCode: 409, detail: "Nothing to upload at this stage.");
             }
-            if (string.IsNullOrWhiteSpace(input.FileName))
+            if (!request.HasFormContentType)
             {
-                // ⚠️ `G26`/`G27` — the real upload (storage + antivirus) is
-                // blocked, so a round records the file NAME the trainer chose
-                // and no bytes are stored anywhere.
                 return Results.Problem(statusCode: 400, detail: "file-required");
+            }
+            var form = await request.ReadFormAsync(ct);
+            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+            var (attachment, problem) = await Documents.AttachmentUploads.StoreAsync(
+                form.Files.GetFile("file"),
+                Documents.AttachmentUploads.DocumentFormats,
+                Documents.AttachmentUploads.DocumentMaxSizeMb,
+                actor.UserId, db, store, scanner, ct);
+            if (problem is not null)
+            {
+                return problem;
             }
             var rounds = await db.SubmissionRounds
                 .Where(r => r.SubmissionId == submission.SubmissionId)
@@ -300,13 +323,15 @@ public static class EngagementEndpoints
                 RoundId = Guid.NewGuid(),
                 SubmissionId = submission.SubmissionId,
                 RoundNumber = rounds.Count + 1,
-                FileName = input.FileName,
+                FileName = attachment!.FileName,
+                AttachmentId = attachment.AttachmentId,
                 UploadedAt = DateTime.UtcNow,
             });
             submission.Status = SubmissionStatuses.PendingApproval;
             await db.SaveChangesAsync(ct);
-            return Results.Ok((await SubmissionWiresAsync(db, [submission.EngagementId], ct))[0]);
-        }).WithName("UploadSubmissionRound");
+            return Results.Ok((await SubmissionWiresAsync(
+                db, [submission.EngagementId], internalView: false, ct))[0]);
+        }).WithName("UploadSubmissionRound").DisableAntiforgery();
 
         /* ── the internal side ─────────────────────────────────────────────── */
 
@@ -398,7 +423,7 @@ public static class EngagementEndpoints
             ExpertHubDbContext db, CancellationToken ct) =>
         {
             var engagementIds = await db.Engagements.Select(e => e.EngagementId).ToListAsync(ct);
-            return Results.Ok(await SubmissionWiresAsync(db, engagementIds, ct));
+            return Results.Ok(await SubmissionWiresAsync(db, engagementIds, internalView: true, ct));
         })
             .WithName("InternalSubmissions")
             .RequireFeature("F-0506");
@@ -414,9 +439,37 @@ public static class EngagementEndpoints
                 s => s.SubmissionId == id, ct);
             return submission is null
                 ? Results.Problem(statusCode: 404, detail: "Submission not found.")
-                : Results.Ok((await SubmissionWiresAsync(db, [submission.EngagementId], ct))[0]);
+                : Results.Ok((await SubmissionWiresAsync(
+                    db, [submission.EngagementId], internalView: true, ct))[0]);
         })
             .WithName("InternalSubmissionDetail")
+            .RequireFeature("F-0506");
+
+        // RUN-004 — the coordinator previews or downloads a round's file,
+        // behind the same feature that lets them review it.
+        internalGroup.MapGet("/submissions/{submissionId}/rounds/{roundNumber:int}/file", async (
+            string submissionId,
+            int roundNumber,
+            HttpContext http,
+            ExpertHubDbContext db,
+            Infrastructure.Documents.IDocumentStore store,
+            CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(submissionId, out var id))
+            {
+                return Results.NotFound();
+            }
+            var attachment = await (
+                from round in db.SubmissionRounds
+                join file in db.Attachments on round.AttachmentId equals file.AttachmentId
+                where round.SubmissionId == id && round.RoundNumber == roundNumber
+                select file).FirstOrDefaultAsync(ct);
+            var content = attachment is null ? null : await store.GetAsync(attachment.StorageRef, ct);
+            return content is null
+                ? Results.Problem(statusCode: 404, detail: "The stored file could not be read.")
+                : Documents.AttachmentUploads.Serve(http, attachment!, content);
+        })
+            .WithName("InternalSubmissionRoundFile")
             .RequireFeature("F-0506");
 
         internalGroup.MapPost("/submissions/{submissionId}/decision", async (
@@ -488,7 +541,8 @@ public static class EngagementEndpoints
             round.DecidedBy = actor.UserId;
             round.DecidedAt = now;
             await db.SaveChangesAsync(ct);
-            return Results.Ok((await SubmissionWiresAsync(db, [submission.EngagementId], ct))[0]);
+            return Results.Ok((await SubmissionWiresAsync(
+                db, [submission.EngagementId], internalView: true, ct))[0]);
         })
             .WithName("DecideSubmission")
             .RequireFeature("F-0506");
@@ -571,11 +625,22 @@ public static class EngagementEndpoints
             OccurredAt = now,
         });
 
-        // The slot is free again, and the next approved candidate's turn has
-        // come — the same mechanism that opened the first offer.
         slot.ConfirmedEngagementId = null;
         slot.FastSyncState = "none";
-        await OfferService.AdvanceAsync(db, dispatcher, slot, now, ct);
+        if (actorKind == "staff")
+        {
+            // UAT `BUG-049` — an Academy de-link offers the slot to NOBODY: the
+            // request goes back to the assignment requests list and through
+            // the whole nomination cycle again.
+            await OfferService.ReturnToMatchingAsync(db, slot, ct);
+        }
+        else
+        {
+            // The trainer withdrew: the slot is free again, and the next
+            // approved candidate's turn has come — the same mechanism that
+            // opened the first offer.
+            await OfferService.AdvanceAsync(db, dispatcher, slot, now, ct);
+        }
 
         await OfferService.RaiseAsync(dispatcher, db, eventCode, slot, ct);
         await db.SaveChangesAsync(ct);
@@ -685,6 +750,7 @@ public static class EngagementEndpoints
             .Where(r => slots.Select(s => s.RequestId).Contains(r.RequestId))
             .ToListAsync(ct);
         var names = await TrainerNamesAsync(db, ct);
+        var outcomes = await OfferService.OutcomesAsync(db, offers, ct);
         var now = DateTime.UtcNow;
 
         return [.. offers.Select(offer =>
@@ -703,13 +769,7 @@ public static class EngagementEndpoints
                 slot.SlotNumber,
                 offer.TrainerId.ToString(),
                 names.GetValueOrDefault(offer.TrainerId, string.Empty),
-                offer.Status switch
-                {
-                    OfferStatuses.AwaitingResponse => "awaiting-response",
-                    OfferStatuses.Accepted => "accepted",
-                    OfferStatuses.Rejected => "rejected",
-                    _ => "expired",
-                },
+                outcomes[offer.OfferId],
                 ApplicationEndpoints.Iso(offer.SentAt),
                 sla,
                 offer.RespondedAt is { } at ? ApplicationEndpoints.Iso(at) : null,
@@ -718,8 +778,11 @@ public static class EngagementEndpoints
         })];
     }
 
+    /// <param name="internalView">The coordinator's view: a round's file opens
+    /// through the F-0506 route. The trainer's own opens through the shared
+    /// download route, which serves an uploader their own file.</param>
     private static async Task<List<SubmissionWire>> SubmissionWiresAsync(
-        ExpertHubDbContext db, IReadOnlyList<Guid> engagementIds, CancellationToken ct)
+        ExpertHubDbContext db, IReadOnlyList<Guid> engagementIds, bool internalView, CancellationToken ct)
     {
         var submissions = await db.MaterialSubmissions
             .Where(s => engagementIds.Contains(s.EngagementId))
@@ -759,7 +822,11 @@ public static class EngagementEndpoints
                         r.Note,
                         r.DecidedBy is { } by ? deciders.GetValueOrDefault(by) : null,
                         r.DecidedAt is { } at ? ApplicationEndpoints.Iso(at) : null,
-                        ApplicationEndpoints.Iso(r.UploadedAt)))]);
+                        ApplicationEndpoints.Iso(r.UploadedAt),
+                        r.AttachmentId is not { } fileId ? null
+                            : internalView
+                                ? $"/{ExpertHub.Core.ApiVersions.V1}/internal/submissions/{submission.SubmissionId:D}/rounds/{r.RoundNumber}/file"
+                                : Documents.AttachmentUploads.DownloadUrl(fileId)))]);
         })];
     }
 

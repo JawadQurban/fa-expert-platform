@@ -24,7 +24,7 @@ import type {
   TimelineStageDto,
 } from './applicationDetail.types';
 import { APPLICATION_STAGES, validateApplicantAgreementDecision } from './applicationDetail.types';
-import type { AddServiceRequestInput } from './addService.types';
+import type { AddServiceRequestInput, MyServiceRequestDto } from './addService.types';
 import { validateAttachmentFile, validateCompleteness } from './applicationValidation';
 import type { ValidationMessages } from './applicationValidation';
 import { APPLICATION_FORM_SCHEMA } from './applicationSchema';
@@ -249,6 +249,8 @@ export interface MockApplicationsProviderOptions {
   readonly prefill?: Record<string, string>;
   /** EH-TP-05: make uploads fail (upload-error / retry testing). */
   readonly uploadFailWith?: ExpertHubApiError;
+  /** RUN-020: make a file removal fail, so the page must keep the file. */
+  readonly removeFailWith?: ExpertHubApiError;
   /** EH-TP-03 / J-11: make the applicant's agreement decision fail (error / retry). */
   readonly decisionFailWith?: ExpertHubApiError;
   /** EH-TP-06: simulate the FAST-unavailable state (can't read current services). */
@@ -402,7 +404,13 @@ function currentStageIndex(status: ApplicationSummaryDto['status']): number {
   }
 }
 
-function buildTimeline(status: ApplicationSummaryDto['status']): TimelineStageDto[] {
+/** BUG-034 — screening exempted these from the interview (J-08). */
+const INTERVIEW_EXEMPTED: ReadonlySet<string> = new Set(['app-010']);
+
+function buildTimeline(
+  status: ApplicationSummaryDto['status'],
+  interviewExempted = false
+): TimelineStageDto[] {
   const current = currentStageIndex(status);
   const rejected = status === 'rejected';
   return APPLICATION_STAGES.map((id, index) => ({
@@ -411,7 +419,9 @@ function buildTimeline(status: ApplicationSummaryDto['status']): TimelineStageDt
       rejected && index === current
         ? 'rejected'
         : index < current
-          ? 'complete'
+          ? interviewExempted && id === 'interview'
+            ? 'exempted'
+            : 'complete'
           : index === current
             ? 'current'
             : 'upcoming',
@@ -454,7 +464,7 @@ function deriveDetail(summary: ApplicationSummaryDto): ApplicationDetailDto {
     createdAt: summary.createdAt,
     submittedAt: summary.submittedAt,
     updatedAt: summary.updatedAt,
-    timeline: buildTimeline(summary.status),
+    timeline: buildTimeline(summary.status, INTERVIEW_EXEMPTED.has(summary.id)),
     perServiceOutcomes: summary.services.map((service) => ({ service, outcome })),
     rejectionReason: summary.status === 'rejected' ? MOCK_REJECTION_REASON : null,
     attachments,
@@ -501,6 +511,7 @@ export function createMockApplicationsProvider(
     schemaUnavailable,
     prefill = {},
     uploadFailWith,
+    removeFailWith,
     hasApprovedTrainerRole = false,
     noActiveAgreement = false,
   } = options;
@@ -524,6 +535,8 @@ export function createMockApplicationsProvider(
   let attachmentCounter = 0;
   let submitCounter = 0;
   let draftCounter = 0;
+  // BUG-019 — what the trainer submitted, as the server keeps it.
+  const serviceRequests: MyServiceRequestDto[] = [];
 
   // EH-TP-03: per-id detail state, held in the closure exactly as the server
   // holds it. Derived on first access from the matching list summary; actions
@@ -707,7 +720,9 @@ export function createMockApplicationsProvider(
       ).length;
       const invalid = validateAttachmentFile(rule, file, existingCount, SERVER_MESSAGES);
       if (invalid != null) {
-        return { ok: false, error: { status: 400, message: invalid } };
+        // The API's shape: 422 with the refusal's `reason` (`format` | `size`
+        // | `count` — exactly what `SERVER_MESSAGES` yields).
+        return { ok: false, error: { status: 422, message: invalid, reason: invalid } };
       }
       attachmentCounter += 1;
       const dto = {
@@ -723,8 +738,8 @@ export function createMockApplicationsProvider(
 
     async removeAttachment(attachmentId) {
       await delay(latencyMs);
-      if (failWith != null) {
-        return { ok: false, error: failWith };
+      if (failWith != null || removeFailWith != null) {
+        return { ok: false, error: (failWith ?? removeFailWith)! };
       }
       if (draft != null) {
         draft = {
@@ -1001,20 +1016,51 @@ export function createMockApplicationsProvider(
       }
       // `BR-0110`: a service already approved cannot be requested again.
       if (detail.services.includes(input.service)) {
-        return { ok: false, error: { status: 409, message: 'Service already approved.' } };
+        return { ok: false, error: { status: 409, message: 'service-already-approved' } };
+      }
+      if (
+        serviceRequests.some(
+          (request) => request.requestedService === input.service && request.status === 'pending'
+        )
+      ) {
+        return { ok: false, error: { status: 409, message: 'service-request-pending' } };
       }
       // `BR-0112`: routes straight to the admin decision path (no screening). The
       // mock issues a request reference; the real numbering is the backend's.
       submitCounter += 1;
+      const reference = `EH-ASR-2026-${String(submitCounter).padStart(4, '0')}`;
+      const submittedAt = new Date().toISOString();
+      serviceRequests.unshift({
+        id: `asr-${submitCounter}`,
+        reference,
+        requestedService: input.service,
+        status: noActiveAgreement ? 'rejected' : 'pending',
+        submittedAt,
+        decidedAt: noActiveAgreement ? submittedAt : null,
+        rejectionReason: noActiveAgreement ? 'no-active-agreement' : null,
+      });
       return {
         ok: true,
         value: {
-          requestId: `EH-ASR-2026-${String(submitCounter).padStart(4, '0')}`,
-          submittedAt: new Date().toISOString(),
+          requestId: `asr-${submitCounter}`,
+          submittedAt,
           // RB-03 — as the server: recorded, and rejected at once.
           status: noActiveAgreement ? 'rejected' : 'pending',
           rejectionReason: noActiveAgreement ? 'no-active-agreement' : null,
+          reference,
         },
+      };
+    },
+
+    async listMyServiceRequests() {
+      await delay(latencyMs);
+      if (failWith != null) {
+        return { ok: false, error: failWith };
+      }
+      const approved = seed.find((item) => item.status === 'approved' || item.status === 'active');
+      return {
+        ok: true,
+        value: { items: [...serviceRequests], addServiceApplicationId: approved?.id ?? null },
       };
     },
   };

@@ -40,7 +40,10 @@ internal sealed record SpeakerInputWire(
     string? Title,
     string? FirstNameAr, string? MiddleNameAr, string? ThirdNameAr, string? LastNameAr,
     string? FirstNameEn, string? MiddleNameEn, string? ThirdNameEn, string? LastNameEn,
-    string? Bio, string? PhotoAttachmentId);
+    string? Bio, string? PhotoAttachmentId,
+    // RUN-040: create only — the user has seen the same-name warning and says
+    // the record is a different person.
+    bool? ConfirmDuplicate = null);
 
 /*
  * EH-INT-11 — speaker records (J-04), behind `speakerService.ts`:
@@ -112,6 +115,12 @@ internal static class SpeakerEndpoints
             {
                 return problem;
             }
+            // RUN-040 — a warning, not a refusal: two people can share a name.
+            if (input.ConfirmDuplicate != true && await db.SpeakerRecords.AnyAsync(
+                    s => s.FirstNameAr == values!.FirstNameAr && s.LastNameAr == values.LastNameAr, ct))
+            {
+                return Results.Problem(statusCode: 409, detail: "duplicate-name");
+            }
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
             var now = DateTime.UtcNow;
             var speaker = new SpeakerRecord
@@ -173,14 +182,19 @@ internal static class SpeakerEndpoints
         {
             return query;
         }
-        var term = search.Trim();
-        return query.Where(s =>
-            s.FirstNameAr.Contains(term) || s.LastNameAr.Contains(term)
-            || (s.MiddleNameAr != null && s.MiddleNameAr.Contains(term))
-            || (s.ThirdNameAr != null && s.ThirdNameAr.Contains(term))
-            || (s.FirstNameEn != null && s.FirstNameEn.Contains(term))
-            || (s.LastNameEn != null && s.LastNameEn.Contains(term))
-            || (s.Title != null && s.Title.Contains(term)));
+        // RUN-029 — every WORD must match some column: «متحدث اختبار» is a
+        // first name and a last name, which no single column ever contained.
+        foreach (var term in search.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
+            query = query.Where(s =>
+                s.FirstNameAr.Contains(term) || s.LastNameAr.Contains(term)
+                || (s.MiddleNameAr != null && s.MiddleNameAr.Contains(term))
+                || (s.ThirdNameAr != null && s.ThirdNameAr.Contains(term))
+                || (s.FirstNameEn != null && s.FirstNameEn.Contains(term))
+                || (s.LastNameEn != null && s.LastNameEn.Contains(term))
+                || (s.Title != null && s.Title.Contains(term)));
+        }
+        return query;
     }
 
     private static async Task<SpeakerRecord?> FindAsync(

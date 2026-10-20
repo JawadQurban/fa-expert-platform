@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
 using ExpertHub.Api.ServiceRequests;
@@ -136,11 +137,40 @@ internal sealed record TrainerProfileWire(
     TrainerAgreementSummaryWire? Agreement,
     IdentityCardWire IdentityCard,
     // `P-331` — the approved short bio; a pending one is in the review queue.
-    string? Bio);
+    string? Bio,
+    /*
+     * RUN-017 — the approved application in full: every section and field
+     * the trainer was accredited on (identity, qualifications, certificates,
+     * experience, training, availability), select answers by their label,
+     * and every entry of a repeatable section. The same wire the screening
+     * screen reads, so both views of one application stay one shape.
+     */
+    IReadOnlyList<Screening.ScreeningSectionWire> ApplicationSections,
+    IReadOnlyList<Screening.ScreeningAttachmentWire> Attachments,
+    /*
+     * The bank data, keyed as the trainer saved it — ONLY for a viewer who
+     * holds F-0301 (إعداد الاتفاقية وتفعيلها), the feature that already shows
+     * staff these fields in the agreement's merged data. Null for anyone
+     * else, and null while the trainer has not completed it.
+     */
+    IReadOnlyDictionary<string, string>? BankData,
+    // RUN-025 — true while the status above was set by hand (F-0411).
+    bool FileStatusManual = false,
+    // RUN-025 — whether this viewer holds F-0411 and so sees the control.
+    bool CanSetFileStatus = false);
+
+/// <summary>RUN-025 — a file status from `TrainerFileStatuses`, or
+/// `automatic` to return the file to its agreement; the reason is mandatory.</summary>
+internal sealed record FileStatusInputWire(string? Status, string? Reason);
 
 /// <summary>The public directory and the internal trainer base.</summary>
 public static class DirectoryEndpoints
 {
+    private const string ProfessionalCertificateRule = "professional-certificate";
+
+    /// <summary>RUN-025 — the input value that clears a manual file status.</summary>
+    private const string AutomaticFileStatus = "automatic";
+
     public static RouteGroupBuilder MapDirectoryEndpoints(this RouteGroupBuilder v1)
     {
         /*
@@ -152,18 +182,12 @@ public static class DirectoryEndpoints
             int page, int pageSize, string? search, string? specialty,
             ExpertHubDbContext db, CancellationToken ct) =>
         {
-            // ⚠️ `G12`/`Q16` — no taxonomy maps a trainer onto a specialty, so
-            // this filter could only ever answer «nobody». Refused, never
-            // exposed as a filter that predictably returns a wrong result.
-            if (!string.IsNullOrWhiteSpace(specialty))
-            {
-                return Results.Problem(statusCode: 400, detail: "specialty-filter-unavailable");
-            }
+            // RUN-031 — `specialty` is a domain code (`dom-NNN`) from the
+            // owner's list the applicant chose from (`TrainerProfileService.Specialties`).
             var consented = await ConsentedAsync(db, ct);
             var filtered = consented
-                .Where(t =>
-                    string.IsNullOrWhiteSpace(search)
-                        || t.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
+                .Where(t => TrainerProfileService.NameMatches(t.Name, search)
+                    && (string.IsNullOrWhiteSpace(specialty) || t.Specialties.Contains(specialty)))
                 .ToList();
 
             var safePageSize = Math.Clamp(pageSize, 1, 100);
@@ -203,7 +227,9 @@ public static class DirectoryEndpoints
             return Results.Ok(new PublicTrainerProfileWire(
                 profile.TrainerId.ToString(),
                 user.FullNameAr,
-                TrainerProfileService.Specialties(),
+                TrainerProfileService.Specialties(
+                    (await TrainerProfileService.DomainsAsync(db, [profile.TrainerId], ct))
+                        .GetValueOrDefault(profile.TrainerId)),
                 [.. records.Select(r => new PublicProgramWire(r.ProgramNameAr, r.DeliveredFrom.Year))],
                 Classification: TrainerProfileService.Classification(publicServices),
                 Bio: await TrainerBioEndpoints.PublishedAsync(db, profile.TrainerId, ct),
@@ -228,14 +254,24 @@ public static class DirectoryEndpoints
                 : (await PhotoAttachmentsAsync(db, [profile.ApplicationId], ct))
                     .GetValueOrDefault(profile.ApplicationId);
             var content = photo is null ? null : await store.GetAsync(photo.StorageRef, ct);
-            if (content is null || !content.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            /*
+             * ⚠️ The type is read from the BYTES, never from what was stored
+             * with them. The stored MIME is whatever the uploading browser
+             * claimed (an SVG with a script in it served as `image/svg+xml`
+             * from this origin is stored XSS), and the file store has no MIME
+             * at all — it answers `application/octet-stream`, which made every
+             * photo a 404 there. Only the three raster formats are served.
+             */
+            var type = content is null ? null : RasterImageType(content.Bytes);
+            if (type is null)
             {
                 return Results.Problem(statusCode: 404, detail: "Trainer not found.");
             }
             // Short and public: a withdrawn consent must stop the photo soon,
             // and nothing about it differs per viewer.
             http.Response.Headers.CacheControl = "public, max-age=300";
-            return Results.File(content.Bytes, content.MimeType);
+            http.Response.Headers.XContentTypeOptions = "nosniff";
+            return Results.File(content!.Bytes, type);
         }).WithName("PublicTrainerPhoto");
 
         /* ── the internal trainer base — J-15 ──────────────────────────────── */
@@ -258,17 +294,13 @@ public static class DirectoryEndpoints
             {
                 return Results.Problem(statusCode: 400, detail: "min-years-experience-unavailable");
             }
-            // The same rule for three more filters with nothing behind them:
-            // no specialty or domain taxonomy (`Q16`), and no calculated rating
-            // (`DM-GAP-14` — nothing writes one), so each answered «nobody» or
-            // silently nothing. Refused rather than offered.
+            // The same rule for two more filters with nothing behind them: no
+            // separate specialty taxonomy (`Q16` — the field filter is `domain`,
+            // below), and no calculated rating (`DM-GAP-14` — nothing writes
+            // one). Refused rather than offered.
             if (!string.IsNullOrWhiteSpace(specialty))
             {
                 return Results.Problem(statusCode: 400, detail: "specialty-filter-unavailable");
-            }
-            if (!string.IsNullOrWhiteSpace(domain))
-            {
-                return Results.Problem(statusCode: 400, detail: "domain-filter-unavailable");
             }
             if (minEvaluation is not null)
             {
@@ -276,8 +308,9 @@ public static class DirectoryEndpoints
             }
             var rows = await LoadInternalAsync(db, ct);
             var filtered = rows.Where(r =>
-                    (string.IsNullOrWhiteSpace(search)
-                        || r.Wire.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
+                    TrainerProfileService.NameMatches(r.Wire.Name, search)
+                    // RUN-029 — the declared «المجال», by its code in the owner's list.
+                    && (string.IsNullOrWhiteSpace(domain) || r.Wire.Specialties.Contains(domain))
                     && (string.IsNullOrWhiteSpace(service) || r.Wire.Services.Contains(service))
                     && (string.IsNullOrWhiteSpace(fileStatus) || r.Wire.FileStatus == fileStatus)
                     && (minCertifications is not { } minCerts
@@ -292,16 +325,24 @@ public static class DirectoryEndpoints
                 // the contract's own comment says it will be.
                 AvailableDomains: [],
                 Speakers: await SpeakerRowsAsync(
-                    http, db, search, service, fileStatus, minCertifications, ct)));
+                    http, db, search, service, fileStatus, minCertifications, domain, ct)));
         })
             .WithName("TrainerSearch")
             .RequireFeature("F-0410");
 
-        // F-0402 الملف الشامل — the unified internal profile.
+        // F-0402 الملف الشامل — the unified internal profile. The requesting
+        // party (F-0504) reads it too, for the people nominated to a request
+        // they can see (UAT `BUG-041`, J-17/F3/AC-2) — and only those.
         trainers.MapGet("/{trainerId}", async (
-            string trainerId, ExpertHubDbContext db, CancellationToken ct) =>
+            string trainerId, HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
         {
             if (!Guid.TryParse(trainerId, out var id))
+            {
+                return Results.Problem(statusCode: 404, detail: "Trainer not found.");
+            }
+            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+            if (!await FeatureAuthorization.HasFeatureAsync(db, actor.UserId, "F-0402", ct)
+                && !await Assignments.AssignmentEndpoints.IsNominatedToVisibleRequestAsync(http, db, id, ct))
             {
                 return Results.Problem(statusCode: 404, detail: "Trainer not found.");
             }
@@ -310,10 +351,89 @@ public static class DirectoryEndpoints
             {
                 return Results.Problem(statusCode: 404, detail: "Trainer not found.");
             }
-            return Results.Ok(await BuildInternalProfileAsync(db, profile, ct));
+            var showBank = await FeatureAuthorization.HasFeatureAsync(db, actor.UserId, "F-0301", ct);
+            return Results.Ok(await BuildInternalProfileAsync(db, profile, showBank, ct) with
+            {
+                CanSetFileStatus = await FeatureAuthorization.HasFeatureAsync(db, actor.UserId, "F-0411", ct),
+            });
         })
             .WithName("TrainerProfileDetail")
-            .RequireFeature("F-0402");
+            .RequireAnyFeature("F-0402", "F-0504");
+
+        /*
+         * RUN-025 — F-0411 ضبط حالة ملف المدرب. Owner ruling 2026-10-20 extends
+         * `P-244`: staff may set the file status by hand, with a reason. The
+         * value is stored as an OVERRIDE that the one derivation
+         * (`TrainerProfileService.FileStatus`) lets win, so matching, the
+         * trainer base and the public directory all follow it, and an
+         * agreement change cannot silently undo it. `automatic` clears it and
+         * hands the file back to its agreement.
+         */
+        trainers.MapPost("/{trainerId}/file-status", async (
+            string trainerId, FileStatusInputWire input,
+            HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(trainerId, out var id))
+            {
+                return Results.Problem(statusCode: 404, detail: "Trainer not found.");
+            }
+            string? target = input.Status == AutomaticFileStatus ? null : input.Status;
+            if (target is not null && !TrainerFileStatuses.All.Contains(target))
+            {
+                return Results.Problem(statusCode: 400, detail: "Unknown file status.");
+            }
+            var reason = input.Reason?.Trim();
+            if (string.IsNullOrEmpty(reason))
+            {
+                return Results.Problem(statusCode: 400, detail: "reason-required");
+            }
+            var before = await db.TrainerProfiles.AsNoTracking()
+                .Where(p => p.TrainerId == id)
+                .Select(p => new { p.FileStatusOverride })
+                .FirstOrDefaultAsync(ct);
+            if (before is null)
+            {
+                return Results.Problem(statusCode: 404, detail: "Trainer not found.");
+            }
+            if (before.FileStatusOverride == target)
+            {
+                return Results.Problem(statusCode: 409, detail: "Already in that status.");
+            }
+
+            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+            var now = DateTime.UtcNow;
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            // Claims the row against the override this request read: a
+            // concurrent change in between makes this one a 409, not a
+            // silent second write.
+            var claimed = await db.TrainerProfiles
+                .Where(p => p.TrainerId == id && p.FileStatusOverride == before.FileStatusOverride)
+                .ExecuteUpdateAsync(set => set.SetProperty(p => p.FileStatusOverride, target), ct);
+            if (claimed == 0)
+            {
+                return Results.Problem(statusCode: 409, detail: "Already changed.");
+            }
+            db.AppendAudit(new AuditLogEntry
+            {
+                AuditId = Guid.NewGuid(),
+                UserId = actor.UserId,
+                Action = "file-status-set",
+                EntityType = "TRAINER_PROFILE",
+                EntityId = id,
+                BeforeState = JsonSerializer.Serialize(new { fileStatusOverride = before.FileStatusOverride }),
+                AfterState = JsonSerializer.Serialize(new { fileStatusOverride = target, reason }),
+                IpAddress = http.Connection.RemoteIpAddress?.ToString(),
+                OccurredAt = now,
+            });
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            var profile = await db.TrainerProfiles.AsNoTracking().SingleAsync(p => p.TrainerId == id, ct);
+            var showBank = await FeatureAuthorization.HasFeatureAsync(db, actor.UserId, "F-0301", ct);
+            return Results.Ok(await BuildInternalProfileAsync(db, profile, showBank, ct) with { CanSetFileStatus = true });
+        })
+            .WithName("SetTrainerFileStatus")
+            .RequireFeature("F-0411");
 
         return v1;
     }
@@ -327,7 +447,7 @@ public static class DirectoryEndpoints
     /// and stays listable; suspended and expired (which includes a deliberately
     /// ended agreement, `P-244`) do not.
     /// </summary>
-    private static async Task<HashSet<Guid>> ListableAsync(
+    internal static async Task<HashSet<Guid>> ListableAsync(
         ExpertHubDbContext db, IReadOnlyList<TrainerProfile> profiles, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
@@ -373,6 +493,24 @@ public static class DirectoryEndpoints
         .GroupBy(x => x.ApplicationId)
         .ToDictionary(g => g.Key, g => g.First().file);
 
+    /// <summary>`image/png`, `image/jpeg` or `image/webp` by magic number, or
+    /// null for anything else (SVG, PDF, HTML, an unknown or empty file).</summary>
+    internal static string? RasterImageType(byte[] bytes)
+    {
+        ReadOnlySpan<byte> b = bytes;
+        if (b.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
+        {
+            return "image/png";
+        }
+        if (b.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]))
+        {
+            return "image/jpeg";
+        }
+        return b.Length >= 12 && b[..4].SequenceEqual("RIFF"u8) && b[8..12].SequenceEqual("WEBP"u8)
+            ? "image/webp"
+            : null;
+    }
+
     private static string PhotoUrl(Guid trainerId) =>
         $"/{ExpertHub.Core.ApiVersions.V1}/directory/{trainerId:D}/photo";
 
@@ -406,11 +544,12 @@ public static class DirectoryEndpoints
             .ToListAsync(ct);
 
         var photos = await PhotoAttachmentsAsync(db, [.. rows.Select(r => r.ApplicationId)], ct);
+        var domains = await TrainerProfileService.DomainsAsync(db, trainerIds, ct);
 
         return [.. rows.Select(r => new PublicTrainerSummaryWire(
             r.TrainerId.ToString(),
             r.FullNameAr,
-            TrainerProfileService.Specialties(),
+            TrainerProfileService.Specialties(domains.GetValueOrDefault(r.TrainerId)),
             ProgramsDelivered: recordCounts
                 .FirstOrDefault(c => c.TrainerId == r.TrainerId)?.Count ?? 0,
             Classification: TrainerProfileService.Classification(
@@ -426,11 +565,12 @@ public static class DirectoryEndpoints
     /// </summary>
     private static async Task<IReadOnlyList<ExpertHub.Api.Speakers.SpeakerSummaryWire>> SpeakerRowsAsync(
         HttpContext http, ExpertHubDbContext db, string? search, string? service,
-        string? fileStatus, int? minCertifications, CancellationToken ct)
+        string? fileStatus, int? minCertifications, string? domain, CancellationToken ct)
     {
         var trainerOnlyFilter = (!string.IsNullOrWhiteSpace(service) && service != ApplicationServices.Speaker)
             || !string.IsNullOrWhiteSpace(fileStatus)
-            || minCertifications is not null;
+            || minCertifications is not null
+            || !string.IsNullOrWhiteSpace(domain);
         if (trainerOnlyFilter)
         {
             return [];
@@ -464,6 +604,8 @@ public static class DirectoryEndpoints
         var now = DateTime.UtcNow;
         var lastCompleted = await TrainerProfileService.LastCompletedEngagementsAsync(
             db, [.. profiles.Select(p => p.profile.TrainerId)], now, ct);
+        var domains = await TrainerProfileService.DomainsAsync(
+            db, [.. profiles.Select(p => p.profile.TrainerId)], ct);
 
         var results = new List<(TrainerSearchResultWire, Guid)>(profiles.Count);
         foreach (var row in profiles)
@@ -474,7 +616,7 @@ public static class DirectoryEndpoints
                     row.profile.TrainerId.ToString(),
                     row.FullNameAr,
                     [.. held.Select(s => s.Service)],
-                    TrainerProfileService.Specialties(),
+                    TrainerProfileService.Specialties(domains.GetValueOrDefault(row.profile.TrainerId)),
                     TrainerProfileService.Classification(held),
                     TrainerProfileService.FileStatus(
                         row.profile,
@@ -482,8 +624,11 @@ public static class DirectoryEndpoints
                         now,
                         lastCompleted.TryGetValue(row.profile.TrainerId, out var end) ? end : null),
                     ratings.FirstOrDefault(r => r.TrainerId == row.profile.TrainerId)?.CalculatedValue,
+                    // RUN-029 — PROFESSIONAL certificates only. `Contains("certificate")`
+                    // also counted the academic degree's `qualification-certificate`,
+                    // so «at least 1» returned trainers with no certificate at all.
                     attachments.Count(a => a.ApplicationId == row.profile.ApplicationId
-                        && a.RuleCode.Contains("certificate", StringComparison.Ordinal)),
+                        && a.RuleCode == ProfessionalCertificateRule),
                     // ⚠️ Unknown, and said so: no structured numeric source
                     // exists. The form's experience answers are RANGES
                     // (2026-09-14 onward, with gaps), which cannot be a number
@@ -495,7 +640,7 @@ public static class DirectoryEndpoints
     }
 
     private static async Task<TrainerProfileWire> BuildInternalProfileAsync(
-        ExpertHubDbContext db, TrainerProfile profile, CancellationToken ct)
+        ExpertHubDbContext db, TrainerProfile profile, bool showBank, CancellationToken ct)
     {
         var user = await db.Users.SingleAsync(u => u.UserId == profile.UserId, ct);
         var services = await db.TrainerServices
@@ -510,7 +655,12 @@ public static class DirectoryEndpoints
         var attachments = await db.ApplicationAttachments
             .Where(a => a.ApplicationId == profile.ApplicationId)
             .ToListAsync(ct);
-        var certificates = attachments.Select(a => a.FileName).ToList();
+        // Certificates are the PROFESSIONAL certificate files — not the CV,
+        // the photo and the degree, which are listed with the attachments.
+        var certificates = attachments
+            .Where(a => a.RuleCode == ProfessionalCertificateRule)
+            .Select(a => a.FileName)
+            .ToList();
         // The profile picture the trainer uploaded with their application —
         // already stored, and downloadable by staff through the attachment
         // route (`/v1/attachments/{id}`). No photo, no link: the card falls back
@@ -629,13 +779,13 @@ public static class DirectoryEndpoints
             profile.TrainerId.ToString(),
             user.FullNameAr,
             user.Email,
-            // The DM-GAP-01 workbook carries no phone field (identity arrives
-            // via INT-01), so nothing is fabricated for it.
-            Phone: string.Empty,
+            // The form carries no phone field; the one identity (INT-01) gave
+            // the account is the only source, and empty when it gave none.
+            Phone: user.Phone ?? string.Empty,
             Value("inPersonCities"),
             AvatarUrl: photoUrl,
             [.. services.Select(s => s.Service)],
-            TrainerProfileService.Specialties(),
+            TrainerProfileService.Specialties(Value("domain")),
             TrainerProfileService.Classification(services),
             YearsExperience: null,
             qualification,
@@ -692,7 +842,108 @@ public static class DirectoryEndpoints
                 RecentRoles: recentRoles,
                 University: NullIfEmpty(university),
                 QualificationYear: NullIfEmpty(qualificationYear)),
-            await TrainerBioEndpoints.PublishedAsync(db, profile.TrainerId, ct));
+            await TrainerBioEndpoints.PublishedAsync(db, profile.TrainerId, ct),
+            await ApplicationSectionsAsync(db, profile.ApplicationId, schemaVersion, ct),
+            await ApplicationAttachmentsAsync(db, attachments, schemaVersion, ct),
+            showBank ? await BankFieldsAsync(db, profile.UserId, ct) : null,
+            FileStatusManual: profile.FileStatusOverride is not null);
+    }
+
+    /// <summary>
+    /// RUN-017 — the approved application, section by section, in the form's
+    /// own order and labels. A select answer reads as its option's label (the
+    /// trainer's form version), never as the stored code.
+    /// </summary>
+    private static async Task<IReadOnlyList<Screening.ScreeningSectionWire>> ApplicationSectionsAsync(
+        ExpertHubDbContext db, Guid applicationId, string schemaVersion, CancellationToken ct)
+    {
+        var sections = await db.FormSections
+            .Where(s => s.SchemaVersion == schemaVersion)
+            .OrderBy(s => s.OrderIndex)
+            .ToListAsync(ct);
+        var fields = await db.FormFields
+            .Where(f => f.SchemaVersion == schemaVersion)
+            .OrderBy(f => f.OrderIndex)
+            .ToListAsync(ct);
+        var rows = await db.ApplicationFieldValues
+            .Where(v => v.ApplicationId == applicationId)
+            .ToListAsync(ct);
+
+        Screening.ScreeningFieldWire Field(FormField field, string stored) => new(
+            field.FieldCode,
+            new ServiceRequests.LocalizedTextWire(field.LabelAr, field.LabelEn),
+            DisplayLabelled(field.Definition, JsonSerializer.Deserialize<JsonElement>(stored)),
+            null);
+
+        List<Screening.ScreeningEntryWire> EntriesOf(IReadOnlyList<FormField> sectionFields) =>
+        [
+            .. rows
+                .Where(v => sectionFields.Any(f => f.FieldCode == v.FieldCode))
+                .GroupBy(v => v.EntryIndex)
+                .OrderBy(g => g.Key)
+                .Select(g => new Screening.ScreeningEntryWire(
+                    g.Key,
+                    g.Select(v => v.EntryId).FirstOrDefault(id => id is { Length: > 0 }),
+                    [.. sectionFields
+                        .Where(f => g.Any(v => v.FieldCode == f.FieldCode))
+                        .Select(f => Field(f, g.First(v => v.FieldCode == f.FieldCode).Value))])),
+        ];
+
+        return [.. sections
+            .Select(section =>
+            {
+                var sectionFields = fields.Where(f => f.SectionCode == section.SectionCode).ToList();
+                var entries = EntriesOf(sectionFields);
+                return new Screening.ScreeningSectionWire(
+                    section.SectionCode,
+                    new ServiceRequests.LocalizedTextWire(section.TitleAr, section.TitleEn),
+                    entries.Count == 0 ? [] : entries[0].Fields,
+                    section.Repeatable is { Length: > 0 } && entries.Count > 0 ? entries : null);
+            })
+            .Where(section => section.Fields.Count > 0)];
+    }
+
+    /// <summary>A stored answer as text, select codes replaced by their labels.</summary>
+    private static string DisplayLabelled(string definition, JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.String => SelectOptionLabelAr(definition, value.GetString() ?? string.Empty)
+            ?? value.GetString() ?? string.Empty,
+        JsonValueKind.Array => string.Join("، ", value.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => SelectOptionLabelAr(definition, item.GetString()!) ?? item.GetString()!)),
+        _ => Screening.ScreeningEndpoints.DisplayValue(value),
+    };
+
+    /// <summary>Every file on the approved application, with its rule's label
+    /// and the staff download route.</summary>
+    private static async Task<IReadOnlyList<Screening.ScreeningAttachmentWire>> ApplicationAttachmentsAsync(
+        ExpertHubDbContext db, IReadOnlyList<ApplicationAttachment> attachments, string schemaVersion,
+        CancellationToken ct)
+    {
+        var rules = await db.AttachmentRules
+            .Where(r => r.SchemaVersion == schemaVersion)
+            .ToListAsync(ct);
+        return [.. attachments.Select(a =>
+        {
+            var rule = rules.FirstOrDefault(r => r.RuleCode == a.RuleCode);
+            return new Screening.ScreeningAttachmentWire(
+                a.ApplicationAttachmentId.ToString(),
+                a.FileName,
+                new ServiceRequests.LocalizedTextWire(rule?.LabelAr ?? a.RuleCode, rule?.LabelEn ?? a.RuleCode),
+                Path.GetExtension(a.FileName).TrimStart('.'),
+                Math.Max(1, a.SizeBytes / 1024),
+                a.AttachmentId is { } id ? $"/{ExpertHub.Core.ApiVersions.V1}/attachments/{id:D}" : null);
+        })];
+    }
+
+    /// <summary>The completed bank data as the trainer saved it, or null.</summary>
+    private static async Task<IReadOnlyDictionary<string, string>?> BankFieldsAsync(
+        ExpertHubDbContext db, Guid userId, CancellationToken ct)
+    {
+        var bank = await db.BankData.FirstOrDefaultAsync(b => b.UserId == userId, ct);
+        return bank is { CompletedAt: not null, Fields: { } fields }
+            ? JsonSerializer.Deserialize<Dictionary<string, string>>(fields)
+            : null;
     }
 
     /// <summary>
@@ -723,7 +974,8 @@ public static class DirectoryEndpoints
 
     /// <summary>The Arabic label of <paramref name="value"/> among a select
     /// field definition's options, or null when it is not one of them.</summary>
-    private static string? SelectOptionLabelAr(string definition, string value)
+    internal static string? SelectOptionLabelAr(string definition, string value)
+
     {
         using var parsed = System.Text.Json.JsonDocument.Parse(definition);
         if (!parsed.RootElement.TryGetProperty("options", out var options)

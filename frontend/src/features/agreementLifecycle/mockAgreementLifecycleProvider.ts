@@ -222,6 +222,8 @@ export interface MockAgreementLifecycleProviderOptions {
   readonly now?: string;
   /** Simulate a viewer who may look but not act (`04` EH-INT-06 §10, J-26). */
   readonly viewer?: Partial<AgreementDetailDto['viewer']>;
+  /** UAT RUN-037 — the signing record every detail carries. */
+  readonly signing?: AgreementDetailDto['signing'];
 }
 
 function delay(ms: number): Promise<void> {
@@ -231,7 +233,13 @@ function delay(ms: number): Promise<void> {
 export function createMockAgreementLifecycleProvider(
   options: MockAgreementLifecycleProviderOptions = {}
 ): AgreementLifecycleService {
-  const { latencyMs = 300, failWith, now = MOCK_NOW, viewer: viewerOverride } = options;
+  const {
+    latencyMs = 300,
+    failWith,
+    now = MOCK_NOW,
+    viewer: viewerOverride,
+    signing = { sequence: [], applicantSignatureName: null, applicantSignedAt: null },
+  } = options;
 
   const agreements = seedAgreements();
   let template = { ...SEED_TEMPLATE, fields: SEED_TEMPLATE.fields.map((f) => ({ ...f })) };
@@ -272,6 +280,7 @@ export function createMockAgreementLifecycleProvider(
         canEnd: viewerOverride?.canEnd ?? allowed.includes('end'),
         canReactivate: viewerOverride?.canReactivate ?? allowed.includes('reactivate'),
       },
+      signing,
     };
   }
 

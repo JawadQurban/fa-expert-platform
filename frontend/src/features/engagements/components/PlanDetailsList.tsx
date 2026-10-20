@@ -73,6 +73,18 @@ export function PlanDetailsList({
     },
   ];
 
+  return <DetailRows rows={rows} />;
+}
+
+/**
+ * The term/value grid itself, shared with the matching page's full request
+ * details (UAT `BUG-040`) so both read the same. Empty values are left out.
+ */
+export function DetailRows({
+  rows,
+}: {
+  readonly rows: ReadonlyArray<{ readonly term: string; readonly value: string | null }>;
+}) {
   return (
     <dl className={styles.list}>
       {rows

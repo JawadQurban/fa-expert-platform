@@ -72,6 +72,8 @@ export interface AddServiceContent {
     readonly fastUnavailableTitle: string;
     readonly fastUnavailableBody: string;
     readonly duplicate: string;
+    /** BUG-022 — a request for this service is already under review. */
+    readonly pending: string;
     readonly submitFailed: string;
     readonly homeLabel: string;
   };
@@ -139,6 +141,8 @@ const ar: AddServiceContent = {
     fastUnavailableBody:
       'لا يمكننا حاليًا قراءة خدماتك المعتمدة من الأنظمة الرسمية، لذا تعذّر بدء طلب إضافة خدمة. يُرجى المحاولة لاحقًا.',
     duplicate: 'هذه الخدمة معتمدة لديك بالفعل.',
+    pending:
+      'لديك طلب إضافة لهذه الخدمة قيد المراجعة. تابع حالته من «طلبات إضافة الخدمة» في صفحة طلباتي.',
     submitFailed: 'تعذّر إرسال الطلب. يُرجى المحاولة مرة أخرى.',
     homeLabel: 'العودة إلى طلباتي',
   },
@@ -209,6 +213,8 @@ const en: AddServiceContent = {
     fastUnavailableBody:
       'We currently cannot read your approved services from the official systems, so an add-service request cannot be started. Please try again later.',
     duplicate: 'You are already approved for this service.',
+    pending:
+      'A request to add this service is already under review. Follow it under “Add-service requests” on My applications.',
     submitFailed: 'The request could not be submitted. Please try again.',
     homeLabel: 'Back to My applications',
   },

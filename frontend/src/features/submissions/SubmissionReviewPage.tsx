@@ -39,8 +39,8 @@ import { dateFormatter } from '../../shared/formatting';
  * Laid out as the approved Option B record screen: the file's head, the
  * decision directly under it, then the upload rounds it is decided against.
  *
- * ⚠️ `G26` — preview/download (F2/AC-2, F5/AC-2) has no source yet and is stated
- * as unavailable beside the file rather than offered as a dead link.
+ * F2/AC-2, F5/AC-2 — each round's stored file opens (preview or download)
+ * through the F-0506 route the round serves (RUN-004).
  *
  * ⚠️ The wire has no reference or programme name; the head names the submitter
  * and the date the slot opened, and invents neither.

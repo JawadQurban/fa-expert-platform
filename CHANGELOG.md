@@ -13,6 +13,12 @@ The history before this repository existed is in
 
 ### Added
 
+- **Staff can set a trainer file's status by hand (RUN-025, `F-0411`, `P-354`).**
+  The comprehensive trainer file has a «ضبط حالة الملف» panel for viewers holding
+  F-0411: choose a status (or «تلقائية» to follow the agreement again) and give
+  a reason. The manual status wins over the agreement-derived one until changed,
+  is followed by matching and the directory, and is written to the audit log.
+  Migration M48 adds `TRAINER_PROFILE.file_status_override`.
 - **Staff can register an applicant again (J-02, `P-350`).** «تسجيل متقدّم جديد» on
   the application inbox finds an existing user by user id, name or email, and
   opens the same application form on their behalf. The application is in the
@@ -39,6 +45,16 @@ The history before this repository existed is in
 
 ### Changed
 
+- **A consultant's scheduling conflict lowers their score instead of excluding
+  them** (owner ruling, 2026-10-20). Matching gains a sixth weighted row,
+  «عدم تعارض المواعيد» (`availability`, weight 33, migration **M47**). For every
+  other service a conflicting engagement still excludes; the two exclusions
+  remain the conflicting engagement and an inactive file (`BUG-038`).
+- **The staff home lists declined assignment offers (`BUG-047`, J-22).** Each row
+  names the request, the seat and the trainer who declined, and says whether
+  the nomination moved to the next candidate or the matching engine has to run
+  again. It is derived from the offers, so it works before CAP-07 routes
+  EV-0502, and a centre coordinator sees only their own centre's (`P-351`).
 - **A centre coordinator works within their own centre (`P-351`).** The
   coordinator's centre is now one of the five assignment centres, chosen in
   access management. They see only their centre's assignment requests, and the
@@ -77,6 +93,32 @@ The history before this repository existed is in
 
 ### Fixed
 
+- **The interview pass mark no longer forces a rejection (BUG-033, `P-355`).**
+  Forwarding to the approval committee stays available when no service reached
+  the pass mark, and a service below it is no longer closed on forwarding: the
+  committee sees every service with its result and decides. Rejection is only
+  ever the decision-maker's choice.
+- **The screening decision card lists exempted services and shows a later
+  rejection (RUN-034).** A service exempted from the interview now counts as
+  accepted, so the card no longer reads «قُبلت الخدمات التالية: .» with an empty
+  list. Once the decision-maker rejects directly after the interview, the card
+  shows that rejection and its reason instead of the original acceptance.
+- **The applicant is told the interview was exempted (BUG-034, `P-352`).** The
+  timeline's interview step reads «مستثنى من المقابلة» / "Exempted from
+  interview" instead of looking like a passed interview. The exemption reason is
+  still not shown to the applicant.
+- **«عدد سنوات الخبرة» is mandatory only while «أعمل حاليًا» is off (RUN-019,
+  user ruling 2026-10-20).** Form version `dm-gap-01.2026-10-19` (M46, corrected
+  in place — not yet deployed) had made it always mandatory. A new schema rule,
+  `requiredWhen`, makes a visible field mandatory only while a condition holds;
+  the form and the API's submit gate both read it. Criterion #4 scores a
+  missing answer as 0.
+- **Bank country is a dropdown, and the IBAN follows it (RUN-026, J-09).**
+  «دولة البنك» lists FAST's countries (`reference-data/fast-country`) and the
+  API refuses a name outside that list; free text remains only while no copy
+  of the list exists. Saudi Arabia keeps "SA" + 22 digits; any other country is
+  checked by ISO 13616 — its own country code, 15–34 characters, mod-97.
+  «مدينة البنك» stays free text: the repository holds no Saudi city list.
 - **Every live application submission failed with «تعذّر تقديم الطلب»**
   (`400 Application is incomplete.`), whatever the applicant filled in. The form
   sends a repeatable section's answers (education, certifications, experience)

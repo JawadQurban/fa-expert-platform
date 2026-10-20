@@ -12,6 +12,8 @@ import {
 } from '../../shared/components/ActiveFilterChips';
 import type { ExpertHubApiError } from '../../shared/services/apiClient';
 import { APPLICATION_SERVICES } from '../applications/application.types';
+import { SPECIALIZATION_DOMAIN_OPTIONS } from '../../shared/content/specializationDomains';
+import { activeDomains } from '../../shared/content/domainCatalogueStatus';
 import {
   DEFAULT_TRAINER_SEARCH_FILTERS,
   hasActiveTrainerSearchFilters,
@@ -48,10 +50,11 @@ import { formatNumber } from '../../shared/formatting';
  * be shown to the trainer (J-13/AC-10, P-48). The two rules are one rule seen
  * from either side.
  *
- * ⚠️ AC-3 also lists specialty, domain, evaluation and experience. None has a
- * control: there is no specialty or domain taxonomy (`Q16`), no calculated
- * rating (`DM-GAP-14`) and no numeric years source, so each filter could only
- * answer wrongly — the API refuses them, and this page does not offer them.
+ * AC-3 also lists specialty, domain, evaluation and experience. The domain is
+ * filterable (RUN-029): it is the «المجال» the trainer declared, from the
+ * owner's list. The rest have no control: no separate specialty taxonomy
+ * (`Q16`), no calculated rating (`DM-GAP-14`) and no numeric years source, so
+ * each filter could only answer wrongly — the API refuses them.
  *
  * **Speakers appear here too** (J-04, owner ruling): after the trainer rows, in
  * the same table, tagged «متحدث» and linking to their own record. A speaker has
@@ -156,6 +159,15 @@ export default function TrainerSearchPage() {
           },
         ]
       : []),
+    ...(filters.domain !== 'all'
+      ? [
+          {
+            id: 'domain',
+            label: content.filters.domainLabel,
+            value: content.specialties[filters.domain] ?? filters.domain,
+          },
+        ]
+      : []),
     ...(filters.minCertifications != null
       ? [
           {
@@ -172,6 +184,7 @@ export default function TrainerSearchPage() {
     search: { search: '' },
     service: { service: 'all' },
     fileStatus: { fileStatus: 'all' },
+    domain: { domain: 'all' },
     minCertifications: { minCertifications: null },
   };
 
@@ -237,7 +250,7 @@ export default function TrainerSearchPage() {
         row.kind === 'speaker'
           ? notApplicable
           : row.trainer.specialties
-              .map((specialty) => content.specialties[specialty])
+              .map((specialty) => content.specialties[specialty] ?? specialty)
               .join(locale === 'ar' ? '، ' : ', '),
     },
     {
@@ -352,7 +365,19 @@ export default function TrainerSearchPage() {
                 })),
               ]}
             />
-            {/* No specialty or domain filter — no taxonomy exists (`Q16`). */}
+            {/* RUN-029 — the declared «المجال», from the owner's domain list. */}
+            <Select
+              label={content.filters.domainLabel}
+              value={filters.domain}
+              onValueChange={(value) => setFilters({ ...filters, domain: value })}
+              options={[
+                { value: 'all', label: content.filters.allOption },
+                ...activeDomains(SPECIALIZATION_DOMAIN_OPTIONS).map((option) => ({
+                  value: option.value,
+                  label: content.specialties[option.value] ?? option.value,
+                })),
+              ]}
+            />
             <Select
               label={content.filters.fileStatusLabel}
               value={filters.fileStatus}

@@ -24,7 +24,7 @@ public sealed class FormSchemaConfiguration : IEntityTypeConfiguration<FormSchem
         builder.Property(s => s.SelectableServices).HasColumnName("selectable_services").HasMaxLength(200);
         builder.Property(s => s.PublishedAt).HasColumnName("published_at");
 
-        builder.HasData([.. ApplicationSeedData.Schemas, ApplicationSchemadmgap0120260921.Schema, ApplicationSchemadmgap0120260928.Schema, ApplicationSchemadmgap0120260929.Schema, ApplicationSchemadmgap0120261007.Schema]);
+        builder.HasData([.. ApplicationSeedData.Schemas, ApplicationSchemadmgap0120260921.Schema, ApplicationSchemadmgap0120260928.Schema, ApplicationSchemadmgap0120260929.Schema, ApplicationSchemadmgap0120261007.Schema, ApplicationSchemadmgap0120261019.Schema]);
     }
 }
 
@@ -55,7 +55,8 @@ public sealed class FormSectionConfiguration : IEntityTypeConfiguration<FormSect
             .. ApplicationSchemadmgap0120260921.Sections,
             .. ApplicationSchemadmgap0120260928.Sections,
             .. ApplicationSchemadmgap0120260929.Sections,
-            .. ApplicationSchemadmgap0120261007.Sections]);
+            .. ApplicationSchemadmgap0120261007.Sections,
+            .. ApplicationSchemadmgap0120261019.Sections]);
     }
 }
 
@@ -88,7 +89,8 @@ public sealed class FormFieldConfiguration : IEntityTypeConfiguration<FormField>
             .. ApplicationSchemadmgap0120260921.Fields,
             .. ApplicationSchemadmgap0120260928.Fields,
             .. ApplicationSchemadmgap0120260929.Fields,
-            .. ApplicationSchemadmgap0120261007.Fields]);
+            .. ApplicationSchemadmgap0120261007.Fields,
+            .. ApplicationSchemadmgap0120261019.Fields]);
     }
 }
 
@@ -122,7 +124,8 @@ public sealed class AttachmentRuleConfiguration : IEntityTypeConfiguration<Attac
             .. ApplicationSchemadmgap0120260921.Attachments,
             .. ApplicationSchemadmgap0120260928.Attachments,
             .. ApplicationSchemadmgap0120260929.Attachments,
-            .. ApplicationSchemadmgap0120261007.Attachments]);
+            .. ApplicationSchemadmgap0120261007.Attachments,
+            .. ApplicationSchemadmgap0120261019.Attachments]);
     }
 }
 

@@ -45,7 +45,14 @@ internal sealed record PortalHomeWire(
     string? RatingLastRefreshedAt,
     bool VisibilityConsent,
     IReadOnlyList<HomeNotificationWire> Notifications,
-    bool HasActivity);
+    bool HasActivity,
+    HomeInterviewWire? UpcomingInterview = null);
+
+/// <summary>The caller's next confirmed interview (BUG-028), or a reschedule
+/// they asked for and are waiting on — read from J-06's record, own scope.</summary>
+internal sealed record HomeInterviewWire(
+    string ApplicationId, string Reference, string? StartsAt, string? TicketNumber,
+    bool ReschedulePending);
 
 /// <summary>The trainer's own overview — `F-0906`, own scope.</summary>
 public static class HomeEndpoints
@@ -88,10 +95,19 @@ public static class HomeEndpoints
             var profile = await db.TrainerProfiles
                 .FirstOrDefaultAsync(p => p.UserId == actor.UserId, ct);
 
-            var applications = await db.Applications
+            // RUN-014 — counted by the status the applicant is SHOWN, so the
+            // home cards and «طلباتي» agree about what is approved.
+            var applications = (await db.Applications
                 .Where(a => a.ApplicantUserId == actor.UserId)
-                .Select(a => a.Status)
-                .ToListAsync(ct);
+                .Select(a => new
+                {
+                    a.Status,
+                    CommitteeApproved = db.CommitteeSequences.Any(c => c.ApplicationId == a.ApplicationId
+                        && c.Status == CommitteeSequenceStatuses.Approved),
+                })
+                .ToListAsync(ct))
+                .Select(a => ApplicationEndpoints.ApplicantStatus(a.Status, a.CommitteeApproved))
+                .ToList();
             var summary = new HomeApplicationsWire(
                 applications.Count,
                 applications.Count(s => InProgressStatuses.Contains(s)),
@@ -134,6 +150,7 @@ public static class HomeEndpoints
                             .Where(s => s.TrainerId == profile.TrainerId).ToListAsync(ct));
 
             var notifications = await RecentNotificationsAsync(db, actor.UserId, ct);
+            var upcomingInterview = await UpcomingInterviewAsync(db, actor.UserId, ct);
 
             return Results.Ok(new PortalHomeWire(
                 actor.FullNameAr,
@@ -149,10 +166,52 @@ public static class HomeEndpoints
                 // the person, decided here so the page never guesses.
                 HasActivity: applications.Count > 0
                     || programsCount > 0
-                    || notifications.Count > 0));
+                    || notifications.Count > 0,
+                UpcomingInterview: upcomingInterview));
         }).RequireAuthorization().WithName("PortalHome");
 
         return v1;
+    }
+
+    /// <summary>
+    /// The caller's interview that is still ahead: a confirmed slot not yet
+    /// started, or a pending reschedule (no time to show, but still the next
+    /// thing on their interview). Null when there is none.
+    /// </summary>
+    private static async Task<HomeInterviewWire?> UpcomingInterviewAsync(
+        ExpertHubDbContext db, Guid userId, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var candidates = await (
+            from interview in db.Interviews
+            join application in db.Applications on interview.ApplicationId equals application.ApplicationId
+            where application.ApplicantUserId == userId
+                && interview.Status != InterviewStatuses.Completed
+            select new
+            {
+                application.ApplicationId,
+                application.Reference,
+                interview.TicketNumber,
+                interview.RescheduleRequestedAt,
+                StartsAt = db.InterviewSlots
+                    .Where(s => s.SlotId == interview.ConfirmedSlotId)
+                    .Select(s => (DateTime?)s.StartsAt)
+                    .FirstOrDefault(),
+            }).ToListAsync(ct);
+        var next = candidates
+            .Where(c => c.RescheduleRequestedAt is not null || c.StartsAt >= now)
+            .OrderBy(c => c.StartsAt ?? DateTime.MaxValue)
+            .FirstOrDefault();
+        return next is null
+            ? null
+            : new HomeInterviewWire(
+                next.ApplicationId.ToString(),
+                next.Reference ?? string.Empty,
+                next.RescheduleRequestedAt is null && next.StartsAt is { } at
+                    ? ApplicationEndpoints.Iso(at)
+                    : null,
+                next.TicketNumber,
+                ReschedulePending: next.RescheduleRequestedAt is not null);
     }
 
     /// <summary>
@@ -198,7 +257,11 @@ public static class HomeEndpoints
         return [.. entries.Select(entry => new HomeNotificationWire(
             entry.LogId.ToString(),
             "info",
-            subjects.FirstOrDefault(
+            // The subject as it was rendered and sent — placeholders filled
+            // in — wins over the template's raw wording.
+            entry.Subject
+            ?? subjects.FirstOrDefault(
+
                     s => s.Code == entry.TemplateCode && s.Version == entry.TemplateVersion)
                 ?.SubjectAr
                 // No template row (it was edited into a new version, or the

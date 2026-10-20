@@ -64,6 +64,9 @@ const OUTCOME_TAG = {
   accepted: 'success',
   rejected: 'neutral',
   expired: 'warning',
+  withdrawn: 'warning',
+  delinked: 'neutral',
+  cancelled: 'neutral',
 } as const satisfies Record<PreviousOfferOutcome, string>;
 
 /** A `409` means the slot moved on; a `400` names its rule; anything else is generic. */

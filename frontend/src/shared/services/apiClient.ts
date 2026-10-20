@@ -17,6 +17,12 @@ import { expertHubConfig } from '../../app/config/expertHubConfig';
 export interface ExpertHubApiError {
   readonly status: number;
   readonly message: string;
+  /**
+   * The problem's machine-readable `reason` extension, when the server sends
+   * one (an upload refusal: `format` | `size` | `count`). A screen maps it to
+   * its own localized copy — the `detail` is English and never shown raw.
+   */
+  readonly reason?: string;
 }
 
 export interface ExpertHubApiClient {
@@ -74,15 +80,31 @@ async function request<T>(
       // rather than "Unprocessable Content". Keeping only the status text
       // threw that away and left every screen guessing.
       let message = response.statusText;
+      let reason: string | undefined;
       try {
-        const problem = (await response.json()) as { detail?: string; title?: string };
+        const problem = (await response.json()) as {
+          detail?: string;
+          title?: string;
+          reason?: unknown;
+        };
         message = problem.detail ?? problem.title ?? message;
+        reason = typeof problem.reason === 'string' ? problem.reason : undefined;
       } catch {
         // Not JSON — the status text is all there is.
       }
-      return { ok: false, error: { status: response.status, message } };
+      return {
+        ok: false,
+        error:
+          reason == null
+            ? { status: response.status, message }
+            : { status: response.status, message, reason },
+      };
     }
-    return { ok: true, value: (await response.json()) as T };
+    // ⚠️ An empty success body (`Results.Ok(null)`, 204) is `null`, not a
+    // failure: parsing it threw, so every attachment removal reported an
+    // error the page then ignored (RUN-020).
+    const text = await response.text();
+    return { ok: true, value: (text === '' ? null : JSON.parse(text)) as T };
   } catch (cause) {
     return {
       ok: false,

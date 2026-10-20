@@ -36,8 +36,13 @@ export interface InterviewTicketDto {
   /** Unique interview number linked to the applicant; survives reschedules
    *  (J-06/F4/AC-6 — a reschedule never issues a new number). */
   readonly number: string;
-  /** The confirmed slot the applicant selected. */
-  readonly scheduledAt: string;
+  /**
+   * The confirmed slot the applicant selected — `null` until they pick one
+   * (RUN-021: a proposal is never shown as if it were fixed).
+   */
+  readonly scheduledAt: string | null;
+  /** The open proposals, as entered, while the applicant has not picked. */
+  readonly proposedSlots: readonly string[];
   /**
    * Teams meeting link recorded on the ticket (J-06/F2/AC-3). `null` until the
    * Teams integration exists — it is **not** in the CAP-12 integration table
@@ -157,7 +162,23 @@ export interface InterviewViewerDto {
   readonly canReject?: boolean;
   /** J-07/F3/AC-3 — every assigned member marked «did not attend». */
   readonly fullNoShow?: boolean;
+  /**
+   * Why `canEvaluate` is false — `null` when it is true. RUN-002: «not a
+   * member» is only one of these reasons, and the page must not use it for
+   * the others.
+   */
+  readonly evaluationBlockedReason: EvaluationBlockedReason | null;
 }
+
+export type EvaluationBlockedReason =
+  'not-member' | 'already-responded' | 'awaiting-selection' | 'not-started' | 'completed';
+
+/**
+ * The interview's state, derived on the server from its status and the clock
+ * (BUG-032 — `ended` once its time has passed, with no job behind it).
+ */
+export type InterviewPhase =
+  'awaiting-selection' | 'scheduled' | 'in-progress' | 'ended' | 'completed';
 
 /* ------------------------------------------------------------------ *
  * Recorded post-interview decision — J-07/F3
@@ -184,6 +205,7 @@ export interface InterviewDetailDto {
   /** Only services accepted at screening reach an interview (J-05/F5/AC-5). */
   readonly acceptedServices: readonly ApplicationService[];
   readonly ticket: InterviewTicketDto;
+  readonly status: InterviewPhase;
   readonly model: InterviewModelDto;
   readonly committee: readonly CommitteeMemberResponseDto[];
   /** `null` while any member is still pending (`BR-0220`) — never partial. */

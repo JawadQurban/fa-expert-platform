@@ -91,6 +91,8 @@ export const MOCK_PROFILE: MyProfileDto = {
     currentlyEmployed: true,
     experienceStartDate: '2016-01-01',
     responsibilities: 'تقديم الاستشارات المالية.',
+    // Mandatory since `dm-gap-01.2026-10-19` (RUN-019) — criterion #4 scores it.
+    yearsOfExperience: '5-10',
     // Added by `dm-gap-01.2026-09-22` and mandatory for all four services —
     // the same controlled «مجال التخصص» list `domain` uses. Without a value
     // here the profile's own save cannot validate, because `save()` checks
@@ -121,7 +123,7 @@ export const MOCK_PROFILE: MyProfileDto = {
     agreementEndsAt: '2027-06-30T23:59:59Z',
   },
   services: ['trainer', 'consultant'],
-  specialties: ['leadership', 'human-resources'],
+  specialties: ['dom-001', 'dom-008'],
   programs: [
     { id: 'prog-1', name: 'برنامج القيادة التنفيذية', role: 'مدرب رئيسي', year: 2025 },
     { id: 'prog-2', name: 'برنامج إدارة التغيير', role: 'مدرب', year: 2024 },
@@ -154,6 +156,8 @@ export const MOCK_PROFILE: MyProfileDto = {
     syncedAt: '2026-09-10T08:00:00Z',
   },
   visibilityConsent: true,
+  listedInDirectory: true,
+  cv: { id: 'cv-1', name: 'السيرة-الذاتية.pdf' },
   /**
    * ⚠️ MOCK: seeded as `requested` so the J-09/F6 section is demonstrable — this
    * is the state a trainer is in immediately after preliminary approval. Before
@@ -223,6 +227,42 @@ export function createMockProfileProvider(
 
   const ok = (): Result<MyProfileDto, ExpertHubApiError> => ({ ok: true, value: clone(profile) });
 
+  /**
+   * J-14/F1/AC-2 — a file under the trainer's application rule, in the
+   * server's order: no rule (409), empty (400), format/size (422). `null` when
+   * the file is acceptable.
+   */
+  const refuseUnder = async (
+    ruleId: string,
+    file: File
+  ): Promise<Result<MyProfileDto, ExpertHubApiError> | null> => {
+    await delay(latencyMs);
+    if (failWith != null) {
+      return { ok: false, error: failWith };
+    }
+    if (uploadFailWith != null) {
+      return { ok: false, error: uploadFailWith };
+    }
+    const rule = profile.formSchema.attachments.find((candidate) => candidate.id === ruleId);
+    if (rule == null) {
+      return {
+        ok: false,
+        error: {
+          status: 409,
+          message: ruleId === 'cv' ? 'cv-rule-unavailable' : 'certificate-rule-unavailable',
+        },
+      };
+    }
+    if (file.size === 0) {
+      return { ok: false, error: { status: 400, message: 'file-required' } };
+    }
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (!rule.acceptedFormats.includes(extension) || file.size > rule.maxSizeMb * 1024 * 1024) {
+      return { ok: false, error: { status: 422, message: 'Invalid file.' } };
+    }
+    return null;
+  };
+
   return {
     async getMyProfile() {
       await delay(latencyMs);
@@ -284,7 +324,7 @@ export function createMockProfileProvider(
         return { ok: false, error: failWith };
       }
       // `BR-1007`: the change is immediate — the public directory reflects it now.
-      profile = { ...profile, visibilityConsent: consent };
+      profile = { ...profile, visibilityConsent: consent, listedInDirectory: consent };
       return ok();
     },
 
@@ -308,33 +348,26 @@ export function createMockProfileProvider(
     },
 
     async uploadCertificate(file: File) {
-      await delay(latencyMs);
-      if (failWith != null) {
-        return { ok: false, error: failWith };
-      }
-      if (uploadFailWith != null) {
-        return { ok: false, error: uploadFailWith };
-      }
-      // J-14/F1/AC-2 — the trainer's application `professional-certificate`
-      // rule, in the server's order: no rule (409), empty (400), format/size (422).
-      const rule = profile.formSchema.attachments.find(
-        (candidate) => candidate.id === 'professional-certificate'
-      );
-      if (rule == null) {
-        return { ok: false, error: { status: 409, message: 'certificate-rule-unavailable' } };
-      }
-      if (file.size === 0) {
-        return { ok: false, error: { status: 400, message: 'file-required' } };
-      }
-      const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
-      if (!rule.acceptedFormats.includes(extension) || file.size > rule.maxSizeMb * 1024 * 1024) {
-        return { ok: false, error: { status: 422, message: 'Invalid certificate file.' } };
+      const refused = await refuseUnder('professional-certificate', file);
+      if (refused != null) {
+        return refused;
       }
       certCounter += 1;
       profile = {
         ...profile,
         certificates: [...profile.certificates, { id: `cert-new-${certCounter}`, name: file.name }],
       };
+      return ok();
+    },
+
+    async replaceCv(file: File) {
+      const refused = await refuseUnder('cv', file);
+      if (refused != null) {
+        return refused;
+      }
+      certCounter += 1;
+      // RUN-027 — replaced, not added: the slot holds one CV.
+      profile = { ...profile, cv: { id: `cv-new-${certCounter}`, name: file.name } };
       return ok();
     },
 

@@ -5,6 +5,7 @@ import {
   renderExpertHubAt,
   screen,
   seedExpertHubSession,
+  userEvent,
   within,
 } from '../../test/renderExpertHub';
 import { expertHubPaths } from '../../app/router/paths';
@@ -22,6 +23,12 @@ import {
 } from './submission.types';
 
 const content = getSubmissionsContent('ar');
+
+function pdf(name: string, sizeBytes = 1024): File {
+  const file = new File(['%PDF-1.4'], name, { type: 'application/pdf' });
+  Object.defineProperty(file, 'size', { value: sizeBytes });
+  return file;
+}
 
 /** The two seeded paths. */
 const MATERIAL = 'sub-001';
@@ -85,19 +92,35 @@ describe('EH-TP-08 / EH-INT-10 — Material & Content Submission and Approval (J
 
   /* ── F1/F4 — uploading ─────────────────────────────────────────────────── */
 
-  it('J-20/F1/AC-2 + F4/AC-2: an upload needs a file name, as the server requires', async () => {
+  it("RUN-004: an upload is held to J-01's document rule, as the server holds it", async () => {
     const service = createMockSubmissionProvider({ latencyMs: 0 });
-    const nameless = await service.uploadSubmission(MATERIAL, { fileName: '  ' });
-    expect(nameless.ok || nameless.error).toEqual({ status: 400, message: 'file-required' });
-    const good = await service.uploadSubmission(MATERIAL, { fileName: 'material.pdf' });
+    const exe = await service.uploadSubmission(MATERIAL, {
+      file: new File(['MZ'], 'setup.exe', { type: 'application/octet-stream' }),
+    });
+    expect(exe.ok || exe.error.reason).toBe('format');
+    const big = await service.uploadSubmission(MATERIAL, {
+      file: pdf('big.pdf', 12 * 1024 * 1024),
+    });
+    expect(big.ok || big.error.reason).toBe('size');
+    const good = await service.uploadSubmission(MATERIAL, { file: pdf('material.pdf') });
     expect(good.ok).toBe(true);
+  });
+
+  it('RUN-004: a refused file is refused on pick, in Arabic, and cannot be sent', async () => {
+    const { container } = await renderPortal();
+    const permissive = userEvent.setup({ applyAccept: false });
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await permissive.upload(input, new File(['MZ'], 'setup.exe'));
+    expect(await screen.findByText(content.fileFormat)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: content.uploadAction })).toBeDisabled();
+    await permissive.upload(input, pdf('big.pdf', 12 * 1024 * 1024));
+    expect(await screen.findByText(content.fileSize)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: content.uploadAction })).toBeDisabled();
   });
 
   it('J-20/F1/AC-3: an upload is recorded as pending approval', async () => {
     const service = createMockSubmissionProvider({ latencyMs: 0 });
-    const result = await service.uploadSubmission(MATERIAL, {
-      fileName: 'material.pdf',
-    });
+    const result = await service.uploadSubmission(MATERIAL, { file: pdf('material.pdf') });
     expect(result.ok).toBe(true);
     if (!result.ok) {
       return;
@@ -169,7 +192,7 @@ describe('EH-TP-08 / EH-INT-10 — Material & Content Submission and Approval (J
 
   it('J-20/F2/AC-4: a note reopens the upload, and the cycle repeats', async () => {
     const service = createMockSubmissionProvider({ latencyMs: 0 });
-    await service.uploadSubmission(MATERIAL, { fileName: 'material.pdf' });
+    await service.uploadSubmission(MATERIAL, { file: pdf('material.pdf') });
     const asked = await service.decideSubmission(MATERIAL, {
       decision: SUBMISSION_DECISION.changesRequested,
       note: 'أضف الحالات العملية',
@@ -183,9 +206,7 @@ describe('EH-TP-08 / EH-INT-10 — Material & Content Submission and Approval (J
     expect(canUpload(asked.value)).toBe(true);
     expect(asked.value.rounds[0].note).toBe('أضف الحالات العملية');
 
-    const again = await service.uploadSubmission(MATERIAL, {
-      fileName: 'material-v2.pdf',
-    });
+    const again = await service.uploadSubmission(MATERIAL, { file: pdf('material-v2.pdf') });
     expect(again.ok).toBe(true);
     if (!again.ok) {
       return;
@@ -196,7 +217,7 @@ describe('EH-TP-08 / EH-INT-10 — Material & Content Submission and Approval (J
 
   it('J-20/F2/AC-4: the submitter sees the note beside the new upload control', async () => {
     const service = createMockSubmissionProvider({ latencyMs: 0 });
-    await service.uploadSubmission(MATERIAL, { fileName: 'material.pdf' });
+    await service.uploadSubmission(MATERIAL, { file: pdf('material.pdf') });
     await service.decideSubmission(MATERIAL, {
       decision: SUBMISSION_DECISION.changesRequested,
       note: 'أضف الحالات العملية',
@@ -216,7 +237,7 @@ describe('EH-TP-08 / EH-INT-10 — Material & Content Submission and Approval (J
 
   it('J-20/F3/AC-1: approving training material starts the copy to FAST', async () => {
     const service = createMockSubmissionProvider({ latencyMs: 0 });
-    await service.uploadSubmission(MATERIAL, { fileName: 'material.pdf' });
+    await service.uploadSubmission(MATERIAL, { file: pdf('material.pdf') });
     const approved = await service.decideSubmission(MATERIAL, {
       decision: SUBMISSION_DECISION.approved,
     });
@@ -240,7 +261,7 @@ describe('EH-TP-08 / EH-INT-10 — Material & Content Submission and Approval (J
 
   it('J-20/F3/AC-2: the sync block states that the flow is one-way', async () => {
     const service = createMockSubmissionProvider({ latencyMs: 0 });
-    await service.uploadSubmission(MATERIAL, { fileName: 'material.pdf' });
+    await service.uploadSubmission(MATERIAL, { file: pdf('material.pdf') });
     setSubmissionServiceForTesting(service);
     await renderReview(MATERIAL);
     expect(await screen.findByText(content.review.syncDirectionNote)).toBeInTheDocument();
@@ -270,12 +291,14 @@ describe('EH-TP-08 / EH-INT-10 — Material & Content Submission and Approval (J
     expect(screen.getByText(content.review.noSlaNote)).toBeInTheDocument();
   });
 
-  /* ── `G26` — no fabricated preview ─────────────────────────────────────── */
+  /* ── RUN-004 — the stored file opens for the coordinator ─────────────── */
 
-  it('`G26`: an uploaded file is named but not linked, and the page says why', async () => {
+  it('RUN-004: the coordinator opens the uploaded file from its round', async () => {
     await renderReview(CONTENT_DEV);
-    expect(await screen.findByText(content.previewUnavailable)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /\.pdf$/ })).not.toBeInTheDocument();
+    const link = await screen.findByRole('link', { name: /محتوى إدارة المخاطر\.pdf/ });
+    expect(link).toHaveAttribute('href', expect.stringContaining('/rounds/1/file'));
+    // Every round has its file, so no «name only» note is shown.
+    expect(screen.queryByText(content.previewUnavailable)).not.toBeInTheDocument();
   });
 
   /* ── accessibility ─────────────────────────────────────────────────────── */

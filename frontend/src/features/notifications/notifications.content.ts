@@ -120,6 +120,9 @@ export interface NotificationsContent {
     readonly channelLabel: string;
     readonly allStatuses: string;
     readonly allChannels: string;
+    /** RUN-023 — the date range, both ends inclusive. */
+    readonly fromLabel: string;
+    readonly toLabel: string;
     /** Introduces the row of currently-applied filters. */
     readonly activeHeading: string;
     /** Accessible name for a chip's remove control. */
@@ -138,6 +141,18 @@ export interface NotificationsContent {
     readonly statuses: Readonly<Record<NotificationLogDto['sendStatus'], string>>;
     readonly failureLabel: string;
     readonly templateVersion: (code: string, version: number) => string;
+  };
+
+  /** J-25 — the recipient's own in-platform notifications, and the header bell. */
+  readonly inbox: {
+    readonly documentTitle: string;
+    readonly title: string;
+    readonly intro: string;
+    readonly empty: string;
+    readonly emptyBody: string;
+    readonly listLabel: string;
+    readonly newLabel: string;
+    readonly bellLabel: (unread: number) => string;
   };
 
   readonly channels: Readonly<Record<NotificationChannel, string>>;
@@ -270,6 +285,8 @@ const ar: NotificationsContent = {
     channelLabel: 'القناة',
     allStatuses: 'كل الحالات',
     allChannels: 'كل القنوات',
+    fromLabel: 'من تاريخ',
+    toLabel: 'إلى تاريخ',
     activeHeading: 'التصفية النشطة:',
     removeFilter: (label, value) => `أزل تصفية ${label}: ${value}`,
     resultsLabel: 'سجل الإشعارات',
@@ -288,6 +305,19 @@ const ar: NotificationsContent = {
     templateVersion: (code, version) => `${code} — الإصدار ${arNumber(version)}`,
   },
 
+  inbox: {
+    documentTitle: 'إشعاراتي — منصة الخبراء',
+    title: 'إشعاراتي',
+    intro: 'الإشعارات التي أرسلتها المنصة إليك، الأحدث أولًا.',
+    empty: 'لا توجد إشعارات بعد',
+    emptyBody: 'ستظهر هنا الإشعارات التي تصلك عن طلباتك واتفاقيتك وعروض الإسناد.',
+    listLabel: 'قائمة الإشعارات',
+    newLabel: 'جديد',
+    bellLabel: (unread) =>
+      unread === 0
+        ? 'الإشعارات'
+        : `الإشعارات، ${unread} ${unread === 1 ? 'إشعار جديد' : 'إشعارات جديدة'}`,
+  },
   channels: { email: 'البريد الإلكتروني', 'in-platform': 'إشعار داخل المنصة' },
   audiences: {
     record_subject: 'صاحب السجل (المدرب أو مقدّم الطلب)',
@@ -429,6 +459,8 @@ const en: NotificationsContent = {
     channelLabel: 'Channel',
     allStatuses: 'All statuses',
     allChannels: 'All channels',
+    fromLabel: 'From date',
+    toLabel: 'To date',
     activeHeading: 'Active filters:',
     removeFilter: (label, value) => `Remove ${label} filter: ${value}`,
     resultsLabel: 'Notification log',
@@ -447,7 +479,19 @@ const en: NotificationsContent = {
     templateVersion: (code, version) => `${code} — version ${version}`,
   },
 
+  inbox: {
+    documentTitle: 'My notifications — Expert Hub',
+    title: 'My notifications',
+    intro: 'The notifications the platform sent you, newest first.',
+    empty: 'No notifications yet',
+    emptyBody:
+      'Notifications about your applications, agreement and assignment offers appear here.',
+    listLabel: 'Notifications',
+    newLabel: 'New',
+    bellLabel: (unread) => (unread === 0 ? 'Notifications' : `Notifications, ${unread} new`),
+  },
   channels: { email: 'Email', 'in-platform': 'In-platform' },
+
   audiences: {
     record_subject: 'The subject of the record (trainer or applicant)',
     acting_staff: 'The staff member responsible for the action',

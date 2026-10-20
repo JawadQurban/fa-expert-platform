@@ -54,6 +54,34 @@ export interface AddServiceRequestDto {
   /** RB-03 — `rejected` when submitted with no active agreement. */
   readonly status?: 'pending' | 'rejected';
   readonly rejectionReason?: string | null;
+  /** BUG-019 — the request's own number (`EH-ASR-YYYY-NNNN`), what the trainer tracks. */
+  readonly reference?: string | null;
+}
+
+/**
+ * BUG-022 — the server's 409 codes. A pending request and an approved service
+ * are different answers, and the page must never call a pending one «approved».
+ */
+export type AddServiceConflictCode =
+  'service-already-approved' | 'service-request-pending' | 'application-not-eligible';
+
+/** One of the trainer's own add-service requests (`GET v1/me/service-requests`). */
+export interface MyServiceRequestDto {
+  readonly id: string;
+  readonly reference: string;
+  readonly requestedService: ApplicationService;
+  readonly status: 'pending' | 'approved' | 'rejected';
+  readonly submittedAt: string;
+  readonly decidedAt: string | null;
+  /** Only RB-03's system reason is ever served — F3/AC-7 keeps a staff reason internal. */
+  readonly rejectionReason: string | null;
+}
+
+/** BUG-019 / BUG-021 — the requests, and the application a new service is added to. */
+export interface MyServiceRequestsDto {
+  readonly items: readonly MyServiceRequestDto[];
+  /** `null` ⇒ no approved application, so there is nothing to add a service to. */
+  readonly addServiceApplicationId: string | null;
 }
 
 /* ------------------------------------------------------------------ *

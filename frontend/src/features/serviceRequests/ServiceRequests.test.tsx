@@ -101,6 +101,16 @@ describe('EH-INT-02b — Service Requests (J-03/F2 + F3)', () => {
 
   /* ── F3 — the decision ─────────────────────────────────────────────────── */
 
+  it('BUG-024: the reviewer can open the trainer’s full profile; RUN-018: the agreement in effect is shown', async () => {
+    await renderRequest('asr-001');
+    expect(screen.getByRole('link', { name: content.detail.context.openProfile })).toHaveAttribute(
+      'href',
+      expertHubPaths.internalTrainer('tp-001')
+    );
+    expect(screen.getByText('AGR-2026-00042')).toBeInTheDocument();
+    expect(screen.queryByText(content.detail.context.agreementNone)).not.toBeInTheDocument();
+  });
+
   it('J-03/F3/AC-1: offers only approve and reject — nothing routes to screening', async () => {
     await renderRequest('asr-001');
     expect(screen.getByRole('button', { name: content.decision.approve })).toBeInTheDocument();

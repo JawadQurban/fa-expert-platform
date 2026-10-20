@@ -88,12 +88,19 @@ public static class FormSchemaVersions
     public const string DeliveryModeTrainerOnly = "dm-gap-01.2026-09-29";
 
     /// <summary>
-    /// The Notion review of 2026-10-07 (`P-342`) — published. «المجال» offers
+    /// The Notion review of 2026-10-07 (`P-342`) — superseded. «المجال» offers
     /// «أخرى» with a text field to name it (criterion #3 pays 0 for it), and
     /// «هل سبق لك التدريب» is mandatory for the Trainer, and «القطاع» arrives
     /// (four sectors, mandatory for all four services).
     /// </summary>
-    public const string Current = "dm-gap-01.2026-10-07";
+    public const string NotionReview = "dm-gap-01.2026-10-07";
+
+    /// <summary>
+    /// The UAT round of 2026-10 — published. «تاريخ الانتهاء» is mandatory
+    /// when «أعمل حاليًا» is off and never before «تاريخ البدء»; «عدد سنوات
+    /// الخبرة» is mandatory; «التخصص» and «اسم الشهادة» name their «أخرى».
+    /// </summary>
+    public const string Current = "dm-gap-01.2026-10-19";
 }
 
 /// <summary>`FORM_SCHEMA.status` — exactly one version is published at a time.</summary>

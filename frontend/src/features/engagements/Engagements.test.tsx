@@ -253,6 +253,10 @@ describe('EH-TP-07 — Assignment Offer Handling & Response Management (J-18)', 
   it('J-18/F3: accepting confirms the engagement and it appears immediately', async () => {
     const { user } = await renderPortal();
     await user.click(await screen.findByRole('button', { name: content.offers.accept }));
+    // UAT `BUG-044` — the final answer is confirmed first.
+    await user.click(
+      await screen.findByRole('button', { name: content.offers.confirmDialog.accept.confirm })
+    );
     expect(await screen.findByText(content.offers.acceptedTitle)).toBeInTheDocument();
     // F3/AC-2 — in the section the journey names.
     expect(
@@ -264,6 +268,10 @@ describe('EH-TP-07 — Assignment Offer Handling & Response Management (J-18)', 
   it('J-18/F3: answering an offer moves focus to the section the result lands in', async () => {
     const { user } = await renderPortal();
     await user.click(await screen.findByRole('button', { name: content.offers.accept }));
+    // UAT `BUG-044` — the final answer is confirmed first.
+    await user.click(
+      await screen.findByRole('button', { name: content.offers.confirmDialog.accept.confirm })
+    );
 
     /*
       Answering reloads the list, so the trainer must be told where the result
@@ -279,6 +287,21 @@ describe('EH-TP-07 — Assignment Offer Handling & Response Management (J-18)', 
     });
     expect(heading).toHaveFocus();
     expect(screen.getByText(content.offers.acceptedTitle)).toBeInTheDocument();
+  });
+
+  it('UAT BUG-044: a final answer is confirmed first, and cancelling sends nothing', async () => {
+    const { user } = await renderPortal();
+    await user.click(await screen.findByRole('button', { name: content.offers.reject }));
+    const dialog = await screen.findByRole('dialog', {
+      name: content.offers.confirmDialog.reject.title,
+    });
+    expect(dialog).toBeInTheDocument();
+    // The footer's cancel (the dialog's own dismiss carries the same name).
+    const cancels = screen.getAllByRole('button', { name: content.offers.confirmCancel });
+    await user.click(cancels[cancels.length - 1]);
+    expect(screen.queryByText(content.offers.rejectedTitle)).not.toBeInTheDocument();
+    // The offer is still there, still awaiting an answer.
+    expect(screen.getByRole('button', { name: content.offers.accept })).toBeEnabled();
   });
 
   it('J-18/F3/AC-2: the section is empty until an offer is accepted', async () => {
@@ -321,6 +344,10 @@ describe('EH-TP-07 — Assignment Offer Handling & Response Management (J-18)', 
   it('J-18/F5/AC-3: a submission awaiting upload opens the upload path', async () => {
     const { user } = await renderPortal({ materialStatus: 'awaiting_upload' });
     await user.click(await screen.findByRole('button', { name: content.offers.accept }));
+    // UAT `BUG-044` — the final answer is confirmed first.
+    await user.click(
+      await screen.findByRole('button', { name: content.offers.confirmDialog.accept.confirm })
+    );
     expect(await screen.findByText(content.engagements.uploadTitle)).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -332,6 +359,10 @@ describe('EH-TP-07 — Assignment Offer Handling & Response Management (J-18)', 
   it('J-18/F5: material pending approval is named, and offers no upload', async () => {
     const { user } = await renderPortal({ materialStatus: 'pending_approval' });
     await user.click(await screen.findByRole('button', { name: content.offers.accept }));
+    // UAT `BUG-044` — the final answer is confirmed first.
+    await user.click(
+      await screen.findByRole('button', { name: content.offers.confirmDialog.accept.confirm })
+    );
     expect(
       await screen.findByText(
         `${content.engagements.materialStatusLabel}: ${content.engagements.statuses.pending_approval}`

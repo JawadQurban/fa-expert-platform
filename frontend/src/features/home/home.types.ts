@@ -54,4 +54,19 @@ export interface PortalHomeDto {
   readonly notifications: readonly HomeNotificationDto[];
   /** `false` ⇒ a brand-new trainer with no activity yet (empty state). */
   readonly hasActivity: boolean;
+  /** BUG-028 — the caller's next interview (J-06), `null` when none is ahead. */
+  readonly upcomingInterview: HomeInterviewDto | null;
+}
+
+/**
+ * The caller's next interview, read from J-06's own record. `startsAt` is
+ * `null` while a reschedule they asked for is pending — there is no time to
+ * show, but the interview is still the next thing on their file.
+ */
+export interface HomeInterviewDto {
+  readonly applicationId: string;
+  readonly reference: string;
+  readonly startsAt: string | null;
+  readonly ticketNumber: string | null;
+  readonly reschedulePending: boolean;
 }

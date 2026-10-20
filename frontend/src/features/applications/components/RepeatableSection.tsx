@@ -129,6 +129,7 @@ export function RepeatableSection({
                   field={field}
                   domId={`eh-field-${entryFieldKey(entry.entryId, field.id)}`}
                   value={entry.values[field.id]}
+                  values={entry.values}
                   error={errors[entryFieldKey(entry.entryId, field.id)]}
                   services={services}
                   locale={locale}

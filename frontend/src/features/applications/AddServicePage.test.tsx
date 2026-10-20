@@ -117,6 +117,26 @@ describe('EH-TP-06 — Add Service', () => {
     expect(screen.queryByText(content.success.note)).not.toBeInTheDocument();
   });
 
+  it('BUG-022: a request already under review is never called an approved service', async () => {
+    const provider = createMockApplicationsProvider({ latencyMs: 0 });
+    setApplicationsServiceForTesting({
+      ...provider,
+      submitAddServiceRequest: () =>
+        Promise.resolve({
+          ok: false,
+          error: { status: 409, message: 'service-request-pending' },
+        }),
+    });
+    const { user } = await renderAddService();
+    await user.click(screen.getByRole('radio', { name: content.services.trainer }));
+    await screen.findByText(content.delta.heading);
+    await fillTrainerDelta(user);
+    await user.click(screen.getByRole('button', { name: content.submit }));
+    await user.click(await screen.findByRole('button', { name: content.confirm.confirm }));
+    expect(await screen.findByText(content.errors.pending)).toBeInTheDocument();
+    expect(screen.queryByText(content.errors.duplicate)).not.toBeInTheDocument();
+  });
+
   it('blocks with a reason when FAST cannot verify current services (P-17)', async () => {
     injectProvider({ addServiceFastUnavailable: true });
     seedExpertHubSession(['trainer']);

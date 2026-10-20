@@ -11,9 +11,11 @@ import type {
   AgreementFieldValues,
   AgreementStage,
   AgreementViewerDto,
+  ApplicantModificationRequestDto,
   FormSigningSequenceInput,
   MergedDataGroup,
   PrepareAgreementInput,
+  PreviousSigningSequenceDto,
   SigningDecisionInput,
   SigningMemberDto,
 } from './agreement.types';
@@ -96,6 +98,10 @@ export interface MockAgreementProviderOptions {
     obligation: 'mandatory' | 'optional';
     isSigner?: boolean;
   }[];
+  /** UAT RUN-015 — an applicant's standing modification request. */
+  readonly applicantModificationRequest?: ApplicantModificationRequestDto | null;
+  /** UAT RUN-015 — chains voided by a re-preparation. */
+  readonly previousSequences?: readonly PreviousSigningSequenceDto[];
 }
 
 function delay(ms: number): Promise<void> {
@@ -113,6 +119,8 @@ export function createMockAgreementProvider(
     gate = { committeeApproved: true, bankDataComplete: true },
     prepared = false,
     seedSequence,
+    applicantModificationRequest = null,
+    previousSequences = [],
   } = options;
 
   const timestamp = new Date(now).toISOString();
@@ -242,6 +250,8 @@ export function createMockAgreementProvider(
             documentAttachmentId
           )
         : null,
+      applicantModificationRequest,
+      previousSequences,
     };
   }
 

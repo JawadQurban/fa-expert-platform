@@ -192,7 +192,7 @@ describe('EH-INT-09d — Re-routing After Offer Rejection (J-19)', () => {
       return;
     }
     const reasons = run.value.excluded.flatMap((candidate) => candidate.reasons);
-    expect(reasons).toContain('specialization');
+    expect(reasons).toContain('file-status');
     expect(reasons).toContain('schedule-conflict');
     // An excluded candidate is refused on send too, not merely hidden.
     const rejected = await service.sendSlotPool(REQUEST, SLOT, {

@@ -32,6 +32,8 @@ export interface ApplicationDetailContent {
     readonly heading: string;
     readonly label: string;
     readonly currentHint: string;
+    /** BUG-034 — the interview stage screening exempted (J-08). */
+    readonly exempted: string;
   };
   readonly perService: {
     readonly heading: string;
@@ -217,6 +219,7 @@ const ar: ApplicationDetailContent = {
     heading: 'مراحل الطلب',
     label: 'مسار مراحل الطلب',
     currentHint: 'المرحلة الحالية',
+    exempted: 'مستثنى من المقابلة',
   },
   perService: {
     heading: 'نتيجة كل خدمة',
@@ -397,6 +400,7 @@ const en: ApplicationDetailContent = {
     heading: 'Application stages',
     label: 'Application stage progress',
     currentHint: 'Current stage',
+    exempted: 'Exempted from interview',
   },
   perService: {
     heading: 'Outcome per service',

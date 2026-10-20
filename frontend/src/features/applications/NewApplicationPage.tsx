@@ -730,7 +730,8 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
             entry.values[field.id],
             services,
             locale,
-            messages
+            messages,
+            entry.values
           );
           if (message != null) {
             const key = entryFieldKey(entry.entryId, field.id);
@@ -755,7 +756,14 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
       });
     } else {
       for (const field of visibleSectionFields(schema, section.id, services, values)) {
-        const message = validateFieldValue(field, values[field.id], services, locale, messages);
+        const message = validateFieldValue(
+          field,
+          values[field.id],
+          services,
+          locale,
+          messages,
+          values
+        );
         if (message != null) {
           errors[field.id] = message;
           items.push({
@@ -822,14 +830,19 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
    * there is nothing to say (a network drop, a 500), because retrying is
    * genuinely the right advice then and only then.
    */
-  const uploadFailureMessage = (error: { status: number; message: string }) => {
-    // The server explained itself: show the explanation, whatever the status.
-    // ⚠️ This used to be limited to 422, which hid a 400 that said "Unknown
-    // attachment rule" — the one sentence that would have found the bug
-    // immediately. A refusal the server can describe is never shown as
-    // "try again".
-    if (error.status >= 400 && error.status < 500 && error.message.trim() !== '') {
-      return error.message;
+  const uploadFailureMessage = (error: ExpertHubApiError, rule: ApplicationAttachmentRule) => {
+    // The server says WHY with a `reason`, and the page says it in the
+    // applicant's language — the problem's `detail` is English («This document
+    // accepts 1 file(s).») and is never shown raw (RUN-020 / BUG-013).
+    switch (error.reason) {
+      case 'format':
+        return messages.fileFormat(rule.acceptedFormats.join(', '));
+      case 'size':
+        return messages.fileSize(rule.maxSizeMb);
+      case 'count':
+        return messages.fileCount(rule.maxCount);
+      default:
+        break;
     }
     // 413 never reaches the API — a reverse proxy refused the body first. The
     // person cannot act on "try again", but they can act on "it is too big",
@@ -888,14 +901,14 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
                     // The server explains a refusal — wrong format, too large,
                     // too many. Replacing that with "try again" hides the one
                     // thing the person needs in order to succeed.
-                    errorMessage: uploadFailureMessage(result.error),
+                    errorMessage: uploadFailureMessage(result.error, rule),
                   }
           ),
         }));
         if (result.ok) {
           setAttachments((current) => [...current, result.value]);
         } else {
-          setLiveMessage(uploadFailureMessage(result.error));
+          setLiveMessage(uploadFailureMessage(result.error, rule));
         }
       });
     }
@@ -903,14 +916,26 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
 
   const handleRemoveFile = (ruleId: string, fileId: string, entryId?: string) => {
     const key = attachmentKey(ruleId, entryId);
+    const before = uploadFiles[key] ?? [];
     setUploadFiles((current) => ({
       ...current,
       [key]: (current[key] ?? []).filter((entry) => entry.id !== fileId),
     }));
-    if (attachments.some((attachment) => attachment.id === fileId)) {
+    const stored = attachments.find((attachment) => attachment.id === fileId);
+    if (stored != null) {
       setAttachments((current) => current.filter((attachment) => attachment.id !== fileId));
-      void service.removeAttachment(fileId);
       markDirty();
+      // ⚠️ A removal the server refused is NOT a removal: the file is still on
+      // the draft, still counts against the rule's limit, and is submitted.
+      // Pretending otherwise is how a deleted CV came back (RUN-020).
+      void service.removeAttachment(fileId).then((result) => {
+        if (result.ok) {
+          return;
+        }
+        setAttachments((current) => [...current, stored]);
+        setUploadFiles((current) => ({ ...current, [key]: before }));
+        setLiveMessage(content.attachmentsStep.removeFailed);
+      });
     }
   };
 

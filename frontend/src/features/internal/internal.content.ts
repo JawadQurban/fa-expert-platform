@@ -48,6 +48,26 @@ export interface InternalContent {
       readonly label: string;
       readonly empty: string;
     };
+    /** BUG-047 — trainers who declined an offer, and where the seat went. */
+    readonly declinedOffers: {
+      readonly heading: string;
+      readonly lead: string;
+      readonly seat: (slotNumber: number) => string;
+      readonly declinedAt: (date: string) => string;
+      readonly movedTo: (name: string) => string;
+      readonly rematch: string;
+      readonly open: (reference: string) => string;
+    };
+    /** BUG-028 / BUG-029 — interviews ahead, and reschedules waiting. */
+    readonly interviews: {
+      readonly rescheduleHeading: string;
+      readonly rescheduleLead: string;
+      readonly requestedAt: (date: string) => string;
+      readonly upcomingHeading: string;
+      readonly upcomingEmpty: string;
+      readonly ticket: (ticket: string) => string;
+      readonly open: (name: string) => string;
+    };
     readonly quickLinks: {
       readonly heading: string;
       readonly inboxTitle: string;
@@ -185,6 +205,24 @@ const ar: InternalContent = {
       label: 'توزّع الطلبات المفتوحة',
       empty: 'لا توجد طلبات مفتوحة.',
     },
+    declinedOffers: {
+      heading: 'اعتذارات عن عروض الإسناد',
+      lead: 'مدربون اعتذروا عن عروض إسناد في طلبات تتابعها، وإلى أين انتقل الترشيح.',
+      seat: (slotNumber) => `المقعد ${arNumber(slotNumber)}`,
+      declinedAt: (date) => `اعتذر في ${date}`,
+      movedTo: (name) => `انتقل الترشيح إلى ${name}`,
+      rematch: 'لا يوجد مرشح آخر في القائمة — أعد تشغيل محرك المطابقة',
+      open: (reference) => `فتح طلب الإسناد ${reference}`,
+    },
+    interviews: {
+      rescheduleHeading: 'طلبات إعادة جدولة المقابلة',
+      rescheduleLead: 'مقدّمو طلبات ينتظرون مواعيد مقابلة جديدة.',
+      requestedAt: (date) => `طُلبت في ${date}`,
+      upcomingHeading: 'المقابلات القادمة',
+      upcomingEmpty: 'لا توجد مقابلات مؤكدة قادمة.',
+      ticket: (ticket) => `التذكرة ${ticket}`,
+      open: (name) => `فتح مقابلة ${name}`,
+    },
     quickLinks: {
       heading: 'روابط سريعة',
       inboxTitle: 'صندوق الطلبات',
@@ -320,6 +358,25 @@ const en: InternalContent = {
       label: 'Open applications by stage',
       empty: 'No open applications.',
     },
+    declinedOffers: {
+      heading: 'Declined assignment offers',
+      lead: 'Trainers who declined an assignment offer on requests you follow, and where the nomination went.',
+      seat: (slotNumber) => `Seat ${String(slotNumber)}`,
+      declinedAt: (date) => `Declined ${date}`,
+      movedTo: (name) => `Nomination moved to ${name}`,
+      rematch: 'No other candidate on the list — run the matching engine again',
+      open: (reference) => `Open assignment request ${reference}`,
+    },
+    interviews: {
+      rescheduleHeading: 'Interview reschedule requests',
+      rescheduleLead: 'Applicants waiting for new interview times.',
+      requestedAt: (date) => `Requested ${date}`,
+      upcomingHeading: 'Upcoming interviews',
+      upcomingEmpty: 'No confirmed interviews ahead.',
+      ticket: (ticket) => `Ticket ${ticket}`,
+      open: (name) => `Open ${name}’s interview`,
+    },
+
     quickLinks: {
       heading: 'Quick links',
       inboxTitle: 'Application inbox',

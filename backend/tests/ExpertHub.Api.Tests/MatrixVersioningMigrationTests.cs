@@ -118,7 +118,12 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
         Assert.Equal("superseded", schemas["dm-gap-01.2026-09-29"]);
         // The Notion review of 2026-10-07 (`P-342`): «المجال» offers «أخرى»,
         // and «هل سبق لك التدريب» is mandatory for the Trainer.
-        Assert.Equal("published", schemas["dm-gap-01.2026-10-07"]);
+        Assert.Equal("superseded", schemas["dm-gap-01.2026-10-07"]);
+        // The UAT round of 2026-10-19: the experience end date is mandatory
+        // and never before the start; «أخرى» is named for specialization and
+        // certificate.
+        Assert.Equal("published", schemas["dm-gap-01.2026-10-19"]);
+        Assert.Equal(57, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-10-07"));
         Assert.Equal(47, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-14"));
         Assert.Equal(51, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-16"));
         Assert.Equal(55, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-21"));
@@ -127,7 +132,7 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
         Assert.Equal(
             ["education", "certifications", "experience"],
             await db.FormSections.AsNoTracking()
-                .Where(s => s.SchemaVersion == "dm-gap-01.2026-10-07" && s.Repeatable != null)
+                .Where(s => s.SchemaVersion == "dm-gap-01.2026-10-19" && s.Repeatable != null)
                 .OrderBy(s => s.OrderIndex)
                 .Select(s => s.SectionCode)
                 .ToListAsync());
@@ -137,6 +142,7 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
                 && s.SchemaVersion != "dm-gap-01.2026-09-28"
                 && s.SchemaVersion != "dm-gap-01.2026-09-29"
                 && s.SchemaVersion != "dm-gap-01.2026-10-07"
+                && s.SchemaVersion != "dm-gap-01.2026-10-19"
                 && s.Repeatable != null));
     }
 

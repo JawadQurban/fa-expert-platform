@@ -135,6 +135,21 @@ public static class ScreeningEndpoints
             {
                 return Results.Problem(statusCode: 404, detail: "Application not found.");
             }
+            if (application.Status == ApplicationStatuses.Submitted)
+            {
+                // RUN-022 — staff opening a submitted application is screening
+                // starting: «مُقدَّم» → «قيد المراجعة». A conditional claim, so
+                // two people opening it at once is one transition.
+                var now = DateTime.UtcNow;
+                await db.Applications
+                    .Where(a => a.ApplicationId == application.ApplicationId
+                        && a.Status == ApplicationStatuses.Submitted)
+                    .ExecuteUpdateAsync(set => set
+                        .SetProperty(a => a.Status, ApplicationStatuses.UnderReview)
+                        .SetProperty(a => a.UpdatedAt, now), ct);
+                application.Status = ApplicationStatuses.UnderReview;
+                application.UpdatedAt = now;
+            }
             return Results.Ok(await BuildDetailAsync(db, application, ct));
         }).WithName("ScreeningDetail");
 
@@ -250,6 +265,9 @@ public static class ScreeningEndpoints
                     RecordResult(db, row, scores, "exempt_interview", now, actor.UserId,
                         exemptionReasonId: decision.ExemptionReason,
                         exemptionReasonText: decision.ExemptionReasonOther);
+                    // RUN-034 — an exempted service IS accepted; the exemption
+                    // only decides that it skips the interview (J-08/F2).
+                    accepted.Add(row.Service);
                     exempted.Add(row.Service);
                 }
                 else
@@ -288,7 +306,10 @@ public static class ScreeningEndpoints
             if (interviewDecisions.Count > 0)
             {
                 await CreateInterviewAsync(db, application, interviewDecisions, now, ct);
-                application.Status = ApplicationStatuses.UnderReview;
+                // RUN-022 — accepted to the interview stage: «مقابلة مجدولة»,
+                // not «قيد المراجعة» until the applicant picks a time. The
+                // interview row's own status still says the time is unpicked.
+                application.Status = ApplicationStatuses.InterviewScheduled;
 
                 // J-06/F1/AC-1 — the applicant is told slots are available
                 // (email + in-platform together), in the same transaction.
@@ -621,17 +642,27 @@ public static class ScreeningEndpoints
         ScreeningDecisionSummaryWire? decisionSummary = null;
         if (results.Count > 0)
         {
-            var decider = await db.Users.SingleAsync(
-                u => u.UserId == results[0].result.DecidedBy, ct);
+            /*
+             * RUN-034 — the card shows the LATEST decision. A direct rejection
+             * after the interview supersedes the screening acceptance (it lives
+             * on INTERVIEW — P-187), while the services screening let through
+             * stay listed. An exempted service counts as accepted.
+             */
+            var interviewRejection = await db.Interviews.FirstOrDefaultAsync(
+                i => i.ApplicationId == application.ApplicationId
+                    && i.DecisionKind == "reject" && i.DecidedBy != null && i.DecidedAt != null, ct);
+            var decidedBy = interviewRejection?.DecidedBy ?? results[0].result.DecidedBy;
+            var decider = await db.Users.SingleAsync(u => u.UserId == decidedBy, ct);
             var rejectedAll = results.All(r => r.result.Decision == "reject");
             decisionSummary = new ScreeningDecisionSummaryWire(
-                rejectedAll ? "reject" : "accept",
-                ApplicationEndpoints.Iso(results[0].result.DecidedAt),
+                rejectedAll || interviewRejection is not null ? "reject" : "accept",
+                ApplicationEndpoints.Iso(interviewRejection?.DecidedAt ?? results[0].result.DecidedAt),
                 decider.FullNameAr,
-                [.. results.Where(r => r.result.Decision == "accept").Select(r => r.Service)],
+                [.. results.Where(r => r.result.Decision is "accept" or "exempt_interview").Select(r => r.Service)],
                 [.. results.Where(r => r.result.Decision == "reject" && r.result.RejectionReasonId == null).Select(r => r.Service)],
                 [.. results.Where(r => r.result.Decision == "exempt_interview").Select(r => r.Service)],
-                rejectedAll ? results[0].result.RejectionReasonId : null);
+                interviewRejection?.DecisionReasonId
+                    ?? (rejectedAll ? results[0].result.RejectionReasonId : null));
         }
 
         // The advisory sibling — read separately, merged nowhere (BR-0202).

@@ -1,5 +1,6 @@
 import type { LocalizedText } from '../../shared/types/localizedText';
 import type { ApplicationService } from '../applications/application.types';
+import type { CreateCentreRequestInput } from './centreRequestForm.types';
 
 /**
  * EH-INT-09 — Assignment Request contracts (CAP-05, journey **J-16**). The
@@ -161,6 +162,14 @@ export interface AssignmentRequestSummaryDto {
 export interface AssignmentRequestDetailDto extends AssignmentRequestSummaryDto {
   /** `null` for services whose matrix is still pending definition. */
   readonly pulled: PulledRequestDataDto | null;
+  /**
+   * UAT `BUG-040` — the request as the centre entered it, so the people
+   * deciding on candidates see what they are for. Optional: older payloads
+   * and the mock carry none.
+   */
+  readonly form?: Partial<CreateCentreRequestInput> | null;
+  readonly centreName?: LocalizedText | null;
+  readonly responsibleEmployeeName?: string | null;
 }
 
 /* ------------------------------------------------------------------ *

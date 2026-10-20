@@ -1,4 +1,4 @@
-import { Tag, Typography } from '@ds/primitives';
+import { Link, Tag, Typography } from '@ds/primitives';
 import type { Locale } from '@/types';
 import type { SubmissionsContent } from '../submissions.content';
 import {
@@ -8,6 +8,7 @@ import {
 } from '../submission.types';
 import styles from './SubmissionRounds.module.css';
 import { dateFormatter } from '../../../shared/formatting';
+import { apiUrl } from '../../../shared/services/apiClient';
 
 /**
  * A submission's status — or a round's decision, which uses the same values —
@@ -45,8 +46,9 @@ export function SubmissionStatusTag({
  * - The coordinator has to see **what they already asked for**, so a second
  *   review is not a first review repeated.
  *
- * ⚠️ `G26` — a round records a file **name** only (no size, no URL). F2/AC-2's
- * preview has no source, and a dead download link would be worse than saying so.
+ * F2/AC-2 — each round's stored file opens from here (RUN-004). A round
+ * recorded before files were stored has a name and no file, and says so
+ * rather than offering a dead link.
  */
 export function SubmissionRounds({
   rounds,
@@ -90,9 +92,16 @@ export function SubmissionRounds({
                 }
               />
             </div>
-            <Typography as="p" variant="text-sm">
-              <bdi>{round.fileName}</bdi>
-            </Typography>
+            {round.fileUrl == null ? (
+              <Typography as="p" variant="text-sm">
+                <bdi>{round.fileName}</bdi>
+              </Typography>
+            ) : (
+              <Link href={apiUrl(round.fileUrl)} target="_blank" rel="noreferrer">
+                <bdi>{round.fileName}</bdi>
+                <span className="fads-visually-hidden"> — {content.openFile}</span>
+              </Link>
+            )}
             <Typography as="p" variant="text-xs" color="muted">
               {dates.format(new Date(round.uploadedAt))}
             </Typography>
@@ -110,9 +119,11 @@ export function SubmissionRounds({
           </li>
         ))}
       </ol>
-      <Typography as="p" variant="text-xs" color="muted">
-        {content.previewUnavailable}
-      </Typography>
+      {rounds.some((round) => round.fileUrl == null) && (
+        <Typography as="p" variant="text-xs" color="muted">
+          {content.previewUnavailable}
+        </Typography>
+      )}
     </>
   );
 }

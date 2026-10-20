@@ -383,19 +383,22 @@ export default function ApplicationDetailPage() {
             </div>
           </dl>
 
-          {/* EH-TP-06 entry — widen scope on an approved/active application (BR-0110). */}
-          {(detail.status === 'approved' || detail.status === 'active') && (
-            <div className={styles.summaryActions}>
-              <Button
-                variant="secondary"
-                size="sm"
-                href={expertHubPaths.applicationAddService(detail.id)}
-                iconStart={<Icon name="add-circle" size="sm" decorative />}
-              >
-                {content.summary.addService}
-              </Button>
-            </div>
-          )}
+          {/* EH-TP-06 entry — widen scope on an accredited application (BR-0110).
+              «معتمد» is shown from final committee approval (RUN-014), but a
+              service can only be added under a signed agreement. */}
+          {(detail.status === 'approved' || detail.status === 'active') &&
+            detail.agreementState === 'signed' && (
+              <div className={styles.summaryActions}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  href={expertHubPaths.applicationAddService(detail.id)}
+                  iconStart={<Icon name="add-circle" size="sm" decorative />}
+                >
+                  {content.summary.addService}
+                </Button>
+              </div>
+            )}
         </Card>
 
         {/* Rejection reason — a decision is never a bare status. Rendered as a

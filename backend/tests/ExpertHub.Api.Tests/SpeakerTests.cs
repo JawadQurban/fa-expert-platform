@@ -89,7 +89,9 @@ public sealed class SpeakerTests
         Assert.Equal("نبذة محدثة.", detail.GetProperty("bio").GetString());
 
         // F2/AC-3 — found by either language's name and by title.
-        foreach (var term in new[] { "العتيبي", "Sarah", "خبيرة" })
+        // RUN-029 — and by a full name: every word must match some column,
+        // which no single column did for «سارة العتيبي».
+        foreach (var term in new[] { "العتيبي", "Sarah", "خبيرة", "سارة العتيبي", "Sarah Alotaibi" })
         {
             var found = await GetAsync(staff, $"/api/v1/internal/speakers/?search={Uri.EscapeDataString(term)}");
             Assert.Equal(1, found.GetProperty("totalCount").GetInt32());
@@ -148,6 +150,43 @@ public sealed class SpeakerTests
         });
         Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
         Assert.Contains("bio-too-long", await tooLong.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_same_name_speaker_is_warned_about_and_added_only_once_confirmed()
+    {
+        // RUN-040 — QA created «متحدث اختبار» twice with no warning.
+        using var staff = await SignInAsync("speaker-duplicate", RoleCode.Staff);
+        var input = new { firstNameAr = "نورة", lastNameAr = "القحطاني" };
+
+        Assert.Equal(HttpStatusCode.Created,
+            (await staff.PostAsJsonAsync("/api/v1/internal/speakers/", input)).StatusCode);
+
+        var again = await staff.PostAsJsonAsync("/api/v1/internal/speakers/", input);
+        Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
+        Assert.Contains("duplicate-name", await again.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        var confirmed = await staff.PostAsJsonAsync("/api/v1/internal/speakers/",
+            new { firstNameAr = " نورة ", lastNameAr = "القحطاني", confirmDuplicate = true });
+        Assert.Equal(HttpStatusCode.Created, confirmed.StatusCode);
+    }
+
+    [Fact]
+    public async Task The_session_greets_by_the_stored_Arabic_name_not_the_login()
+    {
+        // RUN-033 — «مرحبًا، JawadQurban»: the token's name is FAST's login;
+        // the Arabic name FAST supplied lives on APP_USER.
+        using var staff = await SignInAsync("session-name", RoleCode.Staff);
+        await using (var db = _database.CreateContext())
+        {
+            var user = await db.Users.SingleAsync(u => u.ExternalIdentityId == "session-name");
+            user.FullNameAr = "دانه العتيبي";
+            await db.SaveChangesAsync();
+        }
+
+        var session = await staff.GetFromJsonAsync<JsonElement>("/api/auth/session");
+
+        Assert.Equal("دانه العتيبي", session.GetProperty("displayName").GetString());
     }
 
     [Fact]

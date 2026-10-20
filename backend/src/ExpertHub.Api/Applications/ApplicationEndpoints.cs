@@ -57,7 +57,8 @@ internal sealed record ApplicationSummaryWire(
 internal sealed record MyApplicationsListWire(
     IReadOnlyList<ApplicationSummaryWire> Items, int TotalCount, int Page, int PageSize,
     int PageCount, bool CanCreateNew, string? ActiveApplicationId, int TotalApplications,
-    IReadOnlyDictionary<string, int> StatusCounts);
+    IReadOnlyDictionary<string, int> StatusCounts,
+    int AwaitingSlotSelection = 0);
 
 internal sealed record DraftAttachmentWire(string Id, string RuleId, string FileName, long SizeBytes);
 
@@ -154,9 +155,12 @@ internal sealed record AddServiceRequestInputWire(
 /// <remarks><c>Status</c> / <c>RejectionReason</c> — RB-03: a request made with
 /// no active agreement is rejected on submission, and the trainer is told why
 /// (renew the agreement first).</remarks>
+/// <remarks><c>Reference</c> — the request's own number (`EH-ASR-…`), the one
+/// the trainer tracks it by (BUG-019); the id is for links only.</remarks>
 internal sealed record AddServiceRequestWire(
     string RequestId, string SubmittedAt,
-    string Status = ServiceRequestStatuses.Pending, string? RejectionReason = null);
+    string Status = ServiceRequestStatuses.Pending, string? RejectionReason = null,
+    string? Reference = null);
 
 /// <summary>The CAP-01 trainer surface.</summary>
 public static class ApplicationEndpoints
@@ -220,10 +224,21 @@ public static class ApplicationEndpoints
                 .GroupBy(s => s.ApplicationId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)[.. g.Select(s => s.Service)]);
 
+            var mineIds = mine.Select(a => a.ApplicationId).ToList();
+            var committeeApproved = (await db.CommitteeSequences
+                .Where(c => mineIds.Contains(c.ApplicationId)
+                    && c.Status == CommitteeSequenceStatuses.Approved)
+                .Select(c => c.ApplicationId)
+                .ToListAsync(ct)).ToHashSet();
+            // RUN-014 — the applicant sees, filters and counts the PRESENTED
+            // status, the same one the detail page shows.
+            string Shown(Application a) =>
+                ApplicantStatus(a.Status, committeeApproved.Contains(a.ApplicationId));
+
             var filtered = mine.Where(a =>
                     (string.IsNullOrWhiteSpace(search)
                         || (a.Reference ?? string.Empty).Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
-                    && (string.IsNullOrWhiteSpace(status) || a.Status == status)
+                    && (string.IsNullOrWhiteSpace(status) || Shown(a) == status)
                     && (string.IsNullOrWhiteSpace(service)
                         || (servicesByApp.TryGetValue(a.ApplicationId, out var s) && s.Contains(service))))
                 .ToList();
@@ -234,20 +249,30 @@ public static class ApplicationEndpoints
             var items = filtered
                 .Skip((safePage - 1) * safePageSize)
                 .Take(safePageSize)
-                .Select(a => Summary(a, servicesByApp))
+                .Select(a => Summary(a, Shown(a), servicesByApp))
                 .ToList();
 
             var undecided = mine.FirstOrDefault(a => ApplicationStatuses.Undecided.Contains(a.Status));
             var counts = ApplicationStatuses.All.ToDictionary(
                 s => s,
-                s => mine.Count(a => a.Status == s));
+                s => mine.Count(a => Shown(a) == s));
 
             return Results.Ok(new MyApplicationsListWire(
                 items, filtered.Count, safePage, safePageSize, pageCount,
                 CanCreateNew: undecided is null,
                 ActiveApplicationId: undecided?.ApplicationId.ToString(),
                 TotalApplications: mine.Count,
-                StatusCounts: counts));
+                StatusCounts: counts,
+                // RUN-035 — a time waiting to be picked is an action the
+                // applicant owes; the status alone cannot say so, since the
+                // application is already «مقابلة مجدولة» before they pick.
+                AwaitingSlotSelection: await db.Interviews.CountAsync(
+                    i => i.Status == InterviewStatuses.AwaitingSelection
+                        && i.RescheduleRequestedAt == null
+                        && db.Applications.Any(a => a.ApplicationId == i.ApplicationId
+                            && a.ApplicantUserId == actor.UserId
+                            && ApplicationStatuses.Undecided.Contains(a.Status)),
+                    ct)));
         }).WithName("MyApplications");
 
         me.MapPost("/draft/start", async (
@@ -357,7 +382,7 @@ public static class ApplicationEndpoints
                 return Results.Problem(statusCode: 404,
                     detail: "The stored file could not be read.");
             }
-            return Results.File(content.Bytes, content.MimeType, attachment.FileName);
+            return Documents.AttachmentUploads.Serve(http, attachment, content);
         }).RequireAuthorization().WithName("DownloadAttachment");
 
         me.MapPost("/draft/attachments", async (
@@ -595,7 +620,7 @@ public static class ApplicationEndpoints
             }
             if (application.Status is not (ApplicationStatuses.Approved or ApplicationStatuses.Active))
             {
-                return Results.Problem(statusCode: 409, detail: "Only an approved application can add a service.");
+                return Results.Problem(statusCode: 409, detail: "application-not-eligible");
             }
             var schema = await db.FormSchemas.SingleAsync(
                 s => s.SchemaVersion == application.SchemaVersion, ct);
@@ -608,14 +633,16 @@ public static class ApplicationEndpoints
             if (current.Contains(input.Service))
             {
                 // BR-0110 — a service already approved cannot be requested again.
-                return Results.Problem(statusCode: 409, detail: "Service already approved.");
+                // Distinct codes, so the page never calls a PENDING request
+                // «already approved» (BUG-022).
+                return Results.Problem(statusCode: 409, detail: "service-already-approved");
             }
             if (await db.ServiceRequests.AnyAsync(
                 r => r.TrainerUserId == application.ApplicantUserId
                     && r.RequestedService == input.Service
                     && r.Status == ServiceRequestStatuses.Pending, ct))
             {
-                return Results.Problem(statusCode: 409, detail: "A request for this service is already pending.");
+                return Results.Problem(statusCode: 409, detail: "service-request-pending");
             }
 
             var now = DateTime.UtcNow;
@@ -645,7 +672,9 @@ public static class ApplicationEndpoints
             }
             await db.SaveChangesAsync(ct);
             return Results.Ok(new AddServiceRequestWire(
-                request.ServiceRequestId.ToString(), Iso(now), request.Status, request.RejectionReasonId));
+                request.ServiceRequestId.ToString(), Iso(now), request.Status, request.RejectionReasonId,
+                request.Reference));
+
         }).WithName("SubmitAddServiceRequest");
 
         return v1;
@@ -768,8 +797,14 @@ public static class ApplicationEndpoints
         {
             return Results.Problem(statusCode: 404, detail: "Attachment not found.");
         }
+        // ⚠️ The upload answers with the ATTACHMENT id and the draft read with
+        // the APPLICATION_ATTACHMENT id, so the page can hold either. Matching
+        // only one 404'd every removal of a file uploaded in the same visit —
+        // the row survived, came back on refresh, was submitted, and still
+        // counted against the rule's file limit (RUN-020 / BUG-013).
         var row = await db.ApplicationAttachments.FirstOrDefaultAsync(
-            a => a.ApplicationAttachmentId == id && a.ApplicationId == draft.ApplicationId, ct);
+            a => (a.ApplicationAttachmentId == id || a.AttachmentId == id)
+                && a.ApplicationId == draft.ApplicationId, ct);
         if (row is null)
         {
             return Results.Problem(statusCode: 404, detail: "Attachment not found.");
@@ -821,28 +856,7 @@ public static class ApplicationEndpoints
             return Results.Problem(statusCode: 400, detail: "Unknown attachment rule.");
         }
 
-        var extension = Path.GetExtension(file.FileName).TrimStart('.').ToLowerInvariant();
-        // `ATTACHMENT_RULE.accepted_formats` is stored as the JSON array the
-        // owner's field matrix supplies, and read as one — not split on
-        // commas, which would keep the brackets and quotes.
-        var accepted = (JsonSerializer.Deserialize<string[]>(rule.AcceptedFormats) ?? [])
-            .Select(f => f.TrimStart('.').ToLowerInvariant())
-            .ToList();
-        if (!accepted.Contains(extension))
-        {
-            return Results.Problem(
-                statusCode: 422,
-                detail: $"'{extension}' is not an accepted format for this document.",
-                extensions: new Dictionary<string, object?> { ["reason"] = "format" });
-        }
-        if (file.Length > (long)rule.MaxSizeMb * 1024 * 1024)
-        {
-            return Results.Problem(
-                statusCode: 422,
-                detail: $"The file is larger than {rule.MaxSizeMb} MB.",
-                extensions: new Dictionary<string, object?> { ["reason"] = "size" });
-        }
-
+        // The count first: a refusal must not leave stored bytes behind.
         var already = await db.ApplicationAttachments.CountAsync(
             a => a.ApplicationId == draft.ApplicationId && a.RuleCode == rule.RuleCode, ct);
         if (already >= rule.MaxCount)
@@ -853,35 +867,27 @@ public static class ApplicationEndpoints
                 extensions: new Dictionary<string, object?> { ["reason"] = "count" });
         }
 
-        byte[] content;
-        using (var buffer = new MemoryStream())
+        // `ATTACHMENT_RULE.accepted_formats` is stored as the JSON array the
+        // owner's field matrix supplies, and read as one — not split on
+        // commas, which would keep the brackets and quotes. Format, size,
+        // content signature and storage are the ONE pipeline every upload in
+        // the product goes through (`AttachmentUploads.StoreAsync`).
+        var accepted = (JsonSerializer.Deserialize<string[]>(rule.AcceptedFormats) ?? [])
+            .Select(f => f.TrimStart('.').ToLowerInvariant())
+            .ToList();
+        var (attachment, problem) = await Documents.AttachmentUploads.StoreAsync(
+            file, accepted, rule.MaxSizeMb, uploadedBy, db, store, scanner, ct);
+        if (problem is not null)
         {
-            await file.CopyToAsync(buffer, ct);
-            content = buffer.ToArray();
+            return problem;
         }
 
         var now = DateTime.UtcNow;
-        var attachment = new Attachment
-        {
-            AttachmentId = Guid.NewGuid(),
-            FileName = Path.GetFileName(file.FileName),
-            MimeType = string.IsNullOrWhiteSpace(file.ContentType)
-                ? "application/octet-stream"
-                : file.ContentType,
-            SizeBytes = file.Length,
-            StorageRef = await store.PutAsync(content, file.FileName, file.ContentType, ct),
-            Checksum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(content)),
-            // ⚠️ `G27` — `not-scanned` is recorded as itself, never as `clean`.
-            ScanStatus = await scanner.ScanAsync(content, ct),
-            UploadedBy = uploadedBy,
-            UploadedAt = now,
-        };
-        db.Attachments.Add(attachment);
         db.ApplicationAttachments.Add(new ApplicationAttachment
         {
             ApplicationAttachmentId = Guid.NewGuid(),
             ApplicationId = draft.ApplicationId,
-            AttachmentId = attachment.AttachmentId,
+            AttachmentId = attachment!.AttachmentId,
             RuleCode = rule.RuleCode,
             FileName = attachment.FileName,
             SizeBytes = attachment.SizeBytes,
@@ -1358,14 +1364,31 @@ public static class ApplicationEndpoints
             .Select(s => s.Service)
             .ToListAsync(ct);
 
+    /// <summary>
+    /// RUN-014 — the status the APPLICANT is shown. The stored status stays
+    /// `approval-in-progress` through the agreement's internal run (J-10 routes
+    /// on it, and `ScreeningDetailWire.CommitteeApproved` exists because of it),
+    /// and `active` is the stored end state; but to the applicant, final
+    /// committee approval and a signed agreement both mean «معتمد» — what the
+    /// signing step itself promises. `agreement-pending` keeps its own label:
+    /// it is the one state asking the applicant to act.
+    /// </summary>
+    internal static string ApplicantStatus(string stored, bool committeeApproved) => stored switch
+    {
+        ApplicationStatuses.ApprovalInProgress when committeeApproved => ApplicationStatuses.Approved,
+        ApplicationStatuses.Active => ApplicationStatuses.Approved,
+        _ => stored,
+    };
+
     private static ApplicationSummaryWire Summary(
         Application application,
+        string shownStatus,
         Dictionary<Guid, IReadOnlyList<string>> servicesByApp) =>
         new(
             application.ApplicationId.ToString(),
             application.Reference,
             servicesByApp.TryGetValue(application.ApplicationId, out var services) ? services : [],
-            application.Status,
+            shownStatus,
             Iso(application.CreatedAt),
             application.SubmittedAt is { } submitted ? Iso(submitted) : null,
             Iso(application.UpdatedAt));
@@ -1397,15 +1420,19 @@ public static class ApplicationEndpoints
         var bankBlock = await BuildBankBlockAsync(db, application.ApplicantUserId, ct);
         var (agreementState, agreementBlock) =
             await ApplicantAgreementEndpoints.ApplicantViewAsync(db, application, ct);
+        var committeeApproved = await db.CommitteeSequences.AnyAsync(
+            c => c.ApplicationId == application.ApplicationId
+                && c.Status == CommitteeSequenceStatuses.Approved, ct);
         return new ApplicationDetailWire(
             application.ApplicationId.ToString(),
             application.Reference,
             [.. serviceRows.Select(s => s.Service)],
-            application.Status,
+            ApplicantStatus(application.Status, committeeApproved),
             Iso(application.CreatedAt),
             application.SubmittedAt is { } submitted ? Iso(submitted) : null,
             Iso(application.UpdatedAt),
-            Timeline(application.Status),
+            Timeline(application.Status, committeeApproved,
+                await InterviewExemptedAsync(db, application.ApplicationId, ct)),
             [.. serviceRows.Select(s => new PerServiceOutcomeWire(s.Service, s.Outcome))],
             application.Status == ApplicationStatuses.Rejected ? application.RejectionReason : null,
             [.. attachments.Select(a =>
@@ -1450,10 +1477,9 @@ public static class ApplicationEndpoints
     /// <summary>
     /// J-06 — present from the moment screening proposes slots until the
     /// interview is behind them; null at every other stage, so no interview
-    /// UI can render over an interview that does not exist. The exemption
-    /// path (J-08/F2/AC-3) is invisible BY OMISSION: an exempted application
-    /// never had an interview row, so this block is null, the timeline shows
-    /// the stage as passed, and no field exists that could disclose why.
+    /// UI can render over an interview that does not exist. An exempted
+    /// application never had an interview row, so this block is null; the
+    /// timeline marks the stage `exempted` (BUG-034), never the reason.
     /// </summary>
     private static async Task<object?> BuildInterviewBlockAsync(
         ExpertHubDbContext db,
@@ -1501,12 +1527,29 @@ public static class ApplicationEndpoints
         };
     }
 
-    /// <summary>The mock's `currentStageIndex`/`buildTimeline`, exactly.</summary>
-    internal static IReadOnlyList<TimelineStageWire> Timeline(string status)
+    /// <summary>
+    /// BUG-034 (supersedes P-45) — screening exempted the application from the
+    /// interview (J-08), so no interview row was ever made.
+    /// </summary>
+    private static async Task<bool> InterviewExemptedAsync(
+        ExpertHubDbContext db, Guid applicationId, CancellationToken ct) =>
+        !await db.Interviews.AnyAsync(i => i.ApplicationId == applicationId, ct)
+        && await (
+            from result in db.ScreeningResults
+            join service in db.ApplicationServices on result.ApplicationServiceId equals service.ApplicationServiceId
+            where service.ApplicationId == applicationId && result.Decision == "exempt_interview"
+            select result).AnyAsync(ct);
+
+    /// <summary>The mock's `currentStageIndex`/`buildTimeline`, plus
+    /// `exempted` for a passed interview stage that screening exempted.</summary>
+    internal static IReadOnlyList<TimelineStageWire> Timeline(
+        string status, bool committeeApproved = false, bool interviewExempted = false)
     {
         string[] stages = ["submitted", "under-review", "interview", "approval", "agreement", "active"];
         var current = status switch
         {
+            // RUN-014 — final approval is behind them; the agreement is next.
+            ApplicationStatuses.ApprovalInProgress when committeeApproved => 4,
             ApplicationStatuses.Submitted => 0,
             ApplicationStatuses.UnderReview => 1,
             ApplicationStatuses.InterviewScheduled or ApplicationStatuses.InterviewCompleted => 2,
@@ -1518,7 +1561,7 @@ public static class ApplicationEndpoints
         return [.. stages.Select((id, index) => new TimelineStageWire(
             id,
             rejected && index == current ? "rejected"
-                : index < current ? "complete"
+                : index < current ? (interviewExempted && id == "interview" ? "exempted" : "complete")
                 : index == current ? "current"
                 : "upcoming"))];
     }

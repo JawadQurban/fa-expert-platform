@@ -56,6 +56,15 @@ export interface HomeContent {
     readonly empty: string;
     readonly unread: string;
     readonly at: (date: string) => string;
+    readonly viewAll: string;
+  };
+  /** BUG-028 — the next interview. */
+  readonly interview: {
+    readonly heading: string;
+    readonly reference: (reference: string) => string;
+    readonly ticket: (ticket: string) => string;
+    readonly reschedulePending: string;
+    readonly open: string;
   };
   readonly empty: {
     readonly title: string;
@@ -145,6 +154,14 @@ const ar: HomeContent = {
     empty: 'لا توجد إشعارات جديدة.',
     unread: 'غير مقروء',
     at: (date) => date,
+    viewAll: 'كل الإشعارات',
+  },
+  interview: {
+    heading: 'مقابلتك القادمة',
+    reference: (reference) => `الطلب ${reference}`,
+    ticket: (ticket) => `رقم التذكرة: ${ticket}`,
+    reschedulePending: 'طلبت إعادة جدولة المقابلة، وستُقترح عليك مواعيد جديدة.',
+    open: 'تفاصيل المقابلة',
   },
   empty: {
     title: 'لا يوجد نشاط بعد',
@@ -229,7 +246,16 @@ const en: HomeContent = {
     empty: 'No new notifications.',
     unread: 'Unread',
     at: (date) => date,
+    viewAll: 'All notifications',
   },
+  interview: {
+    heading: 'Your next interview',
+    reference: (reference) => `Application ${reference}`,
+    ticket: (ticket) => `Ticket: ${ticket}`,
+    reschedulePending: 'You asked to reschedule; new times will be proposed to you.',
+    open: 'Interview details',
+  },
+
   empty: {
     title: 'No activity yet',
     body: 'Start by submitting an application; your status and metrics will appear here as soon as they exist.',

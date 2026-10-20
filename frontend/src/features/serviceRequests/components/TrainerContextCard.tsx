@@ -1,6 +1,7 @@
 import { Rating } from '@ds/composite';
-import { Icon, Tag, Typography } from '@ds/primitives';
+import { Button, Icon, Tag, Typography } from '@ds/primitives';
 import type { Locale } from '@/types';
+import { expertHubPaths } from '../../../app/router/paths';
 import type { TrainerContextDto } from '../serviceRequest.types';
 import type { ServiceRequestsContent } from '../serviceRequests.content';
 import { Panel } from '../../../shared/workspace/Panel';
@@ -62,7 +63,7 @@ export function TrainerContextCard({
               {trainer.specialties.map((specialty) => (
                 <li key={specialty}>
                   <Tag variant="neutral" size="sm">
-                    {content.specialties[specialty]}
+                    {content.specialties[specialty] ?? specialty}
                   </Tag>
                 </li>
               ))}
@@ -119,6 +120,19 @@ export function TrainerContextCard({
           </dd>
         </div>
       </dl>
+
+      {/* BUG-024 — the decision is made beside the whole record, one click away. */}
+      {trainer.profileId != null && (
+        <div>
+          <Button
+            variant="secondary"
+            size="sm"
+            href={expertHubPaths.internalTrainer(trainer.profileId)}
+          >
+            {copy.openProfile}
+          </Button>
+        </div>
+      )}
     </Panel>
   );
 }

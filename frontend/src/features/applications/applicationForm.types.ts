@@ -57,6 +57,17 @@ export interface ApplicationFieldSchema {
     readonly equals?: string | boolean;
     readonly notEquals?: string | boolean;
   };
+  /**
+   * Narrows `requiredFor` by another field's value, with the same shape and
+   * semantics as `dependsOn` — the field stays visible either way, and is
+   * mandatory only while the condition holds (RUN-019: «عدد سنوات الخبرة»
+   * while «أعمل حاليًا» is off).
+   */
+  readonly requiredWhen?: {
+    readonly fieldId: string;
+    readonly equals?: string | boolean;
+    readonly notEquals?: string | boolean;
+  };
   readonly validation?: {
     readonly maxLength?: number;
     readonly pattern?: string;
@@ -69,6 +80,12 @@ export interface ApplicationFieldSchema {
      */
     readonly maxDate?: string;
     readonly minDate?: string;
+    /**
+     * `date` fields only — the id of a date field in the same entry (or the
+     * same flat values) this one may not precede: an end date is never
+     * before its start (BUG-014/BUG-015).
+     */
+    readonly notBefore?: string;
     /** `number` fields only — inclusive whole-number bounds. */
     readonly min?: number;
     readonly max?: number;

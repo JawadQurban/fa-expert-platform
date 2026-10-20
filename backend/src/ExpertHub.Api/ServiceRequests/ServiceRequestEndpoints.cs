@@ -40,10 +40,12 @@ internal sealed record LocalizedTextWire(string Ar, string En);
 
 internal sealed record TrainerAgreementWire(string Reference, string Status, string? EndsAt);
 
+/// <remarks><c>ProfileId</c> — the `TRAINER_PROFILE` id the internal trainer
+/// profile opens by (BUG-024); null when the person has no trainer file.</remarks>
 internal sealed record TrainerContextWire(
     string TrainerId, string Name, IReadOnlyList<string> CurrentServices,
     IReadOnlyList<string> Specialties, string Classification,
-    double? EvaluationOverall, TrainerAgreementWire? Agreement);
+    double? EvaluationOverall, TrainerAgreementWire? Agreement, string? ProfileId = null);
 
 internal sealed record SubmittedFieldWire(LocalizedTextWire Label, string Value);
 
@@ -81,11 +83,60 @@ internal sealed record AddendumInputWire(string? FileName, long SizeBytes, strin
 internal sealed record DecisionInputWire(
     string? Kind, AddendumInputWire? Addendum, string? Note, string? ReasonId, string? ReasonText);
 
+/// <summary>
+/// One of the trainer's own add-service requests (BUG-019). The rejection
+/// reason is served ONLY when it is RB-03's system reason — F3/AC-7 tells the
+/// trainer a staff rejection's outcome without its reason.
+/// </summary>
+internal sealed record MyServiceRequestWire(
+    string Id, string Reference, string RequestedService, string Status,
+    string SubmittedAt, string? DecidedAt, string? RejectionReason);
+
+/// <remarks><c>AddServiceApplicationId</c> — the approved application a new
+/// service is added to, so the portal can offer «إضافة خدمة» without making the
+/// trainer find it inside an application first (BUG-021). Null = not eligible.</remarks>
+internal sealed record MyServiceRequestsWire(
+    IReadOnlyList<MyServiceRequestWire> Items, string? AddServiceApplicationId);
+
 /// <summary>The J-03 internal surface.</summary>
 public static class ServiceRequestEndpoints
 {
     public static RouteGroupBuilder MapServiceRequestEndpoints(this RouteGroupBuilder v1)
     {
+        // The trainer's own requests — ownership, not a feature (the `/me/*`
+        // rule, `P-190`). Before this a submitted request vanished from the
+        // portal: nothing listed it, its number or its outcome (BUG-019).
+        v1.MapGet("/me/service-requests", async (
+            HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
+        {
+            var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
+            var rows = await db.ServiceRequests.AsNoTracking()
+                .Where(r => r.TrainerUserId == actor.UserId)
+                .OrderByDescending(r => r.SubmittedAt)
+                .ToListAsync(ct);
+            var eligible = await db.Applications.AsNoTracking()
+                .Where(a => a.ApplicantUserId == actor.UserId
+                    && (a.Status == ApplicationStatuses.Approved || a.Status == ApplicationStatuses.Active))
+                .OrderByDescending(a => a.UpdatedAt)
+                .Select(a => (Guid?)a.ApplicationId)
+                .FirstOrDefaultAsync(ct);
+            return Results.Ok(new MyServiceRequestsWire(
+                [.. rows.Select(r => new MyServiceRequestWire(
+                    r.ServiceRequestId.ToString(),
+                    r.Reference,
+                    r.RequestedService,
+                    r.Status,
+                    ApplicationEndpoints.Iso(r.SubmittedAt),
+                    r.DecidedAt is { } decided ? ApplicationEndpoints.Iso(decided) : null,
+                    r.RejectionReasonId == ServiceRequestRejectionReasons.NoActiveAgreement.Id
+                        ? r.RejectionReasonId
+                        : null))],
+                eligible?.ToString()));
+        })
+            .RequireAuthorization()
+            .WithName("MyServiceRequests");
+
+
         var requests = v1.MapGroup("/internal/service-requests")
             .RequireAuthorization(AuthenticationSetup.InternalPolicy)
             // F-0305 إلحاق خدمة جديدة — J-03's internal half.
@@ -177,9 +228,7 @@ public static class ServiceRequestEndpoints
 
                 // BR-0305 — the annex attaches to the trainer's EXISTING
                 // agreement; no new agreement, no new signature.
-                var agreement = await db.Agreements.FirstOrDefaultAsync(
-                    a => a.TrainerUserId == request.TrainerUserId
-                        && a.Status == AgreementStatuses.Active, ct);
+                var agreement = await ActiveAgreementAsync(db, request.TrainerUserId, ct);
                 if (agreement is not null)
                 {
                     db.Addenda.Add(new AddendumRecord
@@ -294,10 +343,22 @@ public static class ServiceRequestEndpoints
     }
 
     /// <summary>RB-03 — the trainer holds an agreement in effect.</summary>
-    internal static Task<bool> HasActiveAgreementAsync(
+    internal static async Task<bool> HasActiveAgreementAsync(
         ExpertHubDbContext db, Guid trainerUserId, CancellationToken ct) =>
-        db.Agreements.AnyAsync(
-            a => a.TrainerUserId == trainerUserId && a.Status == AgreementStatuses.Active, ct);
+        await ActiveAgreementAsync(db, trainerUserId, ct) is not null;
+
+    /// <summary>
+    /// The agreement in effect — the ONE lookup the gate (RB-03), the annex
+    /// (BR-0305) and the decision page's «الاتفاقية السارية» all read, so the
+    /// page can no longer say «no agreement» while the gate found one (RUN-018).
+    /// Newest first, so a renewal governs over what it replaced.
+    /// </summary>
+    internal static Task<Agreement?> ActiveAgreementAsync(
+        ExpertHubDbContext db, Guid trainerUserId, CancellationToken ct) =>
+        db.Agreements
+            .Where(a => a.TrainerUserId == trainerUserId && a.Status == AgreementStatuses.Active)
+            .OrderByDescending(a => a.StartsAt)
+            .FirstOrDefaultAsync(ct);
 
     /// <summary>
     /// RB-03 — the automatic rejection: the dedicated reason, decided by the
@@ -350,6 +411,15 @@ public static class ServiceRequestEndpoints
         CancellationToken ct)
     {
         var trainer = await db.Users.SingleAsync(u => u.UserId == request.TrainerUserId, ct);
+        var agreement = await ActiveAgreementAsync(db, request.TrainerUserId, ct);
+        var profileId = await db.TrainerProfiles
+            .Where(p => p.UserId == request.TrainerUserId)
+            .Select(p => (Guid?)p.TrainerId)
+            .FirstOrDefaultAsync(ct);
+        var schemaVersion = await db.Applications
+            .Where(a => a.ApplicationId == request.ApplicationId)
+            .Select(a => a.SchemaVersion)
+            .SingleAsync(ct);
         var currentServices = await db.ApplicationServices
             .Where(s => s.ApplicationId == request.ApplicationId
                 && s.Outcome == ServiceOutcomes.Accepted)
@@ -358,9 +428,12 @@ public static class ServiceRequestEndpoints
 
         var deltaValues = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             request.DeltaValues, ApplicationFormLogic.WireJson) ?? [];
+        // The request's OWN form version: a select answer is stored as its
+        // option value (`more-than-10`), and what a reviewer reads is that
+        // option's label in this version (RUN-018).
         var fieldLabels = await db.FormFields
-            .Where(f => deltaValues.Keys.Contains(f.FieldCode))
-            .Select(f => new { f.FieldCode, f.LabelAr, f.LabelEn })
+            .Where(f => f.SchemaVersion == schemaVersion && deltaValues.Keys.Contains(f.FieldCode))
+            .Select(f => new { f.FieldCode, f.LabelAr, f.LabelEn, f.Definition })
             .ToListAsync(ct);
         var submittedFields = deltaValues
             .Select(pair =>
@@ -368,7 +441,7 @@ public static class ServiceRequestEndpoints
                 var label = fieldLabels.FirstOrDefault(l => l.FieldCode == pair.Key);
                 return new SubmittedFieldWire(
                     new LocalizedTextWire(label?.LabelAr ?? pair.Key, label?.LabelEn ?? pair.Key),
-                    DisplayValue(pair.Value));
+                    DisplayValue(pair.Value, label?.Definition));
             })
             .ToList();
 
@@ -427,7 +500,13 @@ public static class ServiceRequestEndpoints
                 Specialties: [],
                 Classification: "certified",
                 EvaluationOverall: null,
-                Agreement: null),
+                Agreement: agreement is null
+                    ? null
+                    : new TrainerAgreementWire(
+                        agreement.Reference,
+                        agreement.Status,
+                        agreement.EndsAt is { } endsAt ? ApplicationEndpoints.Iso(endsAt) : null),
+                ProfileId: profileId?.ToString()),
             submittedFields,
             submittedAttachments,
             [
@@ -450,18 +529,28 @@ public static class ServiceRequestEndpoints
             // only action records the automatic rejection.
             request.Status != ServiceRequestStatuses.Pending
                 ? new ViewerWire(CanDecide: false, BlockedReason: "already-decided")
-                : await HasActiveAgreementAsync(db, request.TrainerUserId, ct)
+                : agreement is not null
                     ? new ViewerWire(CanDecide: true, BlockedReason: null)
                     : new ViewerWire(CanDecide: false, BlockedReason: "no-active-agreement"));
     }
 
-    private static string DisplayValue(JsonElement value) => value.ValueKind switch
+    private static string DisplayValue(JsonElement value, string? definition)
     {
-        JsonValueKind.String => value.GetString() ?? string.Empty,
-        JsonValueKind.True => "نعم",
-        JsonValueKind.False => "لا",
-        JsonValueKind.Array => string.Join("، ", value.EnumerateArray()
-            .Select(item => item.GetString() ?? string.Empty)),
-        _ => value.GetRawText(),
-    };
+        string Label(string stored) =>
+            definition is null || stored.Length == 0
+                ? stored
+                : Profiles.DirectoryEndpoints.SelectOptionLabelAr(definition, stored) ?? stored;
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => Label(value.GetString() ?? string.Empty),
+            JsonValueKind.True => "نعم",
+            JsonValueKind.False => "لا",
+            JsonValueKind.Array => string.Join("، ", value.EnumerateArray()
+                .Select(item => item.ValueKind == JsonValueKind.String
+                    ? Label(item.GetString() ?? string.Empty)
+                    : item.GetRawText())),
+            _ => value.GetRawText(),
+        };
+    }
+
 }

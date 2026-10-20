@@ -95,6 +95,8 @@ export default function NotificationLogPage() {
           },
         ]
       : []),
+    ...(query.from != null ? [{ id: 'from', label: copy.fromLabel, value: query.from }] : []),
+    ...(query.to != null ? [{ id: 'to', label: copy.toLabel, value: query.to }] : []),
   ];
 
   useEffect(() => {
@@ -281,6 +283,28 @@ export default function NotificationLogPage() {
                   })),
                 ]}
               />
+              {/* RUN-023 — the native date input: a Riyadh calendar day, both ends inclusive. */}
+              <TextInput
+                label={copy.fromLabel}
+                type="date"
+                value={query.from ?? ''}
+                max={query.to ?? undefined}
+                onChange={(event) =>
+                  setQuery({
+                    ...query,
+                    from: event.target.value === '' ? null : event.target.value,
+                  })
+                }
+              />
+              <TextInput
+                label={copy.toLabel}
+                type="date"
+                value={query.to ?? ''}
+                min={query.from ?? undefined}
+                onChange={(event) =>
+                  setQuery({ ...query, to: event.target.value === '' ? null : event.target.value })
+                }
+              />
 
               {/* What the log is narrowed BY — each filter removable on its own. */}
               <div className={styles.activeChips}>
@@ -294,7 +318,11 @@ export default function NotificationLogPage() {
                         ? { ...query, search: '' }
                         : id === 'sendStatus'
                           ? { ...query, sendStatus: null }
-                          : { ...query, channel: null }
+                          : id === 'from'
+                            ? { ...query, from: null }
+                            : id === 'to'
+                              ? { ...query, to: null }
+                              : { ...query, channel: null }
                     )
                   }
                 />

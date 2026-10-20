@@ -66,7 +66,16 @@ export interface SiblingSlotDto {
  * ------------------------------------------------------------------ */
 
 /** The J-18 offer's outcome, as the cycle endpoint words it. */
-export type PreviousOfferOutcome = 'awaiting-response' | 'accepted' | 'rejected' | 'expired';
+export type PreviousOfferOutcome =
+  | 'awaiting-response'
+  | 'accepted'
+  | 'rejected'
+  | 'expired'
+  // UAT `BUG-048` — accepted, then the engagement ended: withdrawn by the
+  // trainer, de-linked by the Academy, or cancelled in FAST.
+  | 'withdrawn'
+  | 'delinked'
+  | 'cancelled';
 
 /**
  * F1/AC-5 + F2/AC-3 — every offer already made on **this** slot, and how it

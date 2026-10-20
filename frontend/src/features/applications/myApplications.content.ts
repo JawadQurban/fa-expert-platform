@@ -58,6 +58,18 @@ export interface MyApplicationsContent {
     readonly previous: string;
     readonly next: string;
   };
+  /** BUG-019 / BUG-021 — the trainer's add-service requests, tracked here. */
+  readonly serviceRequests: {
+    readonly heading: string;
+    readonly lead: string;
+    readonly addService: string;
+    readonly empty: string;
+    readonly listLabel: string;
+    readonly statuses: Readonly<Record<'pending' | 'approved' | 'rejected', string>>;
+    readonly submittedAt: (date: string) => string;
+    readonly noAgreement: string;
+    readonly loadFailed: string;
+  };
   readonly empty: {
     readonly noApplicationsTitle: string;
     readonly noApplicationsBody: string;
@@ -142,6 +154,17 @@ const ar: MyApplicationsContent = {
     label: 'التنقل بين صفحات الطلبات',
     previous: 'السابق',
     next: 'التالي',
+  },
+  serviceRequests: {
+    heading: 'طلبات إضافة الخدمة',
+    lead: 'أضف خدمة إلى نطاقك المعتمد، وتابع كل طلب برقمه وحالته.',
+    addService: 'إضافة خدمة',
+    empty: 'لم تقدّم أي طلب لإضافة خدمة بعد.',
+    listLabel: 'قائمة طلبات إضافة الخدمة',
+    statuses: { pending: 'قيد المراجعة', approved: 'معتمد', rejected: 'مرفوض' },
+    submittedAt: (date) => `قُدّم في ${date}`,
+    noAgreement: 'رُفض تلقائيًا لعدم وجود اتفاقية سارية.',
+    loadFailed: 'تعذّر تحميل طلبات إضافة الخدمة.',
   },
   empty: {
     noApplicationsTitle: 'لا توجد طلبات بعد',
@@ -228,6 +251,17 @@ const en: MyApplicationsContent = {
     label: 'Applications pagination',
     previous: 'Previous',
     next: 'Next',
+  },
+  serviceRequests: {
+    heading: 'Add-service requests',
+    lead: 'Add a service to your approved scope, and follow each request by its number and status.',
+    addService: 'Add a service',
+    empty: 'You have not requested to add a service yet.',
+    listLabel: 'Add-service requests',
+    statuses: { pending: 'Under review', approved: 'Approved', rejected: 'Rejected' },
+    submittedAt: (date) => `Submitted ${date}`,
+    noAgreement: 'Rejected automatically: no active agreement.',
+    loadFailed: 'Could not load your add-service requests.',
   },
   empty: {
     noApplicationsTitle: 'No applications yet',

@@ -51,17 +51,16 @@ export const APPLICATION_STAGES = [
 
 export type ApplicationStage = (typeof APPLICATION_STAGES)[number];
 
-export type StageState = 'complete' | 'current' | 'upcoming' | 'rejected';
+/** `exempted` — a passed interview stage that screening exempted (J-08). */
+export type StageState = 'complete' | 'current' | 'upcoming' | 'rejected' | 'exempted';
 
 /**
  * One stage of the trainer-facing timeline.
  *
- * **J-08/F2/AC-3** — an application whose interview was *exempted* must show the
- * interview step as **passed**, without disclosing that an exemption was granted.
- * That is guaranteed here by omission: this DTO carries a state and nothing else.
- * There is no exemption flag, no reason, no `skipped` state — so no component
- * can render one, and the exempted path is indistinguishable from a completed
- * interview. The state itself is derived server-side from the business status.
+ * **BUG-034** (supersedes P-45's "invisible by omission") — an application whose
+ * interview was exempted shows that stage as `exempted`, so the applicant reads
+ * «مستثنى من المقابلة» rather than a passed interview. The exemption REASON is
+ * still never served to them. The state is derived server-side.
  */
 export interface TimelineStageDto {
   readonly id: ApplicationStage;

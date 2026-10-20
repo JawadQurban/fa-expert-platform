@@ -308,6 +308,13 @@ internal static partial class FastProfileImport
         {
             user.FullNameAr = profile.FullNameAr;
         }
+        else if (!string.IsNullOrWhiteSpace(profile.FirstNameAr)
+            && user.FullNameAr == subject)
+        {
+            // RUN-033: a member listed by national id because FAST sent only
+            // the given name — still better than the number.
+            user.FullNameAr = profile.FirstNameAr;
+        }
         if (!string.IsNullOrWhiteSpace(profile.FullNameEn))
         {
             user.FullNameEn = profile.FullNameEn;

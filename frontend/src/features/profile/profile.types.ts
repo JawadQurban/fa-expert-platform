@@ -123,7 +123,12 @@ export interface ProfileFieldStateDto {
  * ⚠️ J-12 is not built yet, so today this is served by the mock. When J-12
  * lands, this union is what it must produce — not a new one.
  */
-export type ProfileAgreementStatus = 'active' | 'suspended' | 'expired' | 'ended';
+/**
+ * `expired` and `not-started` are derived from the calendar by the server: an
+ * agreement signed before its start date is `not-started`, never «سارية»
+ * (UAT RUN-003).
+ */
+export type ProfileAgreementStatus = 'active' | 'not-started' | 'suspended' | 'expired' | 'ended';
 
 /**
  * **J-14/F2** — "fields listed in the Locked Fields matrix remain **visible**
@@ -266,22 +271,70 @@ export function validateBankData(fields: BankDataFields): readonly BankDataField
 export type BankDataFormatFieldId = 'iban' | 'swiftCode' | 'accountNumber';
 
 /**
+ * RUN-026 — one «دولة البنك» option: a country from FAST's list as Expert Hub
+ * holds it (`fast-country`). The stored value is `labelAr`; `iso` is the ISO
+ * 3166 alpha-2 code when FAST gives one, and drives the IBAN rule.
+ */
+export interface BankCountryOption {
+  readonly labelAr: string;
+  readonly labelEn: string;
+  readonly iso: string | null;
+}
+
+/** The ISO code of the chosen bank country, or `null` when it is not resolved. */
+export function bankCountryIso(
+  name: string,
+  countries: readonly BankCountryOption[]
+): string | null {
+  return countries.find((c) => c.labelAr === name || c.labelEn === name)?.iso ?? null;
+}
+
+/**
+ * RUN-026 — the IBAN follows the bank country, as the API does: Saudi Arabia
+ * keeps "SA" + 22 digits (24 characters); any other country is ISO 13616 —
+ * its own country code first, 15–34 characters and the mod-97 check digits.
+ * With no ISO code for the country, the IBAN's own prefix picks the rule.
+ */
+export function ibanIsValid(iban: string, countryIso: string | null): boolean {
+  const value = iban.toUpperCase();
+  if (countryIso === 'SA' || (countryIso == null && value.startsWith('SA'))) {
+    return /^SA[0-9]{22}$/.test(value);
+  }
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(value)) {
+    return false;
+  }
+  if (countryIso != null && !value.startsWith(countryIso)) {
+    return false;
+  }
+  // ISO 7064 mod 97-10: the first four characters moved to the end, letters as 10–35.
+  let remainder = 0;
+  for (const char of value.slice(4) + value.slice(0, 4)) {
+    const digit = parseInt(char, 36);
+    remainder = (remainder * (digit < 10 ? 10 : 100) + digit) % 97;
+  }
+  return remainder === 1;
+}
+
+/**
  * J-09 «Bank Data Field Validation Rules» (AC-5), the same rules the API
- * enforces on save: IBAN is "SA" + 22 digits; SWIFT is 8 or 11 characters in
+ * enforces on save: the IBAN per `ibanIsValid`; SWIFT is 8 or 11 characters in
  * BIC shape (4-letter bank, 2-letter country, 2-character location, optional
  * 3-character branch); the account number is digits only. Letters are matched
  * case-insensitively. Returns the ids of filled fields that break their rule —
  * an empty field is `validateBankData`'s to report.
  */
-export function invalidBankDataFields(fields: BankDataFields): readonly BankDataFormatFieldId[] {
-  const rules: Readonly<Record<BankDataFormatFieldId, RegExp>> = {
-    iban: /^SA[0-9]{22}$/i,
-    swiftCode: /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/i,
-    accountNumber: /^[0-9]+$/,
+export function invalidBankDataFields(
+  fields: BankDataFields,
+  countryIso: string | null = null
+): readonly BankDataFormatFieldId[] {
+  const rules: Readonly<Record<BankDataFormatFieldId, (value: string) => boolean>> = {
+    iban: (value) => ibanIsValid(value, countryIso),
+    swiftCode: (value) => /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/i.test(value),
+    accountNumber: (value) => /^[0-9]+$/.test(value),
   };
   return (Object.keys(rules) as BankDataFormatFieldId[]).filter((id) => {
     const value = fields[id].trim();
-    return value !== '' && !rules[id].test(value);
+    return value !== '' && !rules[id](value);
   });
 }
 
@@ -403,6 +456,14 @@ export interface MyProfileDto {
   readonly academyRecords: AcademyRecordsDto | null;
   /** Visibility consent — drives the public directory (`BR-1002/1007`). */
   readonly visibilityConsent: boolean;
+  /**
+   * RUN-005 — whether the public directory lists this trainer NOW: consent
+   * on AND a file the directory may show (active or idle). Consent alone is
+   * not enough, so the page never says «ظاهر» on the switch's word alone.
+   */
+  readonly listedInDirectory: boolean;
+  /** RUN-027 — the CV on file, which the profile replaces. */
+  readonly cv: CertificateDto | null;
   /** J-09/F6 — opens only after preliminary approval; absent before that. */
   readonly bankData: ProfileBankDataDto;
   /** `false` → the FAST section is momentarily unreachable (P-17): show

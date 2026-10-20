@@ -180,7 +180,16 @@ internal sealed record MyProfileWire(
      */
     bool EstablishedInExpertHub,
     // `P-331` — null with no trainer file: a bio belongs to an accredited trainer.
-    TrainerBioWire? Bio);
+    TrainerBioWire? Bio,
+    /*
+     * RUN-005 — whether the public directory lists this trainer RIGHT NOW:
+     * consent on AND a file the directory may show (active or idle, `P-287`).
+     * Consent alone is not enough, so the page must not say «ظاهر» on the
+     * strength of the switch when the directory would still leave them out.
+     */
+    bool ListedInDirectory = false,
+    // RUN-027 — the CV on file (the `cv` slot), which the profile replaces.
+    CertificateWire? Cv = null);
 
 internal sealed record SaveFieldsInputWire(IReadOnlyDictionary<string, JsonElement>? Values);
 
@@ -377,55 +386,33 @@ public static class ProfileEndpoints
         // stored exactly as the application form stores one (same store,
         // scanner and record), under the trainer's own application's
         // `professional-certificate` rule for formats and size.
-        me.MapPost("/certificates", async (
+        me.MapPost("/certificates", (
             HttpRequest request,
             HttpContext http,
             ExpertHubDbContext db,
             IDocumentStore store,
             IUploadScanner scanner,
             CancellationToken ct) =>
-        {
-            var loaded = await LoadAsync(http, db, ct);
-            if (loaded is null)
-            {
-                return Results.Problem(statusCode: 404, detail: "No trainer profile exists yet.");
-            }
-            var (profile, user) = loaded.Value;
-            if (!request.HasFormContentType)
-            {
-                return Results.Problem(statusCode: 415, detail: "Expected a multipart upload.");
-            }
-            var application = await db.Applications.SingleAsync(a => a.ApplicationId == profile.ApplicationId, ct);
-            var rule = await db.AttachmentRules.FirstOrDefaultAsync(
-                r => r.RuleCode == "professional-certificate" && r.SchemaVersion == application.SchemaVersion, ct);
-            if (rule is null)
-            {
-                return Results.Problem(statusCode: 409, detail: "certificate-rule-unavailable");
-            }
-            var formats = (JsonSerializer.Deserialize<string[]>(rule.AcceptedFormats) ?? [])
-                .Select(f => f.TrimStart('.').ToLowerInvariant())
-                .ToArray();
-            var form = await request.ReadFormAsync(ct);
-            var (attachment, problem) = await Documents.AttachmentUploads.StoreAsync(
-                form.Files.GetFile("file"), formats, rule.MaxSizeMb, user.UserId, db, store, scanner, ct);
-            if (problem is not null)
-            {
-                return problem;
-            }
-            db.ApplicationAttachments.Add(new ApplicationAttachment
-            {
-                ApplicationAttachmentId = Guid.NewGuid(),
-                ApplicationId = profile.ApplicationId,
-                AttachmentId = attachment!.AttachmentId,
-                RuleCode = rule.RuleCode,
-                FileName = attachment.FileName,
-                SizeBytes = attachment.SizeBytes,
-            });
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(await BuildAsync(db, profile, user, ct));
-        })
+            StoreUnderRuleAsync(
+                request, http, db, store, scanner, CertificateRule, replace: false, ct))
             .DisableAntiforgery()
             .WithName("AddCertificate");
+
+        // RUN-027 — replace the CV. The only upload used to be «إضافة شهادة»,
+        // so a new CV was filed as a certificate and the old one stayed the CV
+        // every reader (and the bio's AI draft) used. Same rule as J-01 — the
+        // application's own `cv` formats and size — and it REPLACES: the slot
+        // holds one CV.
+        me.MapPost("/cv", (
+            HttpRequest request,
+            HttpContext http,
+            ExpertHubDbContext db,
+            IDocumentStore store,
+            IUploadScanner scanner,
+            CancellationToken ct) =>
+            StoreUnderRuleAsync(request, http, db, store, scanner, CvRule, replace: true, ct))
+            .DisableAntiforgery()
+            .WithName("ReplaceCv");
 
         me.MapPost("/certificates/remove", async (
             RemoveCertificateInputWire input,
@@ -464,6 +451,70 @@ public static class ProfileEndpoints
         }).WithName("RemoveCertificate");
 
         return v1;
+    }
+
+    private const string CertificateRule = "professional-certificate";
+    private const string CvRule = "cv";
+
+    /// <summary>
+    /// Stores an uploaded file on the trainer's application under one of its
+    /// attachment rules — the document is stored exactly as the application
+    /// form stores one (same store, scanner and record), under the trainer's
+    /// own application's rule for formats and size. With
+    /// <paramref name="replace"/> the file becomes the rule's only one.
+    /// </summary>
+    private static async Task<IResult> StoreUnderRuleAsync(
+        HttpRequest request, HttpContext http, ExpertHubDbContext db, IDocumentStore store,
+        IUploadScanner scanner, string ruleCode, bool replace, CancellationToken ct)
+    {
+        var loaded = await LoadAsync(http, db, ct);
+        if (loaded is null)
+        {
+            return Results.Problem(statusCode: 404, detail: "No trainer profile exists yet.");
+        }
+        var (profile, user) = loaded.Value;
+        if (!request.HasFormContentType)
+        {
+            return Results.Problem(statusCode: 415, detail: "Expected a multipart upload.");
+        }
+        var application = await db.Applications.SingleAsync(a => a.ApplicationId == profile.ApplicationId, ct);
+        var rule = await db.AttachmentRules.FirstOrDefaultAsync(
+            r => r.RuleCode == ruleCode && r.SchemaVersion == application.SchemaVersion, ct);
+        if (rule is null)
+        {
+            return Results.Problem(
+                statusCode: 409,
+                detail: ruleCode == CvRule ? "cv-rule-unavailable" : "certificate-rule-unavailable");
+        }
+        var formats = (JsonSerializer.Deserialize<string[]>(rule.AcceptedFormats) ?? [])
+            .Select(f => f.TrimStart('.').ToLowerInvariant())
+            .ToArray();
+        var form = await request.ReadFormAsync(ct);
+        var (attachment, problem) = await Documents.AttachmentUploads.StoreAsync(
+            form.Files.GetFile("file"), formats, rule.MaxSizeMb, user.UserId, db, store, scanner, ct);
+        if (problem is not null)
+        {
+            return problem;
+        }
+        if (replace)
+        {
+            // The link goes; the stored file and its ATTACHMENT row stay, as
+            // they do for a removed certificate.
+            db.ApplicationAttachments.RemoveRange(await db.ApplicationAttachments
+                .Where(a => a.ApplicationId == profile.ApplicationId && a.RuleCode == ruleCode)
+                .ToListAsync(ct));
+        }
+        db.ApplicationAttachments.Add(new ApplicationAttachment
+        {
+            ApplicationAttachmentId = Guid.NewGuid(),
+            ApplicationId = profile.ApplicationId,
+            AttachmentId = attachment!.AttachmentId,
+            RuleCode = rule.RuleCode,
+            FileName = attachment.FileName,
+            SizeBytes = attachment.SizeBytes,
+        });
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(await BuildAsync(db, profile, user, ct));
     }
 
     /* ── assembly ──────────────────────────────────────────────────────────── */
@@ -857,7 +908,9 @@ public static class ProfileEndpoints
                 agreement is null ? null : AgreementStatusWire(agreement, DateTime.UtcNow),
                 agreement?.EndsAt is { } endsAt ? ApplicationEndpoints.Iso(endsAt) : null),
             [.. services.Select(s => s.Service)],
-            TrainerProfileService.Specialties(),
+            TrainerProfileService.Specialties(
+                (await TrainerProfileService.DomainsAsync(db, [profile.TrainerId], ct))
+                    .GetValueOrDefault(profile.TrainerId)),
             [.. records.Select(r => new ProgramHistoryWire(
                 r.RecordId.ToString(), r.ProgramNameAr, r.Role, r.DeliveredFrom.Year))],
             new ProfileRatingsWire(
@@ -865,8 +918,11 @@ public static class ProfileEndpoints
                 overall,
                 refreshedAt is { } at ? ApplicationEndpoints.Iso(at) : null,
                 [.. programs.Select(p => new ProgramRatingWire(p.Program, p.Score))]),
-            [.. certificates.Select(c => new CertificateWire(
-                c.ApplicationAttachmentId.ToString(), c.FileName))],
+            // Certificates only — the CV, photo and degree are the
+            // application's other slots, not certificates to remove here.
+            [.. certificates
+                .Where(c => c.RuleCode == CertificateRule)
+                .Select(c => new CertificateWire(c.ApplicationAttachmentId.ToString(), c.FileName))],
             merged.Records,
             profile.VisibilityConsent,
             profile.VisibilityConsentDecidedAt is { } decidedAt
@@ -893,14 +949,20 @@ public static class ProfileEndpoints
             FastAvailable: true,
             // A trainer file exists, so every section on this page has a source.
             EstablishedInExpertHub: true,
-            await TrainerBioEndpoints.WireAsync(db, profile, ct));
+            await TrainerBioEndpoints.WireAsync(db, profile, ct),
+            ListedInDirectory: profile.VisibilityConsent
+                && (await DirectoryEndpoints.ListableAsync(db, [profile], ct)).Contains(profile.TrainerId),
+            Cv: certificates.FirstOrDefault(c => c.RuleCode == CvRule) is { } cv
+                ? new CertificateWire(cv.ApplicationAttachmentId.ToString(), cv.FileName)
+                : null);
     }
 
-    /// <summary>`expired` is derived from the calendar (`P-188`), so the
-    /// trainer's view derives it the same way the lifecycle screen does.</summary>
+    /// <summary>`expired` and `not-started` are derived from the calendar
+    /// (`P-188`, RUN-003) — the one function the trainer's view, the trainer
+    /// base and the lifecycle screen all read.</summary>
     internal static string AgreementStatusWire(Agreement agreement, DateTime nowUtc) =>
-        agreement.Status == AgreementStatuses.Active
-            && agreement.EndsAt is { } ends && ends < nowUtc
-            ? AgreementStatuses.Expired
-            : agreement.Status;
+        agreement.Status != AgreementStatuses.Active ? agreement.Status
+        : agreement.EndsAt is { } ends && ends < nowUtc ? AgreementStatuses.Expired
+        : agreement.StartsAt is { } starts && starts > nowUtc ? AgreementStatuses.NotStarted
+        : agreement.Status;
 }

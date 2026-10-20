@@ -156,7 +156,12 @@ public sealed class FeaturePermissionTests
         var dashboard = await staff.GetFromJsonAsync<JsonElement>("/api/v1/internal/dashboard");
         var awaiting = dashboard.GetProperty("metrics").EnumerateArray()
             .Single(m => m.GetProperty("id").GetString() == "awaiting-screening");
-        Assert.Equal(1, awaiting.GetProperty("value").GetInt32());
+        // RUN-022 — opening it above started screening: it left «awaiting»
+        // for «in screening».
+        Assert.Equal(0, awaiting.GetProperty("value").GetInt32());
+        Assert.Equal(1, dashboard.GetProperty("metrics").EnumerateArray()
+            .Single(m => m.GetProperty("id").GetString() == "in-screening")
+            .GetProperty("value").GetInt32());
         // BE-12 — a tile names WHERE it drills, not just a bare status, so
         // the material tile can point at a queue that has no application status.
         Assert.Equal("applications", awaiting.GetProperty("target").GetProperty("queue").GetString());

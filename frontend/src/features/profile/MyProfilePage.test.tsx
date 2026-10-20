@@ -157,6 +157,87 @@ describe('EH-TP-04 — My Profile', () => {
     expect(screen.queryByText(/فحص|آمن|scanned|safe/i)).not.toBeInTheDocument();
   });
 
+  it('RUN-027: replaces the CV in its own slot, never as a certificate', async () => {
+    await renderProfile();
+    const cvSection = screen.getByRole('region', { name: content.cv.heading });
+    expect(within(cvSection).getByText(MOCK_PROFILE.cv?.name ?? '')).toBeInTheDocument();
+    // A single-file slot: replaced, never emptied.
+    expect(
+      within(cvSection).queryByRole('button', { name: content.cv.removeLabel })
+    ).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    const input = cvSection.querySelector<HTMLInputElement>('input[type="file"]');
+    if (input == null) {
+      throw new Error('no CV file input');
+    }
+    await user.upload(input, pdf('new-cv.pdf'));
+    expect(await within(cvSection).findByText('new-cv.pdf')).toBeInTheDocument();
+    expect(within(cvSection).queryByText(MOCK_PROFILE.cv?.name ?? '')).not.toBeInTheDocument();
+    expect(screen.getByText(content.cv.uploaded)).toBeInTheDocument();
+    // …and the certificates list did not grow a CV.
+    const certs = screen.getByRole('region', { name: content.certificates.heading });
+    expect(within(certs).queryByText('new-cv.pdf')).not.toBeInTheDocument();
+  });
+
+  it('RUN-027: the HTTP provider posts the CV to its own route', async () => {
+    const posts: { path: string; body: unknown }[] = [];
+    const client: ExpertHubApiClient = {
+      get: () => Promise.reject(new Error('No GET expected.')),
+      post: <T,>(path: string, body?: unknown) => {
+        posts.push({ path, body });
+        return Promise.resolve({ ok: true as const, value: {} as T });
+      },
+    };
+    await createHttpProfileProvider(client).replaceCv(pdf('cv.pdf'));
+    expect(posts[0].path).toBe('v1/me/profile/cv');
+    expect((posts[0].body as FormData).get('file')).toBeInstanceOf(File);
+  });
+
+  it('RUN-005: without an Expert Hub trainer file the switch is disabled and says why', async () => {
+    injectProvider({
+      seed: {
+        ...MOCK_PROFILE,
+        establishedInExpertHub: false,
+        visibilityConsent: false,
+        listedInDirectory: false,
+      },
+    });
+    const { user } = await renderProfile();
+    await user.click(screen.getByRole('tab', { name: content.tabs.visibility }));
+    expect(screen.getByRole('switch', { name: content.visibility.toggleLabel })).toBeDisabled();
+    expect(screen.getByText(content.visibility.notEstablished)).toBeInTheDocument();
+  });
+
+  it('RUN-005: consent on but not listed says so, and never claims «ظاهر»', async () => {
+    injectProvider({
+      seed: { ...MOCK_PROFILE, visibilityConsent: true, listedInDirectory: false },
+    });
+    const { user } = await renderProfile();
+    await user.click(screen.getByRole('tab', { name: content.tabs.visibility }));
+    expect(screen.getByRole('switch', { name: content.visibility.toggleLabel })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    expect(screen.getByText(content.visibility.consentedNotListed)).toBeInTheDocument();
+    expect(screen.getByText(content.visibility.off)).toBeInTheDocument();
+    expect(screen.queryByText(content.visibility.toggleOnDescription)).not.toBeInTheDocument();
+  });
+
+  it('RUN-005: turning visibility on from hidden sends the request and shows «ظاهر»', async () => {
+    injectProvider({
+      seed: { ...MOCK_PROFILE, visibilityConsent: false, listedInDirectory: false },
+    });
+    const { user } = await renderProfile();
+    await user.click(screen.getByRole('tab', { name: content.tabs.visibility }));
+    await user.click(screen.getByRole('switch', { name: content.visibility.toggleLabel }));
+    expect(await screen.findByText(content.consentModal.enableBody)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: content.consentModal.confirm }));
+    expect(await screen.findByText(content.consentModal.enabled)).toBeInTheDocument();
+    expect(screen.getByText(content.visibility.toggleOnDescription)).toBeInTheDocument();
+    expect(screen.getByText(content.visibility.on)).toBeInTheDocument();
+  });
+
   it('J-14/F1/AC-2: a server refusal is shown on the file in Arabic, and nothing is added', async () => {
     injectProvider({ uploadFailWith: { status: 422, message: 'The file is larger than 1 MB.' } });
     const { container } = await renderProfile();
@@ -512,6 +593,13 @@ describe('EH-TP-04 — My Profile', () => {
   });
 
   it('saves a complete set and reports that the team was notified (AC-4)', async () => {
+    // Before any agreement exists — the moment saving unblocks preparation.
+    injectProvider({
+      seed: {
+        ...MOCK_PROFILE,
+        lockedFacts: { ...MOCK_PROFILE.lockedFacts, agreementStatus: null },
+      },
+    });
     const { user } = await renderProfile();
 
     const values: Record<string, string> = {
@@ -540,6 +628,33 @@ describe('EH-TP-04 — My Profile', () => {
     expect(screen.getByText(content.bankData.completeBody)).toBeInTheDocument();
     // The form is replaced by the saved summary.
     expect(screen.queryByRole('button', { name: content.bankData.save })).not.toBeInTheDocument();
+  });
+
+  it('UAT RUN-037: once the agreement is signed, the bank card no longer says preparation can begin', async () => {
+    injectProvider({
+      seed: {
+        ...MOCK_PROFILE,
+        bankData: {
+          state: 'complete',
+          fields: {
+            bankCountry: 'السعودية',
+            bankCity: 'الرياض',
+            bankName: 'البنك الأهلي',
+            branchName: 'فرع العليا',
+            iban: 'SA0380000000608010167519',
+            swiftCode: 'NCBKSAJE',
+            accountHolderName: 'سارة العتيبي',
+            accountNumber: '608010167519',
+          },
+          requestedAt: '2026-07-29T09:00:00Z',
+          completedAt: '2026-07-30T09:00:00Z',
+        },
+      },
+    });
+    await renderProfile();
+
+    expect(await screen.findByText(content.bankData.completeBodySigned)).toBeInTheDocument();
+    expect(screen.queryByText(content.bankData.completeBody)).not.toBeInTheDocument();
   });
   /**
    * J-13/AC-10 (`BR-0408`) — the calculated Trainer Profile Status is visible to

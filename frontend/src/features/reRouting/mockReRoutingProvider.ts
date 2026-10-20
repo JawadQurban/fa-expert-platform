@@ -63,7 +63,14 @@ const CONFIRMED_SLOT = 2;
 const MOCK_MODEL: MatchingModelDto = {
   version: 'mock-dm-gap-05-draft.1',
   // The API's seeded model (`Cap05SeedData`), mirrored — one set of numbers, not two.
-  weights: { language: 34, 'delivery-mode': 33, evaluation: 33 },
+  weights: {
+    specialization: 33,
+    location: 33,
+    language: 34,
+    'delivery-mode': 33,
+    evaluation: 33,
+    availability: 33,
+  },
   tieBreakNote: {
     ar: '⚠️ قاعدة كسر التعادل غير معتمدة بعد؛ يُرتَّب المتساوون بحسب التقييم ثم الاسم.',
     en: '⚠️ The tie-breaking rule is not approved yet; ties fall back to evaluation, then name.',
@@ -151,7 +158,7 @@ const MOCK_SEEDS: readonly MockSeed[] = [
     name: 'أ. ماجد الحربي',
     classification: 'senior',
     evaluationOverall: 4.9,
-    exclusions: ['specialization'],
+    exclusions: ['file-status'],
     raw: { language: 1, 'delivery-mode': 1, evaluation: 0.833 },
     priceInClass: 7000,
     priceOnline: null,
@@ -216,6 +223,7 @@ const NOT_BUILT: CandidatePoolDto = {
   members: [],
   sentAt: null,
   requiredHeadcount: RE_MATCH_HEADCOUNT,
+  returnedToMatching: false,
 };
 
 export interface MockReRoutingProviderOptions {
@@ -438,7 +446,13 @@ export function createMockReRoutingProvider(
         decision: 'pending',
         preferenceRank: null,
       }));
-      pool = { status: 'sent', members, sentAt: now, requiredHeadcount: RE_MATCH_HEADCOUNT };
+      pool = {
+        status: 'sent',
+        members,
+        sentAt: now,
+        requiredHeadcount: RE_MATCH_HEADCOUNT,
+        returnedToMatching: false,
+      };
       return { ok: true, value: pool };
     },
 

@@ -87,6 +87,40 @@ describe('EH-TP-01 — Portal Home', () => {
     expect(screen.getAllByText(new RegExp(content.notifications.unread)).length).toBeGreaterThan(0);
   });
 
+  it('BUG-028: shows the next interview with its reference and ticket', async () => {
+    await renderHome();
+    expect(await screen.findByText(content.interview.heading)).toBeInTheDocument();
+    const interview = MOCK_HOME.upcomingInterview;
+    expect(
+      screen.getByText(content.interview.ticket(interview?.ticketNumber ?? ''))
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: content.interview.open })).toHaveAttribute(
+      'href',
+      expertHubPaths.applicationDetail(interview?.applicationId ?? '')
+    );
+    expect(screen.getByRole('link', { name: content.notifications.viewAll })).toHaveAttribute(
+      'href',
+      expertHubPaths.notifications
+    );
+  });
+
+  it('BUG-028: a pending reschedule is said in words, with no time to show', async () => {
+    injectProvider({
+      seed: {
+        ...MOCK_HOME,
+        upcomingInterview: {
+          applicationId: 'app-1',
+          reference: 'EH-2026-00001',
+          startsAt: null,
+          ticketNumber: null,
+          reschedulePending: true,
+        },
+      },
+    });
+    await renderHome();
+    expect(await screen.findByText(content.interview.reschedulePending)).toBeInTheDocument();
+  });
+
   it('offers quick links to the trainer sub-areas', async () => {
     await renderHome();
     const region = await screen.findByRole('region', { name: content.shortcuts.heading });

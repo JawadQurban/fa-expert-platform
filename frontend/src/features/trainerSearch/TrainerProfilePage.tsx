@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Alert, Loading, Rating } from '@ds/composite';
-import { Button, Icon, Tag, Typography } from '@ds/primitives';
+import { Button, Icon, Select, Tag, Textarea, Typography } from '@ds/primitives';
 import type { TagVariant } from '@ds/primitives';
 import { Breadcrumbs } from '@ds/shell';
 import { useLocale } from '@i18n/LocaleProvider';
 import type { Locale } from '@/types';
 import { expertHubPaths } from '../../app/router/paths';
-import type { TrainerFileStatus, TrainerProfileDto } from './trainerSearch.types';
+import { TRAINER_FILE_STATUSES } from './trainerSearch.types';
+import type { FileStatusChoice, TrainerFileStatus, TrainerProfileDto } from './trainerSearch.types';
 import { getTrainerSearchService } from './trainerSearchService';
 import { getTrainerSearchContent } from './trainerSearch.content';
+import type { TrainerSearchContent } from './trainerSearch.content';
 import { IdentityCardPanel } from './components/IdentityCardPanel';
+import { ApplicationSectionsReview } from '../screening/components/ApplicationSectionsReview';
+import { ScreeningAttachments } from '../screening/components/ScreeningAttachments';
+import { getScreeningContent } from '../screening/screening.content';
+import { getProfileContent } from '../profile/profile.content';
+import { BANK_DATA_FIELD_ORDER } from '../profile/profile.types';
 import { PageLoadError } from '../../shared/components/PageLoadError';
 import { WorkspacePage } from '../../shared/workspace/WorkspacePage';
 import { RecordHead } from '../../shared/workspace/RecordHead';
@@ -67,6 +74,8 @@ function formatScore(value: number, locale: Locale): string {
 export default function TrainerProfilePage() {
   const { locale } = useLocale();
   const content = useMemo(() => getTrainerSearchContent(locale), [locale]);
+  const screeningContent = useMemo(() => getScreeningContent(locale), [locale]);
+  const profileContent = useMemo(() => getProfileContent(locale), [locale]);
   const { trainerId } = useParams();
   const service = getTrainerSearchService();
 
@@ -176,6 +185,11 @@ export default function TrainerProfilePage() {
             <Tag variant={FILE_STATUS_VARIANT[trainer.fileStatus]} size="sm">
               {content.fileStatuses[trainer.fileStatus]}
             </Tag>
+            {trainer.fileStatusManual && (
+              <Tag variant="neutral" size="sm">
+                {copy.fileStatusControl.manualTag}
+              </Tag>
+            )}
           </>
         }
       >
@@ -203,7 +217,13 @@ export default function TrainerProfilePage() {
                   [copy.emailLabel, trainer.email],
                   [copy.phoneLabel, trainer.phone],
                   [copy.cityLabel, trainer.city],
-                  [copy.experienceLabel, content.yearsValue(trainer.yearsExperience)],
+                  [
+                    copy.experienceLabel,
+                    // The answered range (e.g. «من 1 إلى 5 سنوات») — no number exists.
+                    trainer.yearsExperience == null && trainer.identityCard.experience !== ''
+                      ? trainer.identityCard.experience
+                      : content.yearsValue(trainer.yearsExperience),
+                  ],
                   [copy.qualificationLabel, trainer.academicQualification],
                 ] as const
               ).map(([label, value]) => (
@@ -239,7 +259,7 @@ export default function TrainerProfilePage() {
                 {trainer.specialties.map((specialty) => (
                   <li key={specialty}>
                     <Tag variant="neutral" size="sm">
-                      {content.specialties[specialty]}
+                      {content.specialties[specialty] ?? specialty}
                     </Tag>
                   </li>
                 ))}
@@ -346,15 +366,150 @@ export default function TrainerProfilePage() {
             )}
           </Panel>
 
+          {/* RUN-025 — F-0411, only for a viewer who holds it. */}
+          {trainer.canSetFileStatus && (
+            <FileStatusControl trainer={trainer} content={content} onSaved={setTrainer} />
+          )}
+
           {/* F2 — the identity card. */}
           <IdentityCardPanel card={trainer.identityCard} content={content} locale={locale} />
         </div>
       </div>
+
+      {/*
+        RUN-017 — the approved application in full: every section the trainer
+        was accredited on, its attachments, and (F-0301 only) the bank data.
+        The screening screen's own components, so one application reads the
+        same wherever staff meet it.
+      */}
+      <Panel
+        title={copy.applicationHeading}
+        titleId="eh-trainer-application"
+        description={copy.applicationDescription}
+      >
+        {trainer.applicationSections.length === 0 ? (
+          <Typography as="p" variant="text-sm" color="muted">
+            {copy.applicationEmpty}
+          </Typography>
+        ) : (
+          <ApplicationSectionsReview
+            sections={trainer.applicationSections}
+            content={screeningContent}
+            locale={locale}
+          />
+        )}
+      </Panel>
+
+      <Panel title={screeningContent.attachments.heading} titleId="eh-trainer-attachments">
+        <ScreeningAttachments
+          attachments={trainer.attachments}
+          content={screeningContent}
+          locale={locale}
+        />
+      </Panel>
+
+      {trainer.bankData != null && (
+        <Panel title={profileContent.bankData.heading} titleId="eh-trainer-bank">
+          <dl className={styles.facts}>
+            {BANK_DATA_FIELD_ORDER.map((id) => (
+              <div key={id} className={styles.fact}>
+                <dt className={styles.term}>{profileContent.bankData.fields[id]}</dt>
+                <dd className={styles.value}>
+                  <bdi>{trainer.bankData?.[id] ?? ''}</bdi>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </Panel>
+      )}
 
       {/* J-15 scope, restated where a reader might reach for an action. */}
       <Alert tone="info" surface="tinted" role="note">
         {content.scopeNote}
       </Alert>
     </WorkspacePage>
+  );
+}
+
+/** RUN-025 / `F-0411` — set the file status by hand, with a mandatory reason. */
+function FileStatusControl({
+  trainer,
+  content,
+  onSaved,
+}: {
+  readonly trainer: TrainerProfileDto;
+  readonly content: TrainerSearchContent;
+  readonly onSaved: (trainer: TrainerProfileDto) => void;
+}) {
+  const copy = content.profile.fileStatusControl;
+  const [status, setStatus] = useState<FileStatusChoice>(
+    trainer.fileStatusManual ? trainer.fileStatus : 'automatic'
+  );
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const options = [
+    { value: 'automatic', label: copy.automatic },
+    ...TRAINER_FILE_STATUSES.map((value) => ({ value, label: content.fileStatuses[value] })),
+  ];
+
+  async function save() {
+    if (reason.trim() === '') {
+      setReasonError(copy.reasonRequired);
+      return;
+    }
+    setReasonError(null);
+    setBusy(true);
+    const result = await getTrainerSearchService().setFileStatus(
+      trainer.trainerId,
+      status,
+      reason.trim()
+    );
+    setBusy(false);
+    if (result.ok) {
+      setReason('');
+      setFeedback({ ok: true, text: copy.saved });
+      onSaved(result.value);
+    } else {
+      setFeedback({
+        ok: false,
+        text: result.error.status === 409 ? copy.conflict : copy.failed,
+      });
+    }
+  }
+
+  return (
+    <Panel title={copy.heading} titleId="eh-trainer-file-status" description={copy.description}>
+      <div className={styles.column}>
+        {feedback != null && (
+          <Alert tone={feedback.ok ? 'success' : 'error'} role={feedback.ok ? 'status' : 'alert'}>
+            {feedback.text}
+          </Alert>
+        )}
+        <Select
+          label={copy.statusLabel}
+          value={status}
+          onValueChange={(value) => setStatus(value as FileStatusChoice)}
+          options={options}
+          disabled={busy}
+        />
+        <Textarea
+          label={copy.reasonLabel}
+          errorText={reasonError ?? undefined}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          rows={3}
+          requiredField
+          disabled={busy}
+        />
+        <div>
+          <Button variant="primary" size="md" disabled={busy} onClick={() => void save()}>
+            {copy.submit}
+          </Button>
+        </div>
+      </div>
+    </Panel>
   );
 }

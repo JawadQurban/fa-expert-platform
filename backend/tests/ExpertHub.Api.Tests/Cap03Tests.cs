@@ -41,6 +41,69 @@ public sealed class Cap03Tests
 
     public void Dispose() => _tokenEndpoint.Dispose();
 
+    /* ── RUN-026 — the bank country is FAST's list, and the IBAN follows it ── */
+
+    [Theory]
+    [InlineData("GB82WEST12345698765432", true)]   // the ISO 13616 example: valid
+    [InlineData("gb82west12345698765432", true)]   // matched case-insensitively
+    [InlineData("GB83WEST12345698765432", false)]  // check digits off: mod-97 fails
+    [InlineData("GB82WEST123", false)]             // under 15 characters
+    [InlineData("SA0380000000608010167519", true)] // no ISO code: the prefix picks the Saudi rule
+    [InlineData("SA03800000006080101675", false)]  // Saudi, 22 characters
+    public void An_iban_is_judged_by_iso_13616_or_the_saudi_rule(string iban, bool valid) =>
+        Assert.Equal(valid, Agreements.ApplicantAgreementEndpoints.IbanIsValid(iban, null));
+
+    [Fact]
+    public async Task Bank_country_comes_from_the_fast_list_and_the_iban_follows_it()
+    {
+        var world = await ApprovedApplicationAsync("bank-iban");
+        await using (var db = _database.CreateContext())
+        {
+            foreach (var (code, ar, en, iso) in new[]
+            {
+                ("1", "السعودية", "Saudi Arabia", "SA"),
+                ("2", "المملكة المتحدة", "United Kingdom", "GB"),
+            })
+            {
+                db.ReferenceValues.Add(new ReferenceValue
+                {
+                    ValueId = Guid.NewGuid(), ListCode = FastReferenceLists.Countries, Code = code,
+                    LabelAr = ar, LabelEn = en, SortOrder = int.Parse(code, System.Globalization.CultureInfo.InvariantCulture),
+                    IsActive = true, Source = IntegrationSystems.Fast,
+                    Attributes = $"{{\"countryCode\":\"{iso}\"}}", SyncedAt = DateTime.UtcNow,
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+
+        async Task<string[]> InvalidAsync(string country, string iban)
+        {
+            var response = await world.Applicant.PostAsJsonAsync("/api/v1/me/profile/bank-data", new
+            {
+                bankCountry = country, bankCity = "London", bankName = "Westminster",
+                branchName = "City", iban, swiftCode = "NWBKGB2L", accountHolderName = "Sara",
+                accountNumber = "98765432",
+            });
+            if (response.IsSuccessStatusCode)
+            {
+                return [];
+            }
+            var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            return [.. problem.GetProperty("invalidFields").EnumerateArray().Select(f => f.GetString()!)];
+        }
+
+        // Not on FAST's list — the dropdown cannot produce it, so neither may a client.
+        Assert.Equal(["bankCountry"], await InvalidAsync("Atlantis", "SA0380000000608010167519"));
+        // Saudi Arabia keeps the Saudi rule — a British IBAN is not Saudi.
+        Assert.Equal(["iban"], await InvalidAsync("السعودية", "GB82WEST12345698765432"));
+        // A Saudi IBAN for a British bank: wrong country code.
+        Assert.Equal(["iban"], await InvalidAsync("المملكة المتحدة", "SA0380000000608010167519"));
+        Assert.Equal(["iban"], await InvalidAsync("المملكة المتحدة", "GB83WEST12345698765432"));
+        // The UAT report: a GB IBAN for a British bank is accepted — by either name.
+        Assert.Empty(await InvalidAsync("United Kingdom", "GB82WEST12345698765432"));
+        Assert.Empty(await InvalidAsync("المملكة المتحدة", "GB82WEST12345698765432"));
+    }
+
     /* ── J-10 → J-11 → J-12, end to end ───────────────────────────────────── */
 
     [Fact]
@@ -133,6 +196,13 @@ public sealed class Cap03Tests
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
             new { values = new Dictionary<string, string> { ["startDate"] = "2026-09-01" } });
         Assert.Equal(HttpStatusCode.BadRequest, missingFields.StatusCode);
+
+        // …and the term may not end before it starts.
+        var endBeforeStart = await world.Creator.PostAsJsonAsync(
+            $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
+            new { values = new Dictionary<string, string> { ["startDate"] = "2026-09-01", ["endDate"] = "2026-08-31" } });
+        Assert.Equal(HttpStatusCode.BadRequest, endBeforeStart.StatusCode);
+        Assert.Contains("end-before-start", await endBeforeStart.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
         // P-333 — the document is the trainer's own uploaded file: preparing
         // without one is refused, and so is a file somebody else uploaded.
@@ -257,7 +327,9 @@ public sealed class Cap03Tests
         var active = await PostAsync(world.Applicant,
             $"/api/v1/me/applications/{world.ApplicationId}/agreement-decision",
             new { kind = "sign", signatureName = "سارة العتيبي" });
-        Assert.Equal("active", active.GetProperty("status").GetString());
+        // RUN-014 — stored `active`, but the applicant is shown «معتمد», as
+        // the signing step promised them.
+        Assert.Equal("approved", active.GetProperty("status").GetString());
         Assert.Equal("signed", active.GetProperty("agreementState").GetString());
         Assert.Equal("processing", active.GetProperty("sync").GetString());
 
@@ -268,7 +340,9 @@ public sealed class Cap03Tests
             var row = await db.Agreements.SingleAsync();
             agreementId = row.AgreementId;
             Assert.Equal(1, row.TermYears);
-            Assert.Equal(row.StartsAt!.Value.AddYears(1), row.EndsAt);
+            // RUN-003 — the term is the one the preparer entered.
+            Assert.Equal(new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), row.StartsAt);
+            Assert.Equal(new DateTime(2027, 9, 1, 0, 0, 0, DateTimeKind.Utc), row.EndsAt);
             Assert.Equal(0, row.RenewalCount);
         }
 
@@ -283,6 +357,8 @@ public sealed class Cap03Tests
             list.GetProperty("reminderOffsets").EnumerateArray().Select(o => o.GetInt32()).ToArray());
 
         var detail = await GetAsync(world.Creator, $"/api/v1/internal/agreements/{agreementId}");
+        // BUG-001 — the J-11 record opens the file uploaded at J-10.
+        Assert.Equal($"/v1/attachments/{fileId}", detail.GetProperty("documentUrl").GetString());
         // BR-0302 — the next term arrives DECIDED; no input carries a duration.
         Assert.Equal(3, detail.GetProperty("nextTermYears").GetInt32());
         Assert.True(detail.GetProperty("viewer").GetProperty("canRenew").GetBoolean());
@@ -395,6 +471,121 @@ public sealed class Cap03Tests
         Assert.Equal("formation", creatorView.GetProperty("stage").GetString());
         Assert.Empty(creatorView.GetProperty("sequence").EnumerateArray());
         Assert.False(creatorView.GetProperty("sequenceComplete").GetBoolean());
+
+        // UAT RUN-015 — the preparer sees WHAT was asked, by whom and when,
+        // and the cancelled chain it replaced.
+        var request = creatorView.GetProperty("applicantModificationRequest");
+        Assert.Equal("الرجاء تعديل تاريخ البداية.", request.GetProperty("note").GetString());
+        Assert.Equal("سارة العتيبي", request.GetProperty("requestedByName").GetString());
+        Assert.NotEqual(JsonValueKind.Null, request.GetProperty("requestedAt").ValueKind);
+        var previous = creatorView.GetProperty("previousSequences").EnumerateArray().Single();
+        Assert.NotEqual(JsonValueKind.Null, previous.GetProperty("voidedAt").ValueKind);
+        Assert.Equal(
+            new[] { "approved", "signed" },
+            previous.GetProperty("members").EnumerateArray()
+                .Select(m => m.GetProperty("state").GetString()!));
+    }
+
+    /* ── UAT RUN-003 / RUN-037 — the entered term, and who signed ──────────── */
+
+    [Fact]
+    public async Task Signing_keeps_the_entered_term_and_the_agreement_is_not_in_force_before_its_start()
+    {
+        var start = DateTime.UtcNow.Date.AddDays(5);
+        var end = start.AddYears(1).AddDays(-1);
+        var world = await SentToApplicantAsync(
+            "agr-run003",
+            start.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            end.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+
+        await PostAsync(world.Applicant,
+            $"/api/v1/me/applications/{world.ApplicationId}/agreement-decision",
+            new { kind = "sign", signatureName = "سارة العتيبي" });
+
+        // Never «signature day + 1 year»: the dates the preparer entered.
+        Guid agreementId;
+        await using (var db = _database.CreateContext())
+        {
+            var row = await db.Agreements.SingleAsync();
+            agreementId = row.AgreementId;
+            Assert.Equal(start, row.StartsAt);
+            Assert.Equal(end, row.EndsAt);
+        }
+
+        // Signed, but not «سارية» before its start date — on every surface.
+        var list = await GetAsync(world.Creator, "/api/v1/internal/agreements/");
+        var item = list.GetProperty("items").EnumerateArray().Single();
+        Assert.Equal("not-started", item.GetProperty("status").GetString());
+        Assert.StartsWith(start.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            item.GetProperty("startsAt").GetString(), StringComparison.Ordinal);
+        var filtered = await GetAsync(world.Creator, "/api/v1/internal/agreements/?status=not-started");
+        Assert.Single(filtered.GetProperty("items").EnumerateArray());
+
+        var detail = await GetAsync(world.Creator, $"/api/v1/internal/agreements/{agreementId}");
+        Assert.False(detail.GetProperty("viewer").GetProperty("canRenew").GetBoolean());
+        Assert.True(detail.GetProperty("viewer").GetProperty("canSuspend").GetBoolean());
+
+        // RUN-037 — the page that manages the agreement says who signed it.
+        var signing = detail.GetProperty("signing");
+        Assert.Equal(
+            new[] { "approved", "signed" },
+            signing.GetProperty("sequence").EnumerateArray()
+                .Select(m => m.GetProperty("state").GetString()!));
+        Assert.Equal("سارة العتيبي", signing.GetProperty("applicantSignatureName").GetString());
+        Assert.NotEqual(JsonValueKind.Null, signing.GetProperty("applicantSignedAt").ValueKind);
+
+        var profile = await GetAsync(world.Applicant, "/api/v1/me/profile");
+        Assert.Equal("not-started",
+            profile.GetProperty("lockedFacts").GetProperty("agreementStatus").GetString());
+    }
+
+    /* ── UAT RUN-014 — «معتمد» from final approval ─────────────────────────── */
+
+    [Fact]
+    public async Task The_applicant_is_shown_accredited_from_final_approval_while_the_stored_status_stays()
+    {
+        var world = await ApprovedApplicationAsync("agr-run014");
+
+        var detail = await GetAsync(world.Applicant, $"/api/v1/me/applications/{world.ApplicationId}");
+        Assert.Equal("approved", detail.GetProperty("status").GetString());
+        var stages = detail.GetProperty("timeline").EnumerateArray()
+            .ToDictionary(t => t.GetProperty("id").GetString()!, t => t.GetProperty("state").GetString());
+        Assert.Equal("complete", stages["approval"]);
+        Assert.Equal("current", stages["agreement"]);
+
+        var list = await GetAsync(world.Applicant, "/api/v1/me/applications/?page=1&pageSize=10");
+        Assert.Equal("approved",
+            list.GetProperty("items").EnumerateArray().Single().GetProperty("status").GetString());
+        Assert.Equal(1, list.GetProperty("statusCounts").GetProperty("approved").GetInt32());
+        var byStatus = await GetAsync(world.Applicant,
+            "/api/v1/me/applications/?page=1&pageSize=10&status=approved");
+        Assert.Single(byStatus.GetProperty("items").EnumerateArray());
+
+        // f701f58 — staff routing still reads the STORED status plus the flag.
+        var screening = await GetAsync(world.Creator,
+            $"/api/v1/internal/applications/{world.ApplicationId}/screening");
+        Assert.Equal("approval-in-progress", screening.GetProperty("status").GetString());
+        Assert.True(screening.GetProperty("committeeApproved").GetBoolean());
+        await using var db = _database.CreateContext();
+        Assert.Equal(ApplicationStatuses.ApprovalInProgress,
+            (await db.Applications.SingleAsync(a => a.ApplicationId == Guid.Parse(world.ApplicationId))).Status);
+    }
+
+    /* ── UAT RUN-016 — a saved committee template comes back whole ─────────── */
+
+    [Fact]
+    public async Task A_saved_committee_template_returns_its_members_and_their_obligation()
+    {
+        var world = await ApprovedApplicationAsync("agr-run016", "لجنة الاعتماد الدائمة");
+        var creatorId = await UserIdOfAsync("agr-run016-creator");
+
+        var committee = await GetAsync(world.Creator,
+            $"/api/v1/internal/applications/{world.ApplicationId}/committee");
+        var template = committee.GetProperty("templates").EnumerateArray().Single();
+        Assert.Equal("لجنة الاعتماد الدائمة", template.GetProperty("name").GetString());
+        var member = template.GetProperty("members").EnumerateArray().Single();
+        Assert.Equal(creatorId, member.GetProperty("approverId").GetString());
+        Assert.Equal("mandatory", member.GetProperty("obligation").GetString());
     }
 
     /* ── J-10/F4 — the internal modification pause ────────────────────────── */
@@ -757,7 +948,7 @@ public sealed class Cap03Tests
         Assert.Equal(HttpStatusCode.OK, profile.StatusCode);
     }
 
-    private async Task<World> ApprovedApplicationAsync(string prefix)
+    private async Task<World> ApprovedApplicationAsync(string prefix, string committeeTemplateName = "")
     {
         var applicant = await SignInAsync($"{prefix}-applicant", "unmapped", "سارة العتيبي");
         var creator = await SignInAsync(
@@ -795,7 +986,7 @@ public sealed class Cap03Tests
             new
             {
                 members = new[] { new { approverId = creatorId, obligation = "mandatory" } },
-                saveAsTemplateName = "",
+                saveAsTemplateName = committeeTemplateName,
             });
         var approved = await PostAsync(creator,
             $"/api/v1/internal/applications/{applicationId}/committee/decisions",
@@ -808,11 +999,12 @@ public sealed class Cap03Tests
     }
 
     /// <summary>…and on through J-10 to an agreement sitting with the applicant.</summary>
-    private async Task<World> SentToApplicantAsync(string prefix)
+    private async Task<World> SentToApplicantAsync(
+        string prefix, string startDate = "2026-09-01", string endDate = "2027-09-01")
     {
         var world = await ApprovedApplicationAsync(prefix);
         await CompleteBankDataAsync(world.Applicant);
-        await PrepareAndFormAsync(world);
+        await PrepareAndFormAsync(world, startDate, endDate);
         await PostAsync(world.Reviewer,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/decisions",
             new { kind = "approve", note = "" });
@@ -822,7 +1014,8 @@ public sealed class Cap03Tests
         return world;
     }
 
-    private static async Task PrepareAndFormAsync(World world)
+    private static async Task PrepareAndFormAsync(
+        World world, string startDate = "2026-09-01", string endDate = "2027-09-01")
     {
         await PostAsync(world.Creator,
             $"/api/v1/internal/applications/{world.ApplicationId}/agreement/preparation",
@@ -831,8 +1024,8 @@ public sealed class Cap03Tests
                 documentAttachmentId = await TestDocuments.AgreementFileAsync(world.Creator),
                 values = new Dictionary<string, string>
                 {
-                    ["startDate"] = "2026-09-01",
-                    ["endDate"] = "2027-09-01",
+                    ["startDate"] = startDate,
+                    ["endDate"] = endDate,
                 },
             });
         await PostAsync(world.Creator,

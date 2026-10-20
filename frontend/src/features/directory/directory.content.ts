@@ -1,6 +1,7 @@
 import type { Locale } from '@/types';
 import type { DirectorySpecialty, TrainerClassification } from './directory.types';
 import { arNumber } from '../../shared/formatting';
+import { SPECIALIZATION_DOMAIN_OPTIONS } from '../../shared/content/specializationDomains';
 
 /**
  * EH-PUB-02 / EH-PUB-03 (Public Trainer Directory + Profile) copy — Arabic
@@ -36,6 +37,8 @@ export interface DirectoryContent {
     readonly searchLabel: string;
     readonly searchPlaceholder: string;
     readonly clear: string;
+    readonly specialtyLabel: string;
+    readonly allSpecialties: string;
   };
   readonly card: {
     readonly viewProfile: (name: string) => string;
@@ -93,27 +96,18 @@ export interface PublicProfileContent {
   readonly specialties: Readonly<Record<DirectorySpecialty, string>>;
 }
 
-const SPECIALTIES_AR: Record<DirectorySpecialty, string> = {
-  leadership: 'القيادة والإدارة',
-  finance: 'المالية والمحاسبة',
-  'digital-transformation': 'التحول الرقمي',
-  'data-analytics': 'تحليل البيانات',
-  'human-resources': 'الموارد البشرية',
-  'project-management': 'إدارة المشاريع',
-  cybersecurity: 'الأمن السيبراني',
-  'customer-experience': 'تجربة العميل',
-};
+/*
+ * RUN-029/RUN-031 — a specialty is the «المجال» the trainer declared, by its
+ * code in the owner's domain list, so the labels ARE that list (every code,
+ * active or retired, so an older application still reads).
+ */
+const SPECIALTIES_AR: Record<DirectorySpecialty, string> = Object.fromEntries(
+  SPECIALIZATION_DOMAIN_OPTIONS.map((option) => [option.value, option.labelAr])
+);
 
-const SPECIALTIES_EN: Record<DirectorySpecialty, string> = {
-  leadership: 'Leadership & Management',
-  finance: 'Finance & Accounting',
-  'digital-transformation': 'Digital Transformation',
-  'data-analytics': 'Data Analytics',
-  'human-resources': 'Human Resources',
-  'project-management': 'Project Management',
-  cybersecurity: 'Cybersecurity',
-  'customer-experience': 'Customer Experience',
-};
+const SPECIALTIES_EN: Record<DirectorySpecialty, string> = Object.fromEntries(
+  SPECIALIZATION_DOMAIN_OPTIONS.map((option) => [option.value, option.labelEn])
+);
 
 /**
  * Classification labels. **Not public** — J-24/F2/AC-1 omits classification from
@@ -163,6 +157,8 @@ const directoryAr: DirectoryContent = {
     searchLabel: 'بحث',
     searchPlaceholder: 'ابحث بالاسم',
     clear: 'مسح التصفية',
+    specialtyLabel: 'مجال التخصص',
+    allSpecialties: 'كل المجالات',
   },
   card: {
     viewProfile: (name) => `عرض الملف العام لـ${name}`,
@@ -207,6 +203,8 @@ const directoryEn: DirectoryContent = {
     searchLabel: 'Search',
     searchPlaceholder: 'Search by name',
     clear: 'Clear filters',
+    specialtyLabel: 'Specialty',
+    allSpecialties: 'All fields',
   },
   card: {
     viewProfile: (name) => `View the public profile of ${name}`,

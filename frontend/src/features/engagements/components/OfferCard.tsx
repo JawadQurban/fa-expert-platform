@@ -1,4 +1,5 @@
-import { Alert, Card, ItemIcon } from '@ds/composite';
+import { useState } from 'react';
+import { Alert, Card, ItemIcon, Modal } from '@ds/composite';
 import { Button, Icon, Tag, Typography } from '@ds/primitives';
 import type { Locale } from '@/types';
 import { SlaBadge } from '../../../shared/components/SlaBadge';
@@ -48,6 +49,7 @@ export function OfferCard({
   readonly onRespond: (offerId: string, response: OfferResponse) => void;
 }) {
   const copy = content.offers;
+  const [confirming, setConfirming] = useState<OfferResponse | null>(null);
   const price =
     offer.price.amount == null
       ? copy.priceUnavailable
@@ -95,23 +97,50 @@ export function OfferCard({
       </Alert>
 
       <div className={styles.actions}>
-        <Button
-          variant="primary"
-          size="md"
-          disabled={busy}
-          onClick={() => onRespond(offer.offerId, 'accept')}
-        >
+        <Button variant="primary" size="md" disabled={busy} onClick={() => setConfirming('accept')}>
           {copy.accept}
         </Button>
         <Button
           variant="secondary"
           size="md"
           disabled={busy}
-          onClick={() => onRespond(offer.offerId, 'reject')}
+          onClick={() => setConfirming('reject')}
         >
           {copy.reject}
         </Button>
       </div>
+
+      {/* UAT `BUG-044` — the answer is final, so it is confirmed before it is sent. */}
+      <Modal
+        open={confirming != null}
+        onClose={() => setConfirming(null)}
+        title={confirming == null ? '' : copy.confirmDialog[confirming].title}
+        dismissLabel={copy.confirmCancel}
+        footer={
+          <>
+            <Button
+              variant="primary"
+              size="md"
+              disabled={busy}
+              onClick={() => {
+                if (confirming != null) {
+                  onRespond(offer.offerId, confirming);
+                }
+                setConfirming(null);
+              }}
+            >
+              {confirming == null ? '' : copy.confirmDialog[confirming].confirm}
+            </Button>
+            <Button variant="tertiary" size="md" onClick={() => setConfirming(null)}>
+              {copy.confirmCancel}
+            </Button>
+          </>
+        }
+      >
+        <Typography as="p" variant="text-md">
+          {confirming == null ? '' : copy.confirmDialog[confirming].body}
+        </Typography>
+      </Modal>
     </Card>
   );
 }

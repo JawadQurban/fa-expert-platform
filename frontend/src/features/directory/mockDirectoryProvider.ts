@@ -48,7 +48,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-001',
     name: 'د. سارة العتيبي',
     classification: 'expert',
-    specialties: ['leadership', 'human-resources'],
+    specialties: ['dom-001', 'dom-008'],
     consent: true,
     programsDelivered: 3,
   },
@@ -56,7 +56,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-002',
     name: 'أ. خالد المطيري',
     classification: 'senior',
-    specialties: ['finance', 'project-management'],
+    specialties: ['dom-003', 'dom-023'],
     consent: true,
     programsDelivered: 5,
   },
@@ -64,7 +64,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-003',
     name: 'د. نورة القحطاني',
     classification: 'expert',
-    specialties: ['digital-transformation', 'data-analytics'],
+    specialties: ['dom-006', 'dom-017'],
     consent: true,
     programsDelivered: 2,
   },
@@ -72,7 +72,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-004',
     name: 'أ. عبدالله الشهري',
     classification: 'certified',
-    specialties: ['cybersecurity'],
+    specialties: ['dom-015'],
     consent: true,
     programsDelivered: 7,
   },
@@ -80,7 +80,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-005',
     name: 'د. ريم الدوسري',
     classification: 'expert',
-    specialties: ['customer-experience', 'leadership'],
+    specialties: ['dom-002', 'dom-001'],
     consent: true,
     programsDelivered: 4,
   },
@@ -88,7 +88,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-006',
     name: 'أ. فهد الغامدي',
     classification: 'senior',
-    specialties: ['project-management'],
+    specialties: ['dom-023'],
     consent: true,
     programsDelivered: 6,
   },
@@ -96,7 +96,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-007',
     name: 'د. منى الحربي',
     classification: 'expert',
-    specialties: ['human-resources', 'leadership'],
+    specialties: ['dom-008', 'dom-001'],
     consent: true,
     programsDelivered: 1,
   },
@@ -104,7 +104,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-008',
     name: 'أ. ماجد السبيعي',
     classification: 'certified',
-    specialties: ['finance'],
+    specialties: ['dom-003'],
     consent: true,
     programsDelivered: 2,
   },
@@ -112,7 +112,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-009',
     name: 'د. هند الزهراني',
     classification: 'senior',
-    specialties: ['data-analytics', 'digital-transformation'],
+    specialties: ['dom-017', 'dom-006'],
     consent: true,
     programsDelivered: 3,
   },
@@ -120,7 +120,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-010',
     name: 'أ. طلال العنزي',
     classification: 'certified',
-    specialties: ['customer-experience'],
+    specialties: ['dom-002'],
     consent: true,
     programsDelivered: 5,
   },
@@ -128,7 +128,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-011',
     name: 'د. عبير الشمري',
     classification: 'senior',
-    specialties: ['project-management', 'leadership'],
+    specialties: ['dom-023', 'dom-001'],
     consent: true,
     programsDelivered: 2,
   },
@@ -136,7 +136,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-012',
     name: 'أ. سلطان البقمي',
     classification: 'expert',
-    specialties: ['cybersecurity', 'data-analytics'],
+    specialties: ['dom-015', 'dom-017'],
     consent: true,
     programsDelivered: 7,
   },
@@ -144,7 +144,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-013',
     name: 'د. لمياء الفيفي',
     classification: 'expert',
-    specialties: ['digital-transformation', 'customer-experience'],
+    specialties: ['dom-006', 'dom-002'],
     consent: true,
     programsDelivered: 4,
   },
@@ -152,7 +152,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-014',
     name: 'أ. راكان الحارثي',
     classification: 'certified',
-    specialties: ['finance'],
+    specialties: ['dom-003'],
     consent: true,
     programsDelivered: 6,
   },
@@ -160,7 +160,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-015',
     name: 'د. جواهر السالم',
     classification: 'senior',
-    specialties: ['human-resources'],
+    specialties: ['dom-008'],
     consent: true,
     programsDelivered: 1,
   },
@@ -168,7 +168,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-016',
     name: 'أ. بدر الرشيدي',
     classification: 'certified',
-    specialties: ['data-analytics'],
+    specialties: ['dom-017'],
     consent: true,
     programsDelivered: 2,
   },
@@ -176,7 +176,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-017',
     name: 'د. أمل الزهراني',
     classification: 'expert',
-    specialties: ['leadership', 'customer-experience'],
+    specialties: ['dom-001', 'dom-002'],
     consent: true,
     programsDelivered: 3,
   },
@@ -184,7 +184,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-018',
     name: 'أ. ناصر العمري',
     classification: 'senior',
-    specialties: ['project-management', 'digital-transformation'],
+    specialties: ['dom-023', 'dom-006'],
     consent: true,
     programsDelivered: 5,
   },
@@ -194,7 +194,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-101',
     name: 'خبير بدون موافقة على الظهور',
     classification: 'expert',
-    specialties: ['leadership'],
+    specialties: ['dom-001'],
     consent: false,
     programsDelivered: 2,
   },
@@ -202,7 +202,7 @@ export const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     id: 'trn-102',
     name: 'خبير سحب موافقة الظهور',
     classification: 'senior',
-    specialties: ['finance'],
+    specialties: ['dom-003'],
     consent: false,
     programsDelivered: 7,
   },
@@ -284,14 +284,16 @@ function toProfile(record: MockTrainerRecord): PublicTrainerProfileDto {
   };
 }
 
-/**
- * Name only, as the API matches. No specialty filter and no specialty search:
- * the API has no taxonomy behind either (`Q16`), and a mock that honoured them
- * would demo results the real directory cannot return.
- */
+/** As the API matches: every word of the name search, and the declared domain. */
 function matchesQuery(record: MockTrainerRecord, query: DirectoryQuery): boolean {
-  const search = query.search?.trim().toLowerCase() ?? '';
-  return search === '' || record.name.toLowerCase().includes(search);
+  const words = (query.search ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+  const name = record.name.toLowerCase();
+  return (
+    words.every((word) => name.includes(word)) &&
+    (query.specialty == null ||
+      query.specialty === '' ||
+      record.specialties.includes(query.specialty))
+  );
 }
 
 export function createMockDirectoryProvider(

@@ -21,6 +21,7 @@ import {
   type PoolValidationCode,
 } from './matching.types';
 import { SlotTrackingPanel } from '../engagements/components/SlotTrackingPanel';
+import { RequestDetailsPanel } from './RequestDetailsPanel';
 import { getAssignmentService } from './assignmentService';
 import { getAssignmentsContent } from './assignments.content';
 import type { ExpertHubApiError } from '../../shared/services/apiClient';
@@ -88,6 +89,8 @@ export default function AssignmentMatchingPage() {
   const [running, setRunning] = useState(false);
   const [manualQuery, setManualQuery] = useState('');
   const [manualResults, setManualResults] = useState<readonly MatchCandidateDto[]>([]);
+  /** The latest manual search sent; earlier answers are stale. */
+  const searchSequence = useRef(0);
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [decisions, setDecisions] = useState<Record<string, CandidateDecision>>({});
   const [ranks, setRanks] = useState<Record<string, string>>({});
@@ -187,8 +190,12 @@ export default function AssignmentMatchingPage() {
     if (requestId == null) {
       return;
     }
+    // UAT `BUG-039` — one search per keystroke, and the answers can land out
+    // of order: only the latest query may write the results, or a slower
+    // answer for «أحمد» overwrites the one for «أحمد العتيبي».
+    const sequence = ++searchSequence.current;
     void service.searchCandidates(requestId, query).then((result) => {
-      if (result.ok) {
+      if (result.ok && sequence === searchSequence.current) {
         setManualResults(result.value);
       }
     });
@@ -204,10 +211,12 @@ export default function AssignmentMatchingPage() {
   };
 
   const send = () => {
-    if (requestId == null || request == null) {
+    if (requestId == null || pool == null) {
       return;
     }
-    const found = validatePool(selected, request.requiredHeadcount);
+    // The pool is for the slots still open — `pool.requiredHeadcount`, served
+    // by the API — not always the request's whole headcount.
+    const found = validatePool(selected, pool.requiredHeadcount);
     setIssues(found);
     if (found.length > 0) {
       return;
@@ -306,7 +315,7 @@ export default function AssignmentMatchingPage() {
     );
   }
 
-  const requiredPool = poolSizeFor(request.requiredHeadcount);
+  const requiredPool = poolSizeFor(pool.requiredHeadcount);
   const deliveryMode = request.pulled?.plan.deliveryMode ?? 'in-class';
   const building = pool.status === 'not-built' && viewer.canMatch;
 
@@ -336,7 +345,7 @@ export default function AssignmentMatchingPage() {
           </>
         }
         /* F2/AC-2 — the arithmetic, stated before anyone selects anything. */
-        summary={copy.poolSizeNote(request.requiredHeadcount, requiredPool)}
+        summary={copy.poolSizeNote(pool.requiredHeadcount, requiredPool)}
         breadcrumbs={
           <Breadcrumbs
             items={[
@@ -376,6 +385,13 @@ export default function AssignmentMatchingPage() {
           {copy.errors[issues[0]]}
         </Alert>
       )}
+      {pool.returnedToMatching === true && (
+        <Alert tone="info" surface="tinted" role="status" title={copy.returnedTitle}>
+          {copy.returnedBody}
+        </Alert>
+      )}
+
+      <RequestDetailsPanel request={request} content={content} locale={locale} />
 
       {/* ── F1–F3: building the pool ─────────────────────────────────── */}
       {pool.status === 'not-built' &&
@@ -514,6 +530,10 @@ export default function AssignmentMatchingPage() {
                       <Typography as="span" variant="text-sm">
                         {`${copy.priceLabel}: ${priceFor(member)}`}
                       </Typography>
+                      {/* UAT `BUG-041` / F3/AC-2 — the full profile, to decide on. */}
+                      <Link href={expertHubPaths.internalTrainer(member.trainerId)}>
+                        {copy.identityCardLink}
+                      </Link>
                       <div className={styles.actions}>
                         <Button
                           variant={decision === 'approved' ? 'primary' : 'secondary'}
@@ -616,9 +636,9 @@ export default function AssignmentMatchingPage() {
       )}
 
       {/* ── J-18 — what the approval set in motion ───────────────────── */}
-      {pool.status === 'decided' && !isFullRejection(pool.members) && requestId != null && (
-        <SlotTrackingPanel requestId={requestId} />
-      )}
+      {((pool.status === 'decided' && !isFullRejection(pool.members)) ||
+        pool.returnedToMatching === true) &&
+        requestId != null && <SlotTrackingPanel requestId={requestId} />}
 
       <div className={styles.actions}>
         <Button

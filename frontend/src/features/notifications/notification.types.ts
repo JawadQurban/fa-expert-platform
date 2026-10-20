@@ -295,16 +295,41 @@ export interface NotificationLogQuery {
   /** `null` = every status. */
   readonly sendStatus: NotificationLogDto['sendStatus'] | null;
   readonly channel: NotificationChannel | null;
+  /** RUN-023 — `YYYY-MM-DD`, a Riyadh calendar day, inclusive; `null` = open. */
+  readonly from: string | null;
+  readonly to: string | null;
 }
 
 export const DEFAULT_LOG_QUERY: NotificationLogQuery = {
   search: '',
   sendStatus: null,
   channel: null,
+  from: null,
+  to: null,
 };
 
 export function hasActiveLogQuery(query: NotificationLogQuery): boolean {
-  return query.search.trim() !== '' || query.sendStatus != null || query.channel != null;
+  return (
+    query.search.trim() !== '' ||
+    query.sendStatus != null ||
+    query.channel != null ||
+    query.from != null ||
+    query.to != null
+  );
+}
+
+/**
+ * J-25 — one in-platform notification as its recipient reads it
+ * (`GET v1/me/notifications`). `BR-0702` makes the in-platform notification a
+ * log row, so the subject and body are what was rendered and sent.
+ */
+export interface MyNotificationDto {
+  readonly logId: string;
+  readonly eventCode: string;
+  readonly subject: string | null;
+  readonly body: string | null;
+  readonly sentAt: string;
+  readonly sourceEntityId: string | null;
 }
 
 /* ------------------------------------------------------------------ *

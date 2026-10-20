@@ -95,6 +95,8 @@ export interface ScreeningContent {
     readonly description: string;
     readonly qualitativeTag: string;
     readonly emptyValue: string;
+    /** The heading over one entry of a repeatable section. */
+    readonly entryHeading: (n: number) => string;
   };
   readonly attachments: {
     readonly heading: string;
@@ -255,6 +257,7 @@ const ar: ScreeningContent = {
     description: 'استعرض أقسام النموذج حقلًا حقلًا قبل اتخاذ القرار.',
     qualitativeTag: 'سؤال نوعي',
     emptyValue: 'لم يُعبّأ',
+    entryHeading: (n) => `البند ${n}`,
   },
   attachments: {
     heading: 'المرفقات',
@@ -440,6 +443,7 @@ const en: ScreeningContent = {
     description: 'Review the form sections field by field before deciding.',
     qualitativeTag: 'Qualitative question',
     emptyValue: 'Not provided',
+    entryHeading: (n) => `Entry ${n}`,
   },
   attachments: {
     heading: 'Attachments',

@@ -392,6 +392,46 @@ public sealed class NotificationTests
         }
     }
 
+    [Fact]
+    public async Task The_log_narrows_to_a_date_range_of_Riyadh_days()
+    {
+        // RUN-023 — the log had no date filter.
+        var (trainer, _) = await SeedRecipientsAsync();
+        await using (var db = _database.CreateContext())
+        {
+            foreach (var (code, sentAt) in new[]
+            {
+                ("EV-0101", new DateTime(2026, 10, 1, 20, 0, 0, DateTimeKind.Utc)), // 1 Oct 23:00 Riyadh
+                ("EV-0102", new DateTime(2026, 10, 1, 21, 30, 0, DateTimeKind.Utc)), // 2 Oct 00:30 Riyadh
+                ("EV-0103", new DateTime(2026, 9, 30, 20, 59, 0, DateTimeKind.Utc)), // 30 Sep 23:59 Riyadh
+            })
+            {
+                db.AppendNotificationLog(new NotificationLogEntry
+                {
+                    LogId = Guid.NewGuid(),
+                    EventCode = code,
+                    RecipientUserId = trainer,
+                    Channel = "in-platform",
+                    Language = "ar",
+                    TemplateCode = "TPL-ANY",
+                    TemplateVersion = 1,
+                    SendStatus = "success",
+                    SentAt = sentAt,
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+        await SignInAdministratorAsync();
+
+        var oneDay = await GetJsonAsync("/api/v1/internal/notifications/log?from=2026-10-01&to=2026-10-01");
+        Assert.Equal(
+            "EV-0101",
+            Assert.Single(oneDay.EnumerateArray()).GetProperty("eventCode").GetString());
+
+        var fromOnly = await GetJsonAsync("/api/v1/internal/notifications/log?from=2026-10-01");
+        Assert.Equal(2, fromOnly.GetArrayLength());
+    }
+
     /* ── helpers ───────────────────────────────────────────────────────────── */
 
     private async Task<(Guid TrainerId, Guid StaffId)> SeedRecipientsAsync()

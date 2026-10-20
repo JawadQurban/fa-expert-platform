@@ -48,6 +48,14 @@ export interface EngagementsContent {
     readonly accept: string;
     readonly reject: string;
     readonly irreversibleNote: string;
+    /** The confirmation asked before a final answer is sent (UAT `BUG-044`). */
+    readonly confirmDialog: Readonly<
+      Record<
+        'accept' | 'reject',
+        { readonly title: string; readonly body: string; readonly confirm: string }
+      >
+    >;
+    readonly confirmCancel: string;
     readonly acceptedTitle: string;
     readonly acceptedBody: string;
     readonly rejectedTitle: string;
@@ -148,6 +156,19 @@ const ar: EngagementsContent = {
     reject: 'رفض العرض',
     irreversibleNote:
       'القرار نهائي ولا يمكن التراجع عنه؛ وعند الرفض ينتقل العرض إلى المرشح التالي.',
+    confirmDialog: {
+      accept: {
+        title: 'تأكيد قبول العرض',
+        body: 'بقبول العرض يتأكَّد ارتباطك بهذا الطلب. القرار نهائي ولا يمكن التراجع عنه.',
+        confirm: 'نعم، أقبل العرض',
+      },
+      reject: {
+        title: 'تأكيد رفض العرض',
+        body: 'برفض العرض ينتقل إلى مرشح آخر ولا يمكن استعادته. القرار نهائي ولا يمكن التراجع عنه.',
+        confirm: 'نعم، أرفض العرض',
+      },
+    },
+    confirmCancel: 'إلغاء',
     acceptedTitle: 'تأكَّد ارتباطك',
     acceptedBody: 'أُضيف الارتباط إلى «ارتباطاتي المؤكَّدة» أدناه.',
     rejectedTitle: 'رُفض العرض',
@@ -211,8 +232,11 @@ const ar: EngagementsContent = {
     outcomes: {
       'awaiting-response': 'بانتظار الرد',
       accepted: 'قبول',
-      rejected: 'رفض صريح',
+      rejected: 'رفض العرض',
       expired: 'انتهاء المدة دون رد',
+      withdrawn: 'اعتذار بعد التأكيد',
+      delinked: 'إلغاء ارتباط من الأكاديمية',
+      cancelled: 'أُلغي في نظام FAST',
     },
     fastHeading: 'المزامنة مع نظام FAST',
     fastStates: {
@@ -258,6 +282,19 @@ const en: EngagementsContent = {
     reject: 'Reject the offer',
     irreversibleNote:
       'This decision is final and cannot be undone; on rejection the offer moves to the next candidate.',
+    confirmDialog: {
+      accept: {
+        title: 'Confirm accepting the offer',
+        body: 'Accepting confirms your engagement on this request. The decision is final and cannot be undone.',
+        confirm: 'Yes, accept the offer',
+      },
+      reject: {
+        title: 'Confirm rejecting the offer',
+        body: 'Rejecting passes the offer to another candidate and it cannot be recovered. The decision is final and cannot be undone.',
+        confirm: 'Yes, reject the offer',
+      },
+    },
+    confirmCancel: 'Cancel',
     acceptedTitle: 'Your engagement is confirmed',
     acceptedBody: 'It has been added to “Confirmed engagements” below.',
     rejectedTitle: 'Offer rejected',
@@ -323,8 +360,11 @@ const en: EngagementsContent = {
     outcomes: {
       'awaiting-response': 'Awaiting a response',
       accepted: 'Accepted',
-      rejected: 'Explicitly rejected',
+      rejected: 'Rejected the offer',
       expired: 'Expired with no response',
+      withdrawn: 'Withdrew after confirming',
+      delinked: 'De-linked by the Academy',
+      cancelled: 'Cancelled in FAST',
     },
     fastHeading: 'FAST sync',
     fastStates: {

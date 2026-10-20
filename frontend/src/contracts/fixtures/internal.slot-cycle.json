@@ -9,7 +9,7 @@
     "status": "sent",
     "members": [
       {
-        "trainerId": "7c65ab22-e504-42cf-8790-df2ab3ec4161",
+        "trainerId": "b934cfbe-0541-47e0-8eff-603c4b512558",
         "name": "مدرب 1",
         "price": {
           "inClass": null,
@@ -21,7 +21,7 @@
         "preferenceRank": null
       },
       {
-        "trainerId": "a1c1b6d8-6995-439d-a519-c67870e54aa8",
+        "trainerId": "a8243c0a-263f-4ead-8f09-cf299901ded0",
         "name": "مدرب 2",
         "price": {
           "inClass": null,
@@ -33,7 +33,7 @@
         "preferenceRank": null
       },
       {
-        "trainerId": "b37a1624-a987-4ce0-ac01-1a4de6a36027",
+        "trainerId": "9d00e962-bcc6-47fc-b043-8b029bd030f3",
         "name": "مدرب 0",
         "price": {
           "inClass": null,
@@ -45,33 +45,34 @@
         "preferenceRank": null
       }
     ],
-    "sentAt": "2026-09-16T20:57:22Z",
-    "requiredHeadcount": 1
+    "sentAt": "2026-10-19T10:59:11Z",
+    "requiredHeadcount": 1,
+    "returnedToMatching": false
   },
   "cycles": [
     {
       "cycleNumber": 1,
       "status": "awaiting_approval",
-      "poolId": "a82d0b1a-09dc-473d-86fe-8e76ea2c3f2b",
-      "openedAt": "2026-09-16T20:57:22Z"
+      "poolId": "4938f29a-320d-4fdb-b00c-434161327416",
+      "openedAt": "2026-10-19T10:59:11Z"
     }
   ],
   "previouslyOffered": [
     {
-      "offerId": "281a51ee-91d5-4916-acb8-0e722c038f5a",
-      "trainerId": "7c65ab22-e504-42cf-8790-df2ab3ec4161",
-      "trainerName": "مدرب 1",
+      "offerId": "a9e0d947-3606-4b06-8e3d-dfcbfe01aba4",
+      "trainerId": "9d00e962-bcc6-47fc-b043-8b029bd030f3",
+      "trainerName": "مدرب 0",
       "outcome": "rejected",
-      "sentAt": "2026-09-16T20:57:22Z",
-      "respondedAt": "2026-09-16T20:57:22Z"
+      "sentAt": "2026-10-19T10:59:11Z",
+      "respondedAt": "2026-10-19T10:59:11Z"
     },
     {
-      "offerId": "fd757020-30ca-4304-8187-f55f090a6b1a",
-      "trainerId": "a1c1b6d8-6995-439d-a519-c67870e54aa8",
+      "offerId": "b3459e22-2799-4ac7-b037-efe956834b7f",
+      "trainerId": "a8243c0a-263f-4ead-8f09-cf299901ded0",
       "trainerName": "مدرب 2",
       "outcome": "rejected",
-      "sentAt": "2026-09-16T20:57:22Z",
-      "respondedAt": "2026-09-16T20:57:22Z"
+      "sentAt": "2026-10-19T10:59:11Z",
+      "respondedAt": "2026-10-19T10:59:11Z"
     }
   ],
   "viewer": {

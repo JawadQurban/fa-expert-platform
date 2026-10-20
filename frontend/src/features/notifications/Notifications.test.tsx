@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   clearExpertHubSession,
   expectNoA11yViolations,
+  fireEvent,
   renderExpertHubAt,
   screen,
   within,
@@ -10,7 +11,12 @@ import {
 import { expertHubPaths } from '../../app/router/paths';
 import { getHeaderContent } from '../../shared/content/header.content';
 import { setNotificationServiceForTesting } from './notificationService';
-import { createMockNotificationProvider, MOCK_EVENTS, MOCK_LOG } from './mockNotificationProvider';
+import {
+  createMockNotificationProvider,
+  MOCK_EVENTS,
+  MOCK_INBOX,
+  MOCK_LOG,
+} from './mockNotificationProvider';
 import { listSlaMatrix, resetSlaMatrixForTesting } from '../../shared/sla/mockSlaMatrix';
 import type { MockNotificationProviderOptions } from './mockNotificationProvider';
 import { getNotificationsContent } from './notifications.content';
@@ -123,6 +129,8 @@ describe('CAP-07 — communication & notifications', () => {
       'approveTemplate',
       'getMatrix',
       'listLog',
+      // J-25 — reading one's OWN notifications; it sends nothing.
+      'listMyNotifications',
       'listSlaRows',
       'routeEvent',
       'saveTemplate',
@@ -420,6 +428,74 @@ describe('CAP-07 — communication & notifications', () => {
     expect(screen.queryByRole('button', { name: removeName })).not.toBeInTheDocument();
     const table = await screen.findByRole('table', { name: content.log.resultsLabel });
     expect(within(table).getAllByText(content.log.statuses.success).length).toBeGreaterThan(0);
+  });
+
+  it('RUN-023: the log narrows to a date range, both ends inclusive', async () => {
+    await renderLog();
+    const from = screen.getByLabelText(content.log.fromLabel);
+    fireEvent.change(from, { target: { value: '2026-08-26' } });
+    fireEvent.change(screen.getByLabelText(content.log.toLabel), {
+      target: { value: '2026-08-26' },
+    });
+    const table = await screen.findByRole('table', { name: content.log.resultsLabel });
+    const onTheDay = MOCK_LOG.filter((entry) => entry.sentAt.startsWith('2026-08-26')).length;
+    // One header row plus one row per entry sent that day.
+    expect(within(table).getAllByRole('row')).toHaveLength(onTheDay + 1);
+    expect(
+      screen.getByRole('button', {
+        name: content.log.removeFilter(content.log.fromLabel, '2026-08-26'),
+      })
+    ).toBeInTheDocument();
+
+    fireEvent.change(from, { target: { value: '2026-08-27' } });
+    expect(await screen.findByText(content.log.empty)).toBeInTheDocument();
+  });
+
+  /* ── J-25 — the recipient's own notifications ──────────────────────────── */
+
+  it('RUN-001: a signed-in trainer sees the bell with the unread count, and the list shows what was sent', async () => {
+    window.localStorage.clear();
+    seedExpertHubSession(['trainer']);
+    const first = renderExpertHubAt(expertHubPaths.engagements);
+    const bell = await screen.findByRole('link', {
+      name: content.inbox.bellLabel(MOCK_INBOX.length),
+    });
+    expect(bell).toHaveAttribute('href', expertHubPaths.notifications);
+    first.unmount();
+
+    renderExpertHubAt(expertHubPaths.notifications);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: content.inbox.title })
+    ).toBeInTheDocument();
+    // The template text that was sent, as the trainer reads it.
+    expect(await screen.findByText(MOCK_INBOX[0]?.subject ?? '')).toBeInTheDocument();
+    expect(screen.getAllByText(content.inbox.newLabel)).toHaveLength(MOCK_INBOX.length);
+  });
+
+  it('RUN-001: once «إشعاراتي» was opened, the bell counts nothing new', async () => {
+    window.localStorage.setItem('expert-hub.notifications.last-seen', MOCK_INBOX[0]?.sentAt ?? '');
+    seedExpertHubSession(['trainer']);
+    renderExpertHubAt(expertHubPaths.engagements);
+    expect(
+      await screen.findByRole('link', { name: content.inbox.bellLabel(0) })
+    ).toBeInTheDocument();
+  });
+
+  it('RUN-001: staff get the bell too, inside their own shell', async () => {
+    window.localStorage.clear();
+    seedExpertHubSession(['internal']);
+    renderExpertHubAt(expertHubPaths.internalNotificationLog);
+    const bell = await screen.findByRole('link', {
+      name: content.inbox.bellLabel(MOCK_INBOX.length),
+    });
+    expect(bell).toHaveAttribute('href', expertHubPaths.internalMyNotifications);
+  });
+
+  it('«إشعاراتي» with nothing sent yet is an empty state, not a blank page', async () => {
+    injectProvider({ inbox: [] });
+    seedExpertHubSession(['trainer']);
+    renderExpertHubAt(expertHubPaths.notifications);
+    expect(await screen.findByText(content.inbox.empty)).toBeInTheDocument();
   });
 
   /* ── Navigation, failure and accessibility ─────────────────────────────── */

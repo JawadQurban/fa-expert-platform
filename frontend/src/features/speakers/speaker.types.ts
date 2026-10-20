@@ -125,6 +125,8 @@ export type SpeakerField = SpeakerTextField | 'photoAttachmentId';
 /** What the server sends (`POST v1/internal/speakers[/{id}]`). Blank → `null`. */
 export type SpeakerInput = Readonly<Record<SpeakerTextField, string | null>> & {
   readonly photoAttachmentId: string | null;
+  /** Create only: set after the user confirms a same-name record is someone else (RUN-040). */
+  readonly confirmDuplicate?: boolean;
 };
 
 /** The form's own state: every text field a string, never `null`. */

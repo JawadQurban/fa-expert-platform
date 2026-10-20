@@ -114,7 +114,8 @@ export function ProfileFieldsForm({
         values[field.id],
         services,
         locale,
-        formContent.validation
+        formContent.validation,
+        values
       );
       if (message != null) {
         nextErrors[field.id] = message;
@@ -209,6 +210,7 @@ export function ProfileFieldsForm({
                   key={field.id}
                   field={field}
                   value={values[field.id]}
+                  values={values}
                   error={errors[field.id]}
                   services={services}
                   locale={locale}

@@ -48,10 +48,14 @@ internal sealed record RequestSummaryWire(
     LocalizedTextWire? ProgramName, int RequiredHeadcount, string Status,
     string CreatedAt, string CreatedByName);
 
+/// <remarks>UAT `BUG-040` — <c>Form</c> is the request as the centre entered
+/// it, so the matching page shows the whole request, not its reference.</remarks>
 internal sealed record RequestDetailWire(
     string RequestId, string Reference, string ServiceType,
     LocalizedTextWire? ProgramName, int RequiredHeadcount, string Status,
-    string CreatedAt, string CreatedByName, object? Pulled);
+    string CreatedAt, string CreatedByName, object? Pulled,
+    CreateRequestInputWire? Form = null, LocalizedTextWire? CentreName = null,
+    string? ResponsibleEmployeeName = null);
 
 internal sealed record WeightedScoreWire(
     string Criterion, decimal RawScore, decimal Weight, decimal Weighted);
@@ -77,8 +81,12 @@ internal sealed record PoolMemberWire(
     string TrainerId, string Name, CandidatePriceWire Price,
     string Decision, int? PreferenceRank);
 
+/// <remarks><c>ReturnedToMatching</c> — the request's earlier pool is decided,
+/// but a slot came back to matching (a named nominee declined, or the Academy
+/// de-linked the trainer), so a new pool is due for the open slots.</remarks>
 internal sealed record CandidatePoolWire(
-    string Status, IReadOnlyList<PoolMemberWire> Members, string? SentAt, int RequiredHeadcount);
+    string Status, IReadOnlyList<PoolMemberWire> Members, string? SentAt, int RequiredHeadcount,
+    bool ReturnedToMatching = false);
 
 internal sealed record MatchingViewerWire(bool CanMatch, bool CanApprove);
 
@@ -134,6 +142,10 @@ public static class AssignmentEndpoints
 
     private static readonly string[] AttachmentField = ["attachmentId"];
 
+    /// <summary>A named person not accredited for the requested service —
+    /// not a matrix row, the category the matrix applies within.</summary>
+    private const string NotAccreditedReason = "not-accredited";
+
     public static RouteGroupBuilder MapAssignmentEndpoints(this RouteGroupBuilder v1)
     {
         var requests = v1.MapGroup("/internal/assignment-requests")
@@ -160,6 +172,7 @@ public static class AssignmentEndpoints
             CreateRequestInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             // P-351 — a centre-scoped requester submits for their own centre,
@@ -314,12 +327,12 @@ public static class AssignmentEndpoints
             /*
              * J-16/F5 — a named person skips matching (J-17): no ranking, no
              * pool to assemble, and the offer (J-18) goes to them as the sole
-             * candidate. Governance does NOT skip: they must pass every rule
-             * matching would have applied — accredited for this service, a
-             * file an agreement keeps active or idle, the specialization,
-             * the location, no conflicting engagement — or nothing is created.
-             * If they decline or let the offer lapse, the slot is exhausted
-             * and falls back to matching (J-19/F3).
+             * candidate. Governance does NOT skip: they must be accredited for
+             * this service and pass both exclusionary rows — a file an
+             * agreement keeps active or idle, no conflicting engagement — or
+             * nothing is created. Specialization and location are WEIGHTED
+             * (UAT `BUG-038`), so they never refuse a named person. If they
+             * decline or let the offer lapse, the slot goes back to matching.
              */
             if (namedTrainerIds.Count > 0)
             {
@@ -334,16 +347,19 @@ public static class AssignmentEndpoints
                 // `trainerId` says WHICH card the page should point at.
                 foreach (var trainerId in namedTrainerIds)
                 {
-                    var verdict = MatchingEngine.Match(
-                        context, [.. candidates.Where(c => c.TrainerId == trainerId)], weights);
-                    if (verdict.Excluded.Count > 0)
+                    var candidate = candidates.First(c => c.TrainerId == trainerId);
+                    IReadOnlyList<string> reasons = !MatchingEngine.IsInCategory(context, candidate)
+                        ? [NotAccreditedReason]
+                        : [.. MatchingEngine.Match(context, [candidate], weights)
+                            .Excluded.SelectMany(e => e.Reasons)];
+                    if (reasons.Count > 0)
                     {
                         return Results.Problem(
                             statusCode: 400,
                             detail: "nominee-not-eligible",
                             extensions: new Dictionary<string, object?>
                             {
-                                ["reasons"] = verdict.Excluded[0].Reasons,
+                                ["reasons"] = reasons,
                                 ["trainerId"] = trainerId.ToString(),
                                 ["fields"] = SpecificNomineeField,
                             });
@@ -398,7 +414,7 @@ public static class AssignmentEndpoints
                  */
                 var namedSlots = slots.Take(namedTrainerIds.Count).ToList();
                 await OfferService.OpenNextOffersAsync(
-                    db, request, namedSlots, members, now, ct);
+                    db, dispatcher, request, namedSlots, members, now, ct);
             }
 
             await db.SaveChangesAsync(ct);
@@ -480,6 +496,13 @@ public static class AssignmentEndpoints
                 return Results.Problem(statusCode: 404, detail: "Assignment request not found.");
             }
             var summary = await SummaryAsync(db, request, ct);
+            var form = JsonSerializer.Deserialize<CreateRequestInputWire>(request.FormValues, WireJson);
+            var centre = Guid.TryParse(request.CentreId, out var centreId)
+                ? await db.ReferenceValues.AsNoTracking().FirstOrDefaultAsync(v => v.ValueId == centreId, ct)
+                : null;
+            var responsible = Guid.TryParse(request.ResponsibleEmployee, out var responsibleId)
+                ? await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == responsibleId, ct)
+                : null;
             return Results.Ok(new RequestDetailWire(
                 summary.RequestId, summary.Reference, summary.ServiceType, summary.ProgramName,
                 summary.RequiredHeadcount, summary.Status, summary.CreatedAt, summary.CreatedByName,
@@ -487,7 +510,13 @@ public static class AssignmentEndpoints
                 // (INT-05a has no agreed contract — `Q20`/`Q21`), so this is NULL rather than a
                 // fabricated programme — the contract types it nullable for
                 // exactly this reason.
-                Pulled: null));
+                Pulled: null,
+                // UAT `BUG-040` — the whole request, as entered, so the people
+                // deciding on candidates see what the candidates are for.
+                Form: form,
+                CentreName: centre is null ? null : new LocalizedTextWire(centre.LabelAr, centre.LabelEn),
+                // Requests saved before `P-351` may carry a typed name here.
+                ResponsibleEmployeeName: responsible?.FullNameAr ?? request.ResponsibleEmployee));
         })
             .WithName("AssignmentRequestDetail")
             .RequireAnyFeature("F-0501", "F-0503");
@@ -563,6 +592,7 @@ public static class AssignmentEndpoints
                 .OrderBy(o => o.SentAt)
                 .ToListAsync(ct);
             var names = await TrainerNamesAsync(db, ct);
+            var outcomes = await OfferService.OutcomesAsync(db, slotOffers, ct);
 
             return Results.Ok(new
             {
@@ -583,19 +613,15 @@ public static class AssignmentEndpoints
                     openedAt = ApplicationEndpoints.Iso(c.CreatedAt),
                 }),
                 // J-19/F1/AC-5 — who was already offered this slot, and how it
-                // ended. They may be re-included in a new pool.
+                // ended — including an engagement ended AFTER acceptance, by the
+                // trainer or by the Academy (UAT `BUG-048`). They may be
+                // re-included in a new pool.
                 previouslyOffered = slotOffers.Select(o => new
                 {
                     offerId = o.OfferId.ToString(),
                     trainerId = o.TrainerId.ToString(),
                     trainerName = names.GetValueOrDefault(o.TrainerId, string.Empty),
-                    outcome = o.Status switch
-                    {
-                        OfferStatuses.AwaitingResponse => "awaiting-response",
-                        OfferStatuses.Accepted => "accepted",
-                        OfferStatuses.Rejected => "rejected",
-                        _ => "expired",
-                    },
+                    outcome = outcomes[o.OfferId],
                     sentAt = ApplicationEndpoints.Iso(o.SentAt),
                     respondedAt = o.RespondedAt is { } at ? ApplicationEndpoints.Iso(at) : null,
                 }),
@@ -681,7 +707,7 @@ public static class AssignmentEndpoints
             SlotId = slotId,
             MatchingModelId = model.MatchingModelId,
             RequiredPoolSize = Matching.PoolSizeFor(
-                slotNumber is null ? request.RequiredHeadcount : 1),
+                slotNumber is null ? Math.Max(1, await OpenSlotCountAsync(db, request.RequestId, ct)) : 1),
             RunBy = actor.UserId,
             RunAt = DateTime.UtcNow,
         };
@@ -750,11 +776,18 @@ public static class AssignmentEndpoints
         var result = MatchingEngine.Match(ContextFor(request), candidates, weights);
 
         var names = await TrainerNamesAsync(db, ct);
+        var englishNames = await (
+            from profile in db.TrainerProfiles
+            join user in db.Users on profile.UserId equals user.UserId
+            select new { profile.TrainerId, user.FullNameEn })
+            .ToDictionaryAsync(x => x.TrainerId, x => x.FullNameEn, ct);
         var prices = await PricesAsync(db, ct);
-        var matched = result.Ranked.Where(r =>
-            string.IsNullOrWhiteSpace(query)
-            || names.GetValueOrDefault(r.TrainerId, string.Empty)
-                .Contains(query.Trim(), StringComparison.OrdinalIgnoreCase));
+        // UAT `BUG-039` — every word of the query, in either name, whatever
+        // letter forms were typed: «احمد العتيبي» finds «أحمد بن سعد العتيبي».
+        var matched = result.Ranked.Where(r => MatchText.NameMatches(
+            query,
+            names.GetValueOrDefault(r.TrainerId),
+            englishNames.GetValueOrDefault(r.TrainerId)));
         return Results.Ok(matched.Select(r => CandidateWire(r, names, prices)));
     }
 
@@ -768,7 +801,9 @@ public static class AssignmentEndpoints
             return Results.Problem(statusCode: 404, detail: "Assignment request not found.");
         }
         Guid? slotId = null;
-        var headcount = request.RequiredHeadcount;
+        // Three per slot STILL WAITING for a person: on a fresh request that is
+        // every slot; once some are named, offered or filled, only the rest.
+        var headcount = await OpenSlotCountAsync(db, request.RequestId, ct);
         if (slotNumber is { } number)
         {
             var found = await FindSlotAsync(requestId, number, db, ct);
@@ -778,6 +813,10 @@ public static class AssignmentEndpoints
             }
             slotId = found.Value.Slot.SlotId;
             headcount = 1; // a re-routed slot needs one person, so three candidates.
+        }
+        else if (headcount == 0)
+        {
+            return Results.Problem(statusCode: 409, detail: "no-open-slot");
         }
 
         var trainerIds = (input.TrainerIds ?? []).Distinct().ToList();
@@ -826,8 +865,11 @@ public static class AssignmentEndpoints
         if (existing is not null && existing.Status == "decided")
         {
             // J-19/F2/AC-3 — a decided pool is history, not a wall: an
-            // exhausted slot takes a NEW pool, as many times as it runs out.
-            if (cycleSlot is null || !cycleSlot.Exhausted)
+            // exhausted slot takes a NEW pool, as many times as it runs out —
+            // and so does a request a slot came back to (`ReturnToMatchingAsync`).
+            var returned = cycleSlot is null
+                && request.Status == AssignmentRequestStatuses.Matching;
+            if (!returned && (cycleSlot is null || !cycleSlot.Exhausted))
             {
                 return Results.Problem(statusCode: 409, detail: "Already decided.");
             }
@@ -1006,7 +1048,7 @@ public static class AssignmentEndpoints
             // until that set, too, runs out.
             slot.Exhausted = false;
         }
-        await OfferService.OpenNextOffersAsync(db, request, slots, approved, now, ct);
+        await OfferService.OpenNextOffersAsync(db, dispatcher, request, slots, approved, now, ct);
         foreach (var slot in slots.Where(s => s.Exhausted))
         {
             await OfferService.RaiseAsync(dispatcher, db, "EV-0504", slot, ct);
@@ -1028,7 +1070,7 @@ public static class AssignmentEndpoints
     /// role carries; any `all` grant lifts it. A coordinator with no centre
     /// sees nothing — fail closed.
     /// </summary>
-    private static async Task<HashSet<Guid>?> CentreScopeAsync(
+    internal static async Task<HashSet<Guid>?> CentreScopeAsync(
         HttpContext http, ExpertHubDbContext db, CancellationToken ct)
     {
         var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
@@ -1067,6 +1109,31 @@ public static class AssignmentEndpoints
             }
         }
         return await next(context);
+    }
+
+    /// <summary>
+    /// UAT `BUG-041` — the requesting party (`F-0504`) reviews each nominated
+    /// candidate's full profile before approving or rejecting them (J-17/F3/
+    /// AC-2). Without the trainer database's `F-0402`, they may open a profile
+    /// only of someone nominated to a request they can see — never browse.
+    /// </summary>
+    internal static async Task<bool> IsNominatedToVisibleRequestAsync(
+        HttpContext http, ExpertHubDbContext db, Guid trainerId, CancellationToken ct)
+    {
+        var requestIds = await (
+            from member in db.PoolMembers
+            join pool in db.CandidatePools on member.PoolId equals pool.PoolId
+            where member.TrainerId == trainerId
+            select pool.RequestId).Distinct().ToListAsync(ct);
+        if (requestIds.Count == 0)
+        {
+            return false;
+        }
+        var centres = await CentreScopeAsync(http, db, ct);
+        var requests = await db.AssignmentRequests
+            .Where(r => requestIds.Contains(r.RequestId))
+            .ToListAsync(ct);
+        return requests.Any(r => centres is null || InCentres(r, centres));
     }
 
     private static bool InCentres(AssignmentRequest request, HashSet<Guid> centres) =>
@@ -1249,14 +1316,34 @@ public static class AssignmentEndpoints
         var pool = await LatestPoolAsync(db, request.RequestId, slotId, ct);
         if (pool is null)
         {
-            return new CandidatePoolWire("not-built", [], null, slotId is null ? request.RequiredHeadcount : 1);
+            return new CandidatePoolWire(
+                "not-built", [], null,
+                slotId is null ? Math.Max(1, await OpenSlotCountAsync(db, request.RequestId, ct)) : 1);
+        }
+        // A slot came back to matching after this pool was decided: a new
+        // pool is due for the open slots, so the page builds again.
+        if (slotId is null && pool.Status == "decided"
+            && request.Status == AssignmentRequestStatuses.Matching)
+        {
+            return new CandidatePoolWire(
+                "not-built", [], null,
+                Math.Max(1, await OpenSlotCountAsync(db, request.RequestId, ct)),
+                ReturnedToMatching: true);
         }
         var members = await db.PoolMembers
             .Where(m => m.PoolId == pool.PoolId)
             .ToListAsync(ct);
         var names = await TrainerNamesAsync(db, ct);
+        var status = pool.Status == "sent" ? "sent" : pool.Status == "decided" ? "decided" : "not-built";
+        // How many people THIS pool is for: a named pool names one per slot, a
+        // matched one carries three per slot, and one still being built is
+        // for the slots left open.
+        var headcount = slotId is not null ? 1
+            : status == "not-built" ? Math.Max(1, await OpenSlotCountAsync(db, request.RequestId, ct))
+            : pool.Path == "named" ? members.Count
+            : Math.Max(1, members.Count / Matching.CandidatesPerSlot);
         return new CandidatePoolWire(
-            pool.Status == "sent" ? "sent" : pool.Status == "decided" ? "decided" : "not-built",
+            status,
             [.. members.Select(m => new PoolMemberWire(
                 m.TrainerId.ToString(),
                 names.GetValueOrDefault(m.TrainerId, string.Empty),
@@ -1264,8 +1351,21 @@ public static class AssignmentEndpoints
                 m.Decision,
                 m.PreferenceRank))],
             pool.SentAt is { } sentAt ? ApplicationEndpoints.Iso(sentAt) : null,
-            slotId is null ? request.RequiredHeadcount : 1);
+            headcount);
     }
+
+    /// <summary>
+    /// The slots still waiting for a person: no confirmed engagement and no
+    /// offer awaiting an answer.
+    /// </summary>
+    private static async Task<int> OpenSlotCountAsync(
+        ExpertHubDbContext db, Guid requestId, CancellationToken ct) =>
+        await db.AssignmentSlots.CountAsync(
+            s => s.RequestId == requestId
+                && s.ConfirmedEngagementId == null
+                && !db.AssignmentOffers.Any(
+                    o => o.SlotId == s.SlotId && o.Status == OfferStatuses.AwaitingResponse),
+            ct);
 
     private static async Task<List<(AssignmentRequest Request, RequestSummaryWire Summary)>>
         LoadRequestsAsync(ExpertHubDbContext db, CancellationToken ct)

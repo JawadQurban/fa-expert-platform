@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Alert, Loading } from '@ds/composite';
 import { Button, Tag, Typography } from '@ds/primitives';
+import type { TagVariant } from '@ds/primitives';
 import { Breadcrumbs } from '@ds/shell';
 import { useLocale } from '@i18n/LocaleProvider';
 import { expertHubPaths } from '../../app/router/paths';
@@ -10,6 +11,7 @@ import { getInterviewService } from './interviewService';
 import type {
   InterviewDetailDto,
   InterviewEvaluationInput,
+  InterviewPhase,
   PostInterviewDecisionInput,
   RescheduleInput,
 } from './interview.types';
@@ -51,6 +53,15 @@ import { formatDate } from '../../shared/formatting';
  */
 
 type Phase = 'loading' | 'error' | 'not-found' | 'unauthorized' | 'session' | 'ready';
+
+/** BUG-032 — the derived interview state, by text + Tag variant, never colour alone. */
+const PHASE_VARIANT: Readonly<Record<InterviewPhase, TagVariant>> = {
+  'awaiting-selection': 'warning',
+  scheduled: 'information',
+  'in-progress': 'information',
+  ended: 'neutral',
+  completed: 'success',
+};
 
 /** What the viewer just did, so the page can confirm it in place. */
 type Ack = 'evaluation' | 'non-attendance' | null;
@@ -193,10 +204,20 @@ export default function InterviewEvaluationPage() {
 
   const { viewer, ticket } = detail;
   const resultReady = detail.result != null;
-  const scheduled = formatDate(new Date(ticket.scheduledAt), locale, {
-    dateStyle: 'full',
-    timeStyle: 'short',
-  });
+  const formatSlot = (iso: string) =>
+    formatDate(new Date(iso), locale, { dateStyle: 'full', timeStyle: 'short' });
+  // RUN-021 — a proposal is not a fixed time: until the applicant picks, the
+  // head says so and lists what was proposed, exactly as entered.
+  const scheduled =
+    ticket.scheduledAt != null
+      ? formatSlot(ticket.scheduledAt)
+      : content.ticket.awaitingSelection(
+          ticket.proposedSlots.map(formatSlot).join(locale === 'ar' ? '، ' : ', ')
+        );
+  const blocked =
+    viewer.evaluationBlockedReason == null || viewer.evaluationBlockedReason === 'not-member'
+      ? null
+      : content.evaluation.blocked[viewer.evaluationBlockedReason];
 
   return (
     <>
@@ -232,11 +253,16 @@ export default function InterviewEvaluationPage() {
             ticket.meetingUrl == null ? content.ticket.meetingPending : undefined,
           ]}
           tags={
-            ticket.rescheduleCount > 0 ? (
-              <Tag variant="information" size="sm">
-                {content.ticket.rescheduledCount(ticket.rescheduleCount)}
+            <>
+              <Tag variant={PHASE_VARIANT[detail.status]} size="sm">
+                {content.ticket.phases[detail.status]}
               </Tag>
-            ) : undefined
+              {ticket.rescheduleCount > 0 && (
+                <Tag variant="information" size="sm">
+                  {content.ticket.rescheduledCount(ticket.rescheduleCount)}
+                </Tag>
+              )}
+            </>
           }
           actions={
             ticket.meetingUrl != null || viewer.canReschedule ? (
@@ -301,14 +327,15 @@ export default function InterviewEvaluationPage() {
             onSubmit={handleEvaluation}
           />
         ) : (
+          /* RUN-002 — the server says WHY; «not a member» only when it is true. */
           <Panel shape="inline" title={content.evaluation.heading} titleId="eh-interview-own">
             <Alert
               tone="info"
               surface="tinted"
-              title={content.evaluation.notAMemberTitle}
+              title={blocked?.title ?? content.evaluation.notAMemberTitle}
               role="status"
             >
-              {content.evaluation.notAMemberBody}
+              {blocked?.body(scheduled) ?? content.evaluation.notAMemberBody}
             </Alert>
           </Panel>
         )}
@@ -318,11 +345,12 @@ export default function InterviewEvaluationPage() {
 
           The other members' responses are reference material, so they sit
           behind a disclosure under your own evaluation rather than above it.
-          Closed by default: `BR-0203` wants your judgement to be your own, and a
-          panel you must open to read is a weaker nudge than a wall of text you
-          scroll past on the way to the form.
+          It shows names and response states only — never another member's
+          scores — so `BR-0203`'s independent judgement is not at stake.
         */}
-        <details className={styles.committeeDisclosure}>
+        {/* RUN-036 — open by default: a closed card read as an empty section.
+            It lists who responded, never a score, so BR-0203 is unaffected. */}
+        <details className={styles.committeeDisclosure} open>
           <summary className={styles.committeeSummary}>
             <IconTile icon="co-present" />
             <Typography as="span" variant="text-md" weight="bold">

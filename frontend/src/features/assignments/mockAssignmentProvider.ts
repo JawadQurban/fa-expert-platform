@@ -23,6 +23,7 @@ import {
   type PoolDecisionInput,
   type PoolMemberDto,
   type SendPoolInput,
+  type WeightedCriterionId,
   type WeightedCriterionScore,
 } from './matching.types';
 
@@ -199,7 +200,14 @@ const SEED_REQUESTS: readonly AssignmentRequestSummaryDto[] = [
 const MOCK_MATCHING_MODEL: MatchingModelDto = {
   version: 'mock-dm-gap-05-draft.1',
   // The API's seeded model (`Cap05SeedData`), mirrored — one set of numbers, not two.
-  weights: { language: 34, 'delivery-mode': 33, evaluation: 33 },
+  weights: {
+    specialization: 33,
+    location: 33,
+    language: 34,
+    'delivery-mode': 33,
+    evaluation: 33,
+    availability: 33,
+  },
   tieBreakNote: {
     ar: '⚠️ قاعدة كسر التعادل غير معتمدة بعد؛ يُرتَّب المتساوون بحسب التقييم ثم الاسم.',
     en: '⚠️ The tie-breaking rule is not approved yet; ties fall back to evaluation, then name.',
@@ -492,24 +500,13 @@ export function createMockAssignmentProvider(
     );
   }
 
-  /** Rows 1–4 — every exclusionary criterion this candidate fails (F1/AC-2). */
+  /** The two exclusionary rows this candidate fails (F1/AC-2, UAT `BUG-038`). */
   function exclusionsFor(
     candidate: MockCandidateSeed,
     plan: MockPlanSeed
   ): readonly MatchExclusionReason[] {
     const reasons: MatchExclusionReason[] = [];
-    const program = MOCK_PROGRAMS[plan.programId as keyof typeof MOCK_PROGRAMS];
-
-    // Row 1 — approved specializations vs the Program's specialization.
-    if (!candidate.specializations.includes(program.specialization)) {
-      reasons.push('specialization');
-    }
-    // Row 2 — the trainer's city vs the Plan's city, **unless online**. The
-    // matrix's parenthetical is the whole rule: an online plan has no location.
-    if (plan.deliveryMode !== 'online' && candidate.city !== plan.city) {
-      reasons.push('location');
-    }
-    // Row 3 — any confirmed engagement overlapping the plan's dates.
+    // Any confirmed engagement overlapping the plan's dates.
     const planStart = new Date(plan.startsAt).getTime();
     const planEnd = new Date(plan.endsAt).getTime();
     if (
@@ -521,7 +518,7 @@ export function createMockAssignmentProvider(
     ) {
       reasons.push('schedule-conflict');
     }
-    // Row 4 — an active file passes, and so does an idle one: J-13's `idle` has
+    // An active file passes, and so does an idle one: J-13's `idle` has
     // «no effect on matching eligibility». Suspended and expired do not.
     if (candidate.fileStatus !== 'active' && candidate.fileStatus !== 'idle') {
       reasons.push('file-status');
@@ -530,16 +527,20 @@ export function createMockAssignmentProvider(
   }
 
   /**
-   * Rows 5–7 — the weighted criteria. **None of these can exclude anyone**
-   * (F1/AC-3): every branch produces a score, and the lowest possible score is
-   * zero, never a removal.
+   * The weighted criteria. **None of these can exclude anyone** (F1/AC-3):
+   * every branch produces a score, and the lowest possible score is zero,
+   * never a removal — specialization and city included (UAT `BUG-038`).
    */
   function scoresFor(
     candidate: MockCandidateSeed,
     plan: MockPlanSeed
   ): readonly WeightedCriterionScore[] {
     const { weights } = MOCK_MATCHING_MODEL;
-    const raw: Readonly<Record<string, number>> = {
+    const program = MOCK_PROGRAMS[plan.programId as keyof typeof MOCK_PROGRAMS];
+    const raw: Readonly<Record<WeightedCriterionId, number>> = {
+      specialization: candidate.specializations.includes(program.specialization) ? 1 : 0,
+      // An online plan has no location, so the row scores nothing for anyone.
+      location: plan.deliveryMode !== 'online' && candidate.city === plan.city ? 1 : 0,
       // Row 5 — does the trainer deliver in the plan's language?
       language: candidate.languages.includes(plan.language) ? 1 : 0,
       // Row 6 — can they deliver in the plan's mode?
@@ -553,8 +554,20 @@ export function createMockAssignmentProvider(
           : candidate.classification === 'senior'
             ? 0.85
             : 0.7),
+      // A conflicted candidate never reaches here in the mock (it has no
+      // consultant plans), so everyone ranked is free on the dates.
+      availability: 1,
     };
-    return (['language', 'delivery-mode', 'evaluation'] as const).map((criterion) => ({
+    return (
+      [
+        'specialization',
+        'location',
+        'language',
+        'delivery-mode',
+        'evaluation',
+        'availability',
+      ] as const
+    ).map((criterion) => ({
       criterion,
       rawScore: raw[criterion],
       weight: weights[criterion],

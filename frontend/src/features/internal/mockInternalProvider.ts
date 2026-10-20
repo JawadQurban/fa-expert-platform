@@ -246,8 +246,49 @@ export function createMockInternalProvider(
           recent,
           totalOpen,
           submissionDelta: null,
+          // ⚠️ MOCK — one interview ahead and one reschedule waiting.
+          upcomingInterviews: [
+            {
+              applicationId: 'app-003',
+              reference: 'EH-2026-00003',
+              applicantName: 'أ. ريم القحطاني',
+              startsAt: '2026-08-31T07:00:00Z',
+              ticketNumber: 'INT-2026-0007',
+            },
+          ],
+          rescheduleRequests: [
+            {
+              applicationId: 'app-004',
+              reference: 'EH-2026-00004',
+              applicantName: 'م. خالد الشهري',
+              requestedAt: '2026-08-26T09:30:00Z',
+              note: 'تعارض مع موعد سفر',
+            },
+          ],
+          // ⚠️ MOCK — one refusal passed on, one that sent the seat back to matching.
+          declinedOffers: [
+            {
+              requestId: 'req-002',
+              reference: 'AR-2026-00002',
+              slotNumber: 1,
+              trainerName: 'د. سارة العتيبي',
+              declinedAt: '2026-08-27T10:00:00Z',
+              outcome: 'rematch',
+              nextTrainerName: null,
+            },
+            {
+              requestId: 'req-001',
+              reference: 'AR-2026-00001',
+              slotNumber: 2,
+              trainerName: 'أ. فهد الدوسري',
+              declinedAt: '2026-08-26T08:00:00Z',
+              outcome: 'next-candidate',
+              nextTrainerName: 'م. نورة السبيعي',
+            },
+          ],
           distribution: [
             { status: 'under-review', count: 4, percent: 50 },
+
             { status: 'interview-scheduled', count: 2, percent: 25 },
             { status: 'awaiting-committee', count: 2, percent: 25 },
           ],

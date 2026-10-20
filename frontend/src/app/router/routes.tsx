@@ -94,6 +94,7 @@ const NotificationTemplatesPage = lazy(
   () => import('../../features/notifications/NotificationTemplatesPage')
 );
 const NotificationLogPage = lazy(() => import('../../features/notifications/NotificationLogPage'));
+const MyNotificationsPage = lazy(() => import('../../features/notifications/MyNotificationsPage'));
 const SlaConsolePage = lazy(() => import('../../features/notifications/SlaConsolePage'));
 const ActivationPage = lazy(() => import('../../features/identity/ActivationPage'));
 const LoginPage = lazy(() => import('../../features/auth/LoginPage'));
@@ -190,6 +191,11 @@ export const expertHubRoutes: RouteObject[] = [
                 // EH-TP-02 — My Applications (trainer render of this route).
                 path: expertHubRouteSegments.applications,
                 element: withSuspense(<MyApplicationsPage />),
+              },
+              {
+                // J-25 «إشعاراتي» — own notifications, any signed-in role.
+                path: expertHubRouteSegments.notifications,
+                element: withSuspense(<MyNotificationsPage />),
               },
               {
                 // EH-TP-06 — Add Service (request an additional service). Above
@@ -377,6 +383,12 @@ export const expertHubRoutes: RouteObject[] = [
                     path: expertHubRouteSegments.internalNotificationLog,
                     element: withSuspense(<NotificationLogPage />),
                   },
+                  {
+                    // J-25 «إشعاراتي» inside the staff shell — the same page.
+                    path: expertHubRouteSegments.internalMyNotifications,
+                    element: withSuspense(<MyNotificationsPage />),
+                  },
+
                   {
                     // EH-INT-13 — the central deadline console (CAP-07 /
                     // F-0704). BR-0705 puts every capability's SLA here.

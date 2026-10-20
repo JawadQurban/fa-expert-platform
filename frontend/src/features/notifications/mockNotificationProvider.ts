@@ -6,6 +6,7 @@ import {
   validateSla,
   validateTemplate,
   placeholdersUsed,
+  type MyNotificationDto,
   type NotificationEventDto,
   type NotificationLogDto,
   type NotificationLogQuery,
@@ -278,6 +279,31 @@ const EVENTS: readonly NotificationEventDto[] = [
  * channels for one event, so a successful event produces **two** log rows, and a
  * per-channel failure is exactly the case `US-0705` exists for.
  */
+/** The signed-in person's own in-platform notifications (J-25). */
+const SEED_INBOX: readonly MyNotificationDto[] = [
+  {
+    logId: 'log-004',
+    eventCode: 'EV-0501',
+    subject: 'عرض إسناد جديد: ASR-2026-0004',
+    body: 'لديك عرض إسناد بانتظار ردك. يُرجى الاطلاع عليه من صفحة «ارتباطاتي».',
+    sentAt: '2026-08-26T10:02:00Z',
+    sourceEntityId: null,
+  },
+  {
+    logId: 'log-002',
+    eventCode: 'EV-0301',
+    subject: 'تذكير: اقتراب انتهاء الاتفاقية',
+    body: 'تنتهي اتفاقيتك مع الأكاديمية خلال 90 يومًا.',
+    sentAt: '2026-08-26T07:15:00Z',
+    sourceEntityId: null,
+  },
+];
+
+/** The Riyadh calendar day of a UTC instant — the day the log filters by. */
+function riyadhDay(iso: string): string {
+  return new Date(Date.parse(iso) + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 const SEED_LOG: readonly NotificationLogDto[] = [
   {
     logId: 'log-001',
@@ -359,6 +385,8 @@ export interface MockNotificationProviderOptions {
   readonly canManageTemplates?: boolean;
   /** Seed templates, for tests that need an approved one to route with. */
   readonly templates?: readonly NotificationTemplateDto[];
+  /** The signed-in person's own in-platform notifications (J-25). */
+  readonly inbox?: readonly MyNotificationDto[];
 }
 
 function delay(ms: number): Promise<void> {
@@ -375,6 +403,7 @@ export function createMockNotificationProvider(
     actorName = 'مشرف النظام',
     canManageTemplates = true,
     templates: seededTemplates = [],
+    inbox = SEED_INBOX,
   } = options;
 
   // `DM-GAP-08` — every event starts unrouted. Nothing is assumed.
@@ -553,6 +582,10 @@ export function createMockNotificationProvider(
           if (query.channel != null && entry.channel !== query.channel) {
             return false;
           }
+          const day = riyadhDay(entry.sentAt);
+          if ((query.from != null && day < query.from) || (query.to != null && day > query.to)) {
+            return false;
+          }
           return (
             term === '' ||
             entry.recipientName.toLowerCase().includes(term) ||
@@ -562,7 +595,18 @@ export function createMockNotificationProvider(
         }),
       };
     },
+
+    async listMyNotifications() {
+      await delay(latencyMs);
+      return failWith != null ? { ok: false, error: failWith } : { ok: true, value: inbox };
+    },
   };
 }
 
-export { MOCK_NOW, EVENTS as MOCK_EVENTS, SEED_LOG as MOCK_LOG, KNOWN_PLACEHOLDERS };
+export {
+  MOCK_NOW,
+  EVENTS as MOCK_EVENTS,
+  SEED_LOG as MOCK_LOG,
+  SEED_INBOX as MOCK_INBOX,
+  KNOWN_PLACEHOLDERS,
+};

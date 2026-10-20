@@ -1,5 +1,11 @@
 /* Visibility consent — layout-only, token-only (DC-04/DC-23). */
 
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-md);
+}
+
 .wrap {
   display: flex;
   flex-wrap: wrap;

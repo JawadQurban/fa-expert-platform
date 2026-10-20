@@ -1,6 +1,7 @@
 import type { ApplicationService } from '../applications/application.types';
 import type { DirectorySpecialty, TrainerClassification } from '../directory/directory.types';
-import type { ProfileAgreementStatus } from '../profile/profile.types';
+import type { BankDataFieldId, ProfileAgreementStatus } from '../profile/profile.types';
+import type { ScreeningAttachmentDto, ScreeningSectionDto } from '../screening/screening.types';
 import type { SpeakerSummaryDto } from '../speakers/speaker.types';
 
 /**
@@ -65,6 +66,8 @@ export interface TrainerSearchFilters {
   readonly service: ApplicationService | 'all';
   readonly minCertifications: number | null;
   readonly fileStatus: TrainerFileStatus | 'all';
+  /** RUN-029 — the declared «المجال», a domain code (`dom-NNN`), or `'all'`. */
+  readonly domain: DirectorySpecialty;
 }
 
 export const DEFAULT_TRAINER_SEARCH_FILTERS: TrainerSearchFilters = {
@@ -72,6 +75,7 @@ export const DEFAULT_TRAINER_SEARCH_FILTERS: TrainerSearchFilters = {
   service: 'all',
   minCertifications: null,
   fileStatus: 'all',
+  domain: 'all',
 };
 
 export function hasActiveTrainerSearchFilters(filters: TrainerSearchFilters): boolean {
@@ -79,7 +83,8 @@ export function hasActiveTrainerSearchFilters(filters: TrainerSearchFilters): bo
     filters.search.trim() !== '' ||
     filters.service !== 'all' ||
     filters.minCertifications != null ||
-    filters.fileStatus !== 'all'
+    filters.fileStatus !== 'all' ||
+    filters.domain !== 'all'
   );
 }
 
@@ -115,7 +120,8 @@ export function hasTrainerOnlyFilter(filters: TrainerSearchFilters): boolean {
   return (
     (filters.service !== 'all' && filters.service !== 'speaker') ||
     filters.fileStatus !== 'all' ||
-    filters.minCertifications != null
+    filters.minCertifications != null ||
+    filters.domain !== 'all'
   );
 }
 
@@ -191,7 +197,27 @@ export interface TrainerProfileDto {
   readonly identityCard: IdentityCardDto;
   /** `P-331` — the APPROVED short bio; one awaiting review is in the review queue. */
   readonly bio: string | null;
+  /**
+   * RUN-017 — the approved application in full, section by section (select
+   * answers by label, every entry of a repeatable section): the screening
+   * screen's own shape.
+   */
+  readonly applicationSections: readonly ScreeningSectionDto[];
+  readonly attachments: readonly ScreeningAttachmentDto[];
+  /**
+   * The bank data as the trainer saved it — served only to a viewer holding
+   * F-0301 (the agreement feature that already shows these fields), and only
+   * once complete. `null` otherwise.
+   */
+  readonly bankData: Readonly<Partial<Record<BankDataFieldId, string>>> | null;
+  /** RUN-025 — true while `fileStatus` was set by hand (F-0411), not by the agreement. */
+  readonly fileStatusManual: boolean;
+  /** RUN-025 — the viewer holds F-0411 and may set the file status. */
+  readonly canSetFileStatus: boolean;
 }
+
+/** RUN-025 — a manual file status, or `automatic` to hand the file back to its agreement. */
+export type FileStatusChoice = TrainerFileStatus | 'automatic';
 
 /** `P-331` — one bio waiting for a trainer-management decision. */
 export interface PendingBioDto {

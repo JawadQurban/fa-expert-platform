@@ -17,6 +17,7 @@ import { getApplicationsService } from './applicationsService';
 import { getMyApplicationsContent, type MyApplicationsContent } from './myApplications.content';
 import { ApplicationsFilterBar } from './components/ApplicationsFilterBar';
 import { ApplicationsList } from './components/ApplicationsList';
+import { MyServiceRequests } from './components/MyServiceRequests';
 import styles from './MyApplicationsPage.module.css';
 import { formatNumber } from '../../shared/formatting';
 
@@ -87,7 +88,7 @@ function buildSummaryCards(
     {
       id: 'requires-action',
       icon: 'alert-circle',
-      value: counts.draft + counts['agreement-pending'],
+      value: counts.draft + counts['agreement-pending'] + (result.awaitingSlotSelection ?? 0),
       label: content.summary.requiresAction,
     },
   ];
@@ -308,6 +309,9 @@ export default function MyApplicationsPage() {
         </div>
 
         <div className={styles.listRegion}>{listRegion()}</div>
+
+        {/* BUG-019 / BUG-021 — add a service, and follow every request by its number. */}
+        <MyServiceRequests content={content} locale={locale} />
       </Container>
     </Section>
   );

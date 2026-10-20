@@ -40,9 +40,18 @@ public static class BusinessCalendar
     }
 
     /// <summary>`within` | `approaching` (≤1 day) | `breached` — the P-J4 states.</summary>
+    /// <remarks>
+    /// A day that has started counts as a day left (UAT `RUN-039`). Rounding
+    /// DOWN made a three-day window read «2 days left» a second after it was
+    /// sent, beside a sentence saying the window is three days. Past the
+    /// deadline the count is negative, so a breach never reads as «0 days».
+    /// </remarks>
     public static (string State, int DaysRemaining) Countdown(DateTime dueAtUtc, DateTime nowUtc)
     {
-        var daysRemaining = (int)Math.Floor((dueAtUtc - nowUtc).TotalDays);
+        var remaining = (dueAtUtc - nowUtc).TotalDays;
+        var daysRemaining = remaining <= 0
+            ? Math.Min(-1, (int)Math.Floor(remaining))
+            : (int)Math.Ceiling(remaining);
         var state = daysRemaining < 0 ? "breached" : daysRemaining <= 1 ? "approaching" : "within";
         return (state, daysRemaining);
     }

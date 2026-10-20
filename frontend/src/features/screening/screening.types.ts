@@ -131,10 +131,20 @@ export interface ScreeningFieldDto {
   readonly qualitative?: boolean;
 }
 
+/** One entry of a repeatable section (`DEF-01`), in entry order. */
+export interface ScreeningEntryDto {
+  readonly index: number;
+  readonly entryId?: string;
+  readonly fields: readonly ScreeningFieldDto[];
+}
+
 export interface ScreeningSectionDto {
   readonly id: string;
   readonly title: LocalizedText;
+  /** The section's answers — the FIRST entry of a repeatable section. */
   readonly fields: readonly ScreeningFieldDto[];
+  /** Every entry of a repeatable section; absent for any other section. */
+  readonly entries?: readonly ScreeningEntryDto[];
 }
 
 export interface ScreeningAttachmentDto {

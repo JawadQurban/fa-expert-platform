@@ -6,7 +6,7 @@ import type { Locale } from '@/types';
 import { localized } from '../../../shared/types/localizedText';
 import type { ApplicationService } from '../../applications/application.types';
 import type { AgreementsContent } from '../agreements.content';
-import { validateAgreementFields } from '../agreement.types';
+import { END_BEFORE_START, validateAgreementFields } from '../agreement.types';
 import { getAgreementService } from '../agreementService';
 import { ADDENDUM_FORMATS, addendumFileIssue } from '../../serviceRequests/serviceRequest.types';
 import type { AgreementFieldSchema, AgreementFieldValues } from '../agreement.types';
@@ -246,6 +246,9 @@ export function AgreementPreparationForm({
                 {missing.map((fieldId) => {
                   if (fieldId === DOCUMENT_FIELD) {
                     return <li key={fieldId}>{copy.documentRequired}</li>;
+                  }
+                  if (fieldId === END_BEFORE_START) {
+                    return <li key={fieldId}>{copy.endBeforeStart}</li>;
                   }
                   const field = schema.find((entry) => entry.id === fieldId);
                   return (

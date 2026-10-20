@@ -53,6 +53,7 @@ export function ApplicationFormSection({
             key={field.id}
             field={field}
             value={values[field.id]}
+            values={values}
             error={errors[field.id]}
             services={services}
             locale={locale}

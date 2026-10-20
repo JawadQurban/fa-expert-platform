@@ -18,10 +18,12 @@ import {
 import { createMockTrainerSearchProvider } from './mockTrainerSearchProvider';
 import type { MockTrainerSearchProviderOptions } from './mockTrainerSearchProvider';
 import { getTrainerSearchContent } from './trainerSearch.content';
+import { DEFAULT_TRAINER_SEARCH_FILTERS } from './trainerSearch.types';
 import { arNumber } from '../../shared/formatting';
 import { getSpeakersContent } from '../speakers/speakers.content';
 
 const content = getTrainerSearchContent('ar');
+const profileContent = getProfileContent('ar');
 
 function injectProvider(options: MockTrainerSearchProviderOptions = {}) {
   setTrainerSearchServiceForTesting(createMockTrainerSearchProvider({ latencyMs: 0, ...options }));
@@ -80,7 +82,7 @@ describe('EH-INT-07/08 — Trainer Search & Unified Profile (J-15)', () => {
 
   it('the trainer’s OWN profile still shows none of it (P-48 holds)', () => {
     // The internal vocabulary must not have leaked into EH-TP-04 while adding it here.
-    const profileContent = getProfileContent('ar');
+
     expect(Object.keys(profileContent)).not.toContain('fileStatuses');
   });
 
@@ -178,24 +180,41 @@ describe('EH-INT-07/08 — Trainer Search & Unified Profile (J-15)', () => {
     expect(screen.queryByText(content.yearsValue(0))).not.toBeInTheDocument();
   });
 
-  it('offers no specialty, domain or minimum-evaluation filter, and still shows an un-rated trainer', async () => {
+  it('offers a domain filter but no minimum-evaluation filter, and still shows an un-rated trainer', async () => {
     await renderSearch();
-    // No specialty/domain taxonomy (`Q16`) and no calculated rating
-    // (`DM-GAP-14`): each filter could only answer wrongly, and the API refuses
-    // it with 400 — so no control offers it.
-    expect(
-      screen.queryByRole('combobox', { name: /مجال التخصص|^المجال$/ })
-    ).not.toBeInTheDocument();
+    // RUN-029 — the declared «المجال» is filterable; there is still no
+    // calculated rating (`DM-GAP-14`), so no evaluation floor is offered.
+    expect(screen.getByRole('combobox', { name: content.filters.domainLabel })).toBeInTheDocument();
     expect(screen.queryByLabelText(/الحد الأدنى للتقييم/)).not.toBeInTheDocument();
-    // What remains: service + file status, and the certification floor.
-    expect(screen.getAllByRole('combobox')).toHaveLength(2);
+    // Service, file status and domain, and the certification floor.
+    expect(screen.getAllByRole('combobox')).toHaveLength(3);
     expect(screen.getAllByRole('spinbutton')).toHaveLength(1);
     // The evaluation is still displayed — only the filter went.
     const table = await screen.findByRole('table', { name: content.resultsLabel });
     expect(within(table).getByText(content.notEvaluated)).toBeInTheDocument();
+    // «التخصصات» carries the declared domain's label — it was empty for everyone.
+    expect(
+      within(table).getAllByText(new RegExp(content.specialties['dom-001'])).length
+    ).toBeGreaterThan(0);
   });
 
-  it('sends only the filters the API answers — never specialty, domain or minEvaluation', async () => {
+  it('RUN-029: a two-word name search finds the trainer, in either word order', async () => {
+    const service = createMockTrainerSearchProvider({ latencyMs: 0 });
+    const found = await service.searchTrainers({
+      ...DEFAULT_TRAINER_SEARCH_FILTERS,
+      search: 'العتيبي سارة',
+    });
+    expect(found.ok && found.value.items.map((t) => t.name)).toEqual(['د. سارة العتيبي']);
+    const byDomain = await service.searchTrainers({
+      ...DEFAULT_TRAINER_SEARCH_FILTERS,
+      domain: 'dom-015',
+    });
+    expect(
+      byDomain.ok && byDomain.value.items.every((t) => t.specialties.includes('dom-015'))
+    ).toBe(true);
+  });
+
+  it('sends only the filters the API answers — the domain, never specialty or minEvaluation', async () => {
     const paths: string[] = [];
     const client: ExpertHubApiClient = {
       get: <T,>(path: string) => {
@@ -209,11 +228,14 @@ describe('EH-INT-07/08 — Trainer Search & Unified Profile (J-15)', () => {
       service: 'trainer',
       fileStatus: 'active',
       minCertifications: 2,
+      domain: 'dom-003',
       // A stale state object still carrying the removed keys must not leak them.
-      ...({ specialty: 'finance', domain: 'finance', minEvaluation: 4 } as object),
+      ...({ specialty: 'finance', minEvaluation: 4 } as object),
     });
     const params = new URLSearchParams(paths[0].split('?')[1]);
+    expect(params.get('domain')).toBe('dom-003');
     expect([...params.keys()].sort()).toEqual([
+      'domain',
       'fileStatus',
       'minCertifications',
       'search',
@@ -354,10 +376,78 @@ describe('EH-INT-07/08 — Trainer Search & Unified Profile (J-15)', () => {
     expect(screen.queryByText(content.identityCard.missingSource)).not.toBeInTheDocument();
   });
 
+  it('RUN-017: the comprehensive profile carries the approved application, its files and (F-0301) the bank data', async () => {
+    const base = createMockTrainerSearchProvider({ latencyMs: 0 });
+    setTrainerSearchServiceForTesting({
+      ...base,
+      async getTrainerProfile(id) {
+        const result = await base.getTrainerProfile(id);
+        return result.ok
+          ? { ok: true, value: { ...result.value, bankData: { iban: 'SA0380000000608010167519' } } }
+          : result;
+      },
+    });
+    renderTrainer(ACTIVE);
+    await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
+    const application = screen.getByRole('region', { name: content.profile.applicationHeading });
+    // The identity data the profile never showed — from the application.
+    expect(within(application).getByText('1012345678')).toBeInTheDocument();
+    expect(within(application).getByText('سعودي')).toBeInTheDocument();
+    expect(screen.getByText('cv.pdf')).toBeInTheDocument();
+    const bank = screen.getByRole('region', { name: profileContent.bankData.heading });
+    expect(within(bank).getByText('SA0380000000608010167519')).toBeInTheDocument();
+  });
+
+  it('RUN-017: no bank-data panel for a viewer the server withheld it from', async () => {
+    renderTrainer(ACTIVE);
+    await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
+    expect(
+      screen.queryByRole('region', { name: profileContent.bankData.heading })
+    ).not.toBeInTheDocument();
+  });
+
+  it('RUN-025: a viewer holding F-0411 sets the file status by hand, with a mandatory reason', async () => {
+    const copy = content.profile.fileStatusControl;
+    const { user } = renderTrainer(ACTIVE);
+    await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
+    const panel = screen.getByRole('region', { name: copy.heading });
+
+    await user.click(within(panel).getByRole('combobox', { name: copy.statusLabel }));
+    await user.click(await screen.findByRole('option', { name: content.fileStatuses.suspended }));
+    // No reason, no change.
+    await user.click(within(panel).getByRole('button', { name: copy.submit }));
+    expect(await within(panel).findByText(copy.reasonRequired)).toBeInTheDocument();
+
+    await user.type(within(panel).getByLabelText(copy.reasonLabel, { exact: false }), 'مخالفة');
+    await user.click(within(panel).getByRole('button', { name: copy.submit }));
+    expect(await within(panel).findByText(copy.saved)).toBeInTheDocument();
+    expect(screen.getByText(copy.manualTag)).toBeInTheDocument();
+    expect(screen.getAllByText(content.fileStatuses.suspended).length).toBeGreaterThan(0);
+    await expectNoA11yViolations(document.body);
+  });
+
+  it('RUN-025: no file-status control for a viewer without F-0411', async () => {
+    const base = createMockTrainerSearchProvider({ latencyMs: 0 });
+    setTrainerSearchServiceForTesting({
+      ...base,
+      async getTrainerProfile(id) {
+        const result = await base.getTrainerProfile(id);
+        return result.ok
+          ? { ok: true, value: { ...result.value, canSetFileStatus: false } }
+          : result;
+      },
+    });
+    renderTrainer(ACTIVE);
+    await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
+    expect(
+      screen.queryByRole('region', { name: content.profile.fileStatusControl.heading })
+    ).not.toBeInTheDocument();
+  });
+
   it('shows free-text experience as written, never as "NaN"', async () => {
     renderTrainer(ACTIVE);
     await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
-    expect(screen.getByText('من 11 إلى 15 سنة')).toBeInTheDocument();
+    expect(screen.getAllByText('من 11 إلى 15 سنة').length).toBeGreaterThan(0);
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 

@@ -162,7 +162,7 @@ export function PostInterviewDecisionPanel({
         </Alert>
       ) : (
         nonePassed && (
-          <Alert tone="warning" surface="tinted" title={copy.noPassTitle} role="status">
+          <Alert tone="info" surface="tinted" title={copy.noPassTitle} role="status">
             {copy.noPassBody}
           </Alert>
         )
@@ -178,7 +178,7 @@ export function PostInterviewDecisionPanel({
           variant="primary"
           size="md"
           onClick={() => setForwardOpen(true)}
-          disabled={!resultReady || nonePassed || rejectOnly || submitting}
+          disabled={!resultReady || rejectOnly || submitting}
         >
           {copy.forward}
         </Button>

@@ -77,7 +77,7 @@ public sealed class Cap05Tests
             excluded.GetProperty("reasons").EnumerateArray().Select(r => r.GetString()));
         // F1/AC-3 — the weighted breakdown is carried, so the UI never
         // recomputes a ranking it was given.
-        Assert.Equal(3, ranked[0].GetProperty("scores").GetArrayLength());
+        Assert.Equal(6, ranked[0].GetProperty("scores").GetArrayLength());
 
         var eligible = ranked.Select(r => r.GetProperty("trainerId").GetString()!).ToArray();
 
@@ -197,6 +197,33 @@ public sealed class Cap05Tests
         var again = await trainers.Clients[eligible[1]].PostAsJsonAsync(
             $"/api/v1/me/assignment-offers/{secondOfferId}/response", new { response = "accept" });
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
+
+        // UAT `BUG-047` — the request's people see each refusal on their home
+        // page, and where the seat went: on to the next candidate, then (nobody
+        // left) back to matching. Derived from the offers, so it does not wait
+        // on CAP-07 routing.
+        foreach (var viewer in new[] { staff, centre })
+        {
+            var declined = (await GetAsync(viewer, "/api/v1/internal/dashboard"))
+                .GetProperty("declinedOffers").EnumerateArray().ToArray();
+            Assert.Equal(2, declined.Length);
+            Assert.All(declined, d => Assert.Equal(requestId, d.GetProperty("requestId").GetString()));
+            Assert.Equal("rematch", declined[0].GetProperty("outcome").GetString());
+            Assert.Equal(JsonValueKind.Null, declined[0].GetProperty("nextTrainerName").ValueKind);
+            Assert.Equal("next-candidate", declined[1].GetProperty("outcome").GetString());
+            Assert.Equal(declined[0].GetProperty("trainerName").GetString(),
+                declined[1].GetProperty("nextTrainerName").GetString());
+        }
+
+        // P-351 — another centre's refusals do not reach a coordinator.
+        await using (var db = _database.CreateContext())
+        {
+            var request = await db.AssignmentRequests.SingleAsync(r => r.RequestId == Guid.Parse(requestId));
+            request.CentreId = CentreB.ToString();
+            await db.SaveChangesAsync();
+        }
+        Assert.Empty((await GetAsync(centre, "/api/v1/internal/dashboard"))
+            .GetProperty("declinedOffers").EnumerateArray());
     }
 
     /* ── J-17/F4/AC-2 — the requesting party's ranking decides the offer order ─ */
@@ -298,6 +325,65 @@ public sealed class Cap05Tests
     }
 
     [Fact]
+    public async Task Creating_an_offer_raises_EV_0501_and_the_trainer_reads_it_in_platform()
+    {
+        // RUN-001 — EV-0501 was catalogued and routable, but nothing raised it:
+        // routing it to an approved template with «صاحب السجل» produced no
+        // notification, no log row and nothing in the trainer's inbox.
+        using var centre = await SignInAsync(
+            "cap05-centre-ev0501", "منسق المركز", RoleCode.CentreCoordinator);
+        await using (var db = _database.CreateContext())
+        {
+            var author = await db.Users.FirstAsync();
+            var template = new NotificationTemplate
+            {
+                TemplateId = Guid.NewGuid(),
+                Code = "TPL_R01",
+                SubjectAr = "عرض إسناد {{referenceNumber}}",
+                SubjectEn = "Assignment offer {{referenceNumber}}",
+                BodyAr = "مرحبًا {{recipientName}}، لديك عرض إسناد.",
+                BodyEn = "Hello {{recipientName}}, you have an offer.",
+                Placeholders = """["referenceNumber","recipientName"]""",
+                Version = 1,
+                Status = TemplateStatuses.Approved,
+                UpdatedAt = DateTime.UtcNow,
+                UpdatedBy = author.UserId,
+            };
+            db.NotificationTemplates.Add(template);
+            db.NotificationMatrixRows.Add(new NotificationMatrixRow
+            {
+                RowId = Guid.NewGuid(),
+                EventCode = "EV-0501",
+                TemplateId = template.TemplateId,
+                Audience = """["record_subject"]""",
+                IsActive = true,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var trainers = await SeedTrainersAsync(1);
+        var named = trainers.Clients.Keys.Single();
+        var body = GeneralProgramRequest();
+        body["specificNominee"] = named;
+        var created = await PostAsync(centre, "/api/v1/internal/assignment-requests/", body);
+        var reference = created.GetProperty("reference").GetString()!;
+
+        await using (var db = _database.CreateContext())
+        {
+            var occurrence = await db.NotificationOccurrences.SingleAsync(o => o.EventCode == "EV-0501");
+            Assert.Equal(NotificationRoutingStatuses.Routed, occurrence.RoutingStatus);
+            Assert.Equal(1, occurrence.RecipientCount);
+            Assert.True(await db.NotificationLog.AnyAsync(
+                l => l.EventCode == "EV-0501" && l.Channel == NotificationChannels.InPlatform));
+        }
+
+        var inbox = await GetAsync(trainers.Clients[named], "/api/v1/me/notifications");
+        var item = inbox.EnumerateArray().Single();
+        Assert.Equal("EV-0501", item.GetProperty("eventCode").GetString());
+        Assert.Equal($"عرض إسناد {reference}", item.GetProperty("subject").GetString());
+    }
+
+    [Fact]
     public async Task A_named_trainer_who_fails_governance_creates_nothing()
     {
         using var centre = await SignInAsync(
@@ -345,14 +431,177 @@ public sealed class Cap05Tests
         await PostAsync(trainers.Clients[named],
             $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "reject" });
 
-        // No backups exist (J-17 was bypassed), so the slot is exhausted —
-        // and matching runs for it, as for any request (J-19/F3).
+        // UAT `RUN-013` — no backups exist (J-17 was bypassed), so the slot
+        // goes back into ORDINARY matching on its own: not an «exhausted» slot
+        // for staff to re-route by hand, and nobody is offered it meanwhile.
         var slot = (await GetAsync(staff,
             $"/api/v1/internal/assignment-requests/{requestId}/slots")).EnumerateArray().Single();
-        Assert.True(slot.GetProperty("exhausted").GetBoolean());
-        var rerun = await PostAsync(staff,
-            $"/api/v1/internal/assignment-requests/{requestId}/slots/1/matching/run", null);
-        Assert.Equal(3, rerun.GetProperty("ranked").GetArrayLength());
+        Assert.False(slot.GetProperty("exhausted").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, slot.GetProperty("currentOffer").ValueKind);
+        var request = await GetAsync(staff, $"/api/v1/internal/assignment-requests/{requestId}");
+        Assert.Equal("matching", request.GetProperty("status").GetString());
+        var matching = await GetAsync(staff, $"/api/v1/internal/assignment-requests/{requestId}/matching");
+        Assert.Equal("not-built", matching.GetProperty("pool").GetProperty("status").GetString());
+        Assert.True(matching.GetProperty("pool").GetProperty("returnedToMatching").GetBoolean());
+
+        // …and the ordinary cycle runs again: three candidates, the requesting
+        // party's approval, an offer.
+        var others = trainers.Clients.Keys.Where(id => id != named).ToArray();
+        await RunCycleAsync(staff, centre, requestId, [.. others, named]);
+        Assert.Equal(others[0], await CurrentOfferTrainerAsync(staff, requestId));
+    }
+
+    /* ── J-22 + UAT `BUG-049` — an Academy de-link re-offers to nobody ─────── */
+
+    [Fact]
+    public async Task An_academy_delink_returns_the_request_to_matching_and_offers_nobody()
+    {
+        using var staff = await SignInAsync("cap05-staff-delink", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync(
+            "cap05-centre-delink", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var requestId = await CreateRequestAsync(centre);
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+        var offerId = await CurrentOfferIdAsync(staff, requestId);
+        var engagementId = (await PostAsync(trainers.Clients[eligible[0]],
+                $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "accept" }))
+            .EnumerateArray().Single().GetProperty("engagementId").GetString()!;
+
+        await PostAsync(staff, $"/api/v1/internal/engagements/{engagementId}/delink",
+            new { reason = "operational-need-change" });
+
+        // The approved backup (eligible[1]) is NOT offered the slot.
+        var slot = (await GetAsync(staff,
+            $"/api/v1/internal/assignment-requests/{requestId}/slots")).EnumerateArray().Single();
+        Assert.Equal(JsonValueKind.Null, slot.GetProperty("currentOffer").ValueKind);
+        Assert.False(slot.GetProperty("exhausted").GetBoolean());
+        // UAT `BUG-048` — the history says HOW the engagement ended.
+        Assert.Equal("delinked", slot.GetProperty("history").EnumerateArray().Single()
+            .GetProperty("status").GetString());
+        var list = await GetAsync(centre, "/api/v1/internal/assignment-requests/");
+        Assert.Equal("matching", list.EnumerateArray()
+            .Single(r => r.GetProperty("requestId").GetString() == requestId)
+            .GetProperty("status").GetString());
+
+        // The full cycle again, from matching — a new pool of three for the
+        // one open slot, a new approval, and only then an offer.
+        await RunCycleAsync(staff, centre, requestId, [eligible[2], eligible[1], eligible[0]]);
+        Assert.Equal(eligible[2], await CurrentOfferTrainerAsync(staff, requestId));
+    }
+
+    [Fact]
+    public async Task A_trainer_withdrawal_after_confirming_is_named_as_such_in_the_slot_history()
+    {
+        using var staff = await SignInAsync("cap05-staff-wd", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync(
+            "cap05-centre-wd", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var requestId = await CreateRequestAsync(centre);
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+        var offerId = await CurrentOfferIdAsync(staff, requestId);
+        var engagementId = (await PostAsync(trainers.Clients[eligible[0]],
+                $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "accept" }))
+            .EnumerateArray().Single().GetProperty("engagementId").GetString()!;
+        await PostAsync(trainers.Clients[eligible[0]],
+            $"/api/v1/me/engagements/{engagementId}/withdrawal", new { reason = "personal-emergency" });
+
+        var history = (await GetAsync(staff,
+                $"/api/v1/internal/assignment-requests/{requestId}/slots"))
+            .EnumerateArray().Single().GetProperty("history").EnumerateArray()
+            .ToDictionary(o => o.GetProperty("trainerId").GetString()!, o => o.GetProperty("status").GetString());
+        Assert.Equal("withdrawn", history[eligible[0]]);
+        // A trainer's withdrawal still passes the slot to the next approved.
+        Assert.Equal("awaiting-response", history[eligible[1]]);
+    }
+
+    /* ── UAT `RUN-013` / `BUG-044` — an answered offer leaves «عروض الإسناد» ── */
+
+    [Fact]
+    public async Task An_answered_offer_is_no_longer_listed_among_the_trainers_offers()
+    {
+        using var staff = await SignInAsync("cap05-staff-mine", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync(
+            "cap05-centre-mine", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var requestId = await CreateRequestAsync(centre);
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+
+        var refuser = trainers.Clients[eligible[0]];
+        Assert.Single((await GetAsync(refuser, "/api/v1/me/assignment-offers")).EnumerateArray());
+        await PostAsync(refuser, $"/api/v1/me/assignment-offers/{await CurrentOfferIdAsync(staff, requestId)}/response",
+            new { response = "reject" });
+        Assert.Empty((await GetAsync(refuser, "/api/v1/me/assignment-offers")).EnumerateArray());
+
+        var acceptor = trainers.Clients[eligible[1]];
+        await PostAsync(acceptor, $"/api/v1/me/assignment-offers/{await CurrentOfferIdAsync(staff, requestId)}/response",
+            new { response = "accept" });
+        Assert.Empty((await GetAsync(acceptor, "/api/v1/me/assignment-offers")).EnumerateArray());
+        Assert.Single((await GetAsync(acceptor, "/api/v1/me/engagements")).EnumerateArray());
+    }
+
+    /* ── UAT `BUG-038` / `BUG-039` / `BUG-041` ─────────────────────────────── */
+
+    [Fact]
+    public async Task Specialization_and_city_never_exclude_on_any_path_and_a_name_finds_its_trainer()
+    {
+        using var staff = await SignInAsync("cap05-staff-weighted", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync(
+            "cap05-centre-weighted", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(2);
+        var subject = $"cap05-trainer-named-{Guid.NewGuid():N}";
+        using var ahmed = await SignInAsync(subject, "أحمد بن سعد العتيبي", null);
+        var ahmedId = await SeedTrainerProfileAsync(subject, suspended: false);
+        await using (var db = _database.CreateContext())
+        {
+            // A different specialization, and the city written in English.
+            var city = await db.TrainerFieldValues.SingleAsync(
+                v => v.TrainerId == ahmedId && v.FieldCode == "inPersonCities");
+            city.Value = JsonSerializer.Serialize("Jeddah, Riyadh");
+            db.TrainerFieldValues.Add(new TrainerFieldValue
+            {
+                ValueId = Guid.NewGuid(),
+                TrainerId = ahmedId,
+                FieldCode = "domain",
+                Value = JsonSerializer.Serialize("dom-001"),
+            });
+            await db.SaveChangesAsync();
+        }
+        var requestId = await CreateRequestAsync(centre);
+
+        // The engine ranks him — with his specialization scored, not excluded,
+        // and Riyadh recognised as «الرياض».
+        var run = await PostAsync(staff,
+            $"/api/v1/internal/assignment-requests/{requestId}/matching/run", null);
+        var excluded = run.GetProperty("excluded").EnumerateArray()
+            .Select(e => e.GetProperty("trainerId").GetString()).ToList();
+        Assert.DoesNotContain(ahmedId.ToString(), excluded);
+        var scores = run.GetProperty("ranked").EnumerateArray()
+            .Single(r => r.GetProperty("trainerId").GetString() == ahmedId.ToString())
+            .GetProperty("scores").EnumerateArray()
+            .ToDictionary(s => s.GetProperty("criterion").GetString()!, s => s.GetProperty("rawScore").GetDecimal());
+        Assert.Equal(1m, scores["location"]);
+
+        // `BUG-039` — the manual search finds him by two words of his name,
+        // typed without the hamza.
+        var found = await GetAsync(staff,
+            $"/api/v1/internal/assignment-requests/{requestId}/matching/candidates?q={Uri.EscapeDataString("احمد العتيبي")}");
+        Assert.Equal(ahmedId.ToString(), found.EnumerateArray().Single().GetProperty("trainerId").GetString());
+
+        // `BUG-041` — the requesting party cannot open his profile before he
+        // is nominated, and can once he is.
+        var before = await centre.GetAsync($"/api/v1/internal/trainers/{ahmedId}");
+        Assert.Equal(HttpStatusCode.NotFound, before.StatusCode);
+        await PostAsync(staff, $"/api/v1/internal/assignment-requests/{requestId}/pool",
+            new { trainerIds = trainers.Clients.Keys.Append(ahmedId.ToString()) });
+        await GetAsync(centre, $"/api/v1/internal/trainers/{ahmedId}");
+        var notNominated = await centre.GetAsync($"/api/v1/internal/trainers/{trainers.Suspended}");
+        Assert.Equal(HttpStatusCode.NotFound, notNominated.StatusCode);
+
+        // The named path refuses him for nothing but the two exclusions.
+        var named = GeneralProgramRequest();
+        named["specificNominee"] = ahmedId.ToString();
+        var created = await PostAsync(centre, "/api/v1/internal/assignment-requests/", named);
+        Assert.Equal("nominated", created.GetProperty("status").GetString());
     }
 
     /* ── J-19 — re-routing is SLOT-scoped, and counted, never capped ───────── */
@@ -509,9 +758,48 @@ public sealed class Cap05Tests
         Assert.Equal("awaiting_upload", submission.GetProperty("status").GetString());
         var submissionId = submission.GetProperty("submissionId").GetString()!;
 
-        await PostAsync(trainers.Clients[eligible[0]],
-            $"/api/v1/me/submissions/{submissionId}/upload",
-            new { fileName = "material-v1.pdf" });
+        // RUN-004 — the J-01 rule, applied to the FILE: a wrong type, an
+        // oversized PDF, a renamed executable and a bare name are all refused,
+        // and none of them opens a round.
+        var trainerClient = trainers.Clients[eligible[0]];
+        var uploadPath = $"/api/v1/me/submissions/{submissionId}/upload";
+        foreach (var (name, bytes, reason) in new[]
+        {
+            ("setup.exe", "MZ"u8.ToArray(), "format"),
+            ("big.pdf", [.. "%PDF-1.4 "u8.ToArray(), .. new byte[12 * 1024 * 1024]], "size"),
+            ("renamed.pdf", "MZ not a pdf"u8.ToArray(), "format"),
+        })
+        {
+            var refused = await UploadMaterialAsync(trainerClient, uploadPath, name, bytes);
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, refused.StatusCode);
+            Assert.Contains($"\"reason\":\"{reason}\"",
+                await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
+        var nameOnly = await trainerClient.PostAsJsonAsync(uploadPath, new { fileName = "material-v1.pdf" });
+        Assert.Equal(HttpStatusCode.BadRequest, nameOnly.StatusCode);
+
+        var materialBytes = "%PDF-1.4 material v1"u8.ToArray();
+        var uploadedResponse = await UploadMaterialAsync(trainerClient, uploadPath, "material-v1.pdf", materialBytes);
+        Assert.Equal(HttpStatusCode.OK, uploadedResponse.StatusCode);
+        var uploaded = await uploadedResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("pending_approval", uploaded.GetProperty("status").GetString());
+        var round = uploaded.GetProperty("rounds").EnumerateArray().Single();
+        Assert.Equal("material-v1.pdf", round.GetProperty("fileName").GetString());
+
+        // The trainer opens their own file; the coordinator opens it through
+        // the review feature's route — previewable inline, the bytes intact.
+        var ownFile = await trainerClient.GetAsync("/api" + round.GetProperty("fileUrl").GetString());
+        Assert.Equal(materialBytes, await ownFile.Content.ReadAsByteArrayAsync());
+        var queue = await GetAsync(staff, $"/api/v1/internal/submissions/{submissionId}");
+        var coordinatorUrl = queue.GetProperty("rounds")[0].GetProperty("fileUrl").GetString()!;
+        Assert.Contains("/internal/submissions/", coordinatorUrl, StringComparison.Ordinal);
+        var preview = await staff.GetAsync("/api" + coordinatorUrl);
+        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+        Assert.Equal("application/pdf", preview.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("inline", preview.Content.Headers.ContentDisposition?.DispositionType);
+        Assert.Equal(materialBytes, await preview.Content.ReadAsByteArrayAsync());
+        // The route is the review feature's: a trainer is not staff.
+        Assert.NotEqual(HttpStatusCode.OK, (await trainerClient.GetAsync("/api" + coordinatorUrl)).StatusCode);
 
         // There is NO rejection in J-20 — an unknown decision is unknown.
         var rejected = await staff.PostAsJsonAsync(
@@ -536,9 +824,8 @@ public sealed class Cap05Tests
 
         // A second round, then approval — and the approved MATERIAL queues to
         // FAST (J-20/F3), which service content would not.
-        await PostAsync(trainers.Clients[eligible[0]],
-            $"/api/v1/me/submissions/{submissionId}/upload",
-            new { fileName = "material-v2.pdf" });
+        Assert.Equal(HttpStatusCode.OK, (await UploadMaterialAsync(
+            trainerClient, uploadPath, "material-v2.pdf", "%PDF-1.4 material v2"u8.ToArray())).StatusCode);
         var approved = await PostAsync(staff,
             $"/api/v1/internal/submissions/{submissionId}/decision",
             new { decision = "approved" });
@@ -1544,6 +1831,35 @@ public sealed class Cap05Tests
         return eligible;
     }
 
+    /// <summary>J-17 again on a request a slot returned to: the engine, a pool
+    /// of exactly three for the open slot, every candidate approved in the
+    /// given order.</summary>
+    private static async Task RunCycleAsync(
+        HttpClient staff, HttpClient centre, string requestId, string[] preferenceOrder)
+    {
+        var run = await PostAsync(staff,
+            $"/api/v1/internal/assignment-requests/{requestId}/matching/run", null);
+        Assert.Equal(3, run.GetProperty("requiredPoolSize").GetInt32());
+        await PostAsync(staff, $"/api/v1/internal/assignment-requests/{requestId}/pool",
+            new { trainerIds = preferenceOrder });
+        await PostAsync(centre, $"/api/v1/internal/assignment-requests/{requestId}/pool/decision",
+            new
+            {
+                decisions = preferenceOrder
+                    .Select(id => (object)new { trainerId = id, decision = "approved" })
+                    .ToArray(),
+                preferenceOrder,
+            });
+    }
+
+    private static async Task<string> CurrentOfferTrainerAsync(HttpClient staff, string requestId)
+    {
+        var slots = await GetAsync(staff,
+            $"/api/v1/internal/assignment-requests/{requestId}/slots");
+        return slots.EnumerateArray().Single()
+            .GetProperty("currentOffer").GetProperty("trainerId").GetString()!;
+    }
+
     private static async Task<string> CurrentOfferIdAsync(HttpClient staff, string requestId)
     {
         var slots = await GetAsync(staff,
@@ -1583,6 +1899,16 @@ public sealed class Cap05Tests
     private static readonly Guid CentreA = new("ac000000-0000-0000-0000-000000000001");
 
     private static readonly Guid CentreB = new("ac000000-0000-0000-0000-000000000002");
+
+    private static async Task<HttpResponseMessage> UploadMaterialAsync(
+        HttpClient client, string path, string fileName, byte[] bytes)
+    {
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", fileName);
+        return await client.PostAsync(path, form);
+    }
 
     private static async Task<JsonElement> GetAsync(HttpClient client, string path)
     {

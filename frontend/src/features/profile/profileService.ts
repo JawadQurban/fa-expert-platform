@@ -2,7 +2,13 @@ import type { Result } from '@/types';
 import { isModuleLive } from '../../app/config/expertHubConfig';
 import { createExpertHubApiClient } from '../../shared/services/apiClient';
 import type { ExpertHubApiClient, ExpertHubApiError } from '../../shared/services/apiClient';
-import type { BankDataFields, MyProfileDto, ProfileFieldValues } from './profile.types';
+import { expertHubConfig } from '../../app/config/expertHubConfig';
+import type {
+  BankCountryOption,
+  BankDataFields,
+  MyProfileDto,
+  ProfileFieldValues,
+} from './profile.types';
 import { createMockProfileProvider } from './mockProfileProvider';
 
 /**
@@ -50,6 +56,8 @@ export interface ProfileService {
    * and stores it `not-scanned` — the antivirus pass is still `G27`.
    */
   uploadCertificate(file: File): Promise<Result<MyProfileDto, ExpertHubApiError>>;
+  /** RUN-027 — replace the CV under the application's own `cv` rule (J-01). */
+  replaceCv(file: File): Promise<Result<MyProfileDto, ExpertHubApiError>>;
   removeCertificate(id: string): Promise<Result<MyProfileDto, ExpertHubApiError>>;
   /**
    * `P-331` — ask the AI to draft the bio from the CV. Answers at once with the
@@ -59,6 +67,38 @@ export interface ProfileService {
   requestBioDraft(revision: number): Promise<Result<MyProfileDto, ExpertHubApiError>>;
   /** `P-331` — submit the bio for staff review (it is never published unreviewed). */
   submitBio(text: string, revision: number): Promise<Result<MyProfileDto, ExpertHubApiError>>;
+}
+
+/**
+ * RUN-026 — the «دولة البنك» options: FAST's country list as Expert Hub holds
+ * it (`GET v1/reference-data/fast-country`, the documented bank-country
+ * source). Empty without an API or before the first sync — the field then
+ * stays free text rather than an empty dropdown nobody can answer.
+ */
+export async function loadBankCountries(
+  client: ExpertHubApiClient = createExpertHubApiClient()
+): Promise<readonly BankCountryOption[]> {
+  if (expertHubConfig.apiBaseUrl === '') {
+    return [];
+  }
+  const result = await client.get<{
+    readonly values: readonly {
+      readonly labelAr: string;
+      readonly labelEn: string;
+      readonly attributes: { readonly countryCode?: string | null } | null;
+    }[];
+  }>(`${PROFILE_API_VERSION}/reference-data/fast-country`);
+  if (!result.ok) {
+    return [];
+  }
+  return result.value.values.map((value) => {
+    const code = value.attributes?.countryCode ?? '';
+    return {
+      labelAr: value.labelAr,
+      labelEn: value.labelEn,
+      iso: /^[A-Za-z]{2}$/.test(code) ? code.toUpperCase() : null,
+    };
+  });
 }
 
 /** Future-API provider — already wired to the versioned endpoint shape. */
@@ -89,6 +129,11 @@ export function createHttpProfileProvider(
       const payload = new FormData();
       payload.append('file', file);
       return client.post<MyProfileDto>(`${PROFILE_API_VERSION}/me/profile/certificates`, payload);
+    },
+    replaceCv(file) {
+      const payload = new FormData();
+      payload.append('file', file);
+      return client.post<MyProfileDto>(`${PROFILE_API_VERSION}/me/profile/cv`, payload);
     },
     removeCertificate(id) {
       return client.post<MyProfileDto>(`${PROFILE_API_VERSION}/me/profile/certificates/remove`, {

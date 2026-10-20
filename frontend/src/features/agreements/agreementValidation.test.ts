@@ -3,6 +3,7 @@ import { validateSequenceFormation } from '../../shared/types/sequence';
 import { MOCK_AGREEMENT_FIELDS } from './mockAgreementTemplate';
 import {
   canPrepareAgreement,
+  END_BEFORE_START,
   currentSigningMember,
   readyToSendToApplicant,
   validateAgreementFields,
@@ -165,5 +166,18 @@ describe('currentSigningMember', () => {
 
   it('returns null when nobody is mid-review', () => {
     expect(currentSigningMember([member('a', 'signed', true)])).toBeNull();
+  });
+});
+
+describe('validateAgreementFields — the term (J-10/F1)', () => {
+  it('refuses an end date before the start date', () => {
+    const issues = validateAgreementFields([], { startDate: '2026-10-24', endDate: '2026-10-23' });
+    expect(issues).toEqual([{ fieldId: END_BEFORE_START }]);
+  });
+
+  it('accepts an end date on or after the start date', () => {
+    expect(validateAgreementFields([], { startDate: '2026-10-24', endDate: '2027-10-23' })).toEqual(
+      []
+    );
   });
 });

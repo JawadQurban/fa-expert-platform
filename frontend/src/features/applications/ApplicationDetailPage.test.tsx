@@ -314,19 +314,23 @@ describe('EH-TP-03 — Application Details', () => {
     expect(screen.getByText(content.statuses['agreement-pending'])).toBeInTheDocument();
   });
 
-  it('J-08/F2/AC-3: an exempted interview reads as passed, and the exemption is never disclosed', async () => {
+  it('BUG-034: an exempted interview reads «مستثنى من المقابلة», not as passed', async () => {
     // `app-010` skipped the interview stages entirely (screening exempted it, J-08).
-    // The timeline is derived from the business status, and `TimelineStageDto`
-    // has no exemption field — so the trainer sees a passed step and nothing else.
     await renderDetail('app-010'); // approval-in-progress
     const timeline = screen.getByRole('list', { name: content.timeline.label });
     const interviewStep = within(timeline).getByText(content.stages.interview).closest('li');
     expect(interviewStep).not.toBeNull();
-    // Not the current step, and not an error — it is behind us.
+    // Not the current step, and not an error — it is behind us, exempted.
     expect(interviewStep).not.toHaveAttribute('aria-current');
-    for (const word of ['إعفاء', 'معفى', 'exempt', 'Exempt']) {
-      expect(screen.queryByText(new RegExp(word))).not.toBeInTheDocument();
-    }
+    expect(
+      within(interviewStep as HTMLElement).getByText(content.timeline.exempted)
+    ).toBeInTheDocument();
+    expect(content.timeline.exempted).toBe('مستثنى من المقابلة');
+  });
+
+  it('BUG-034: an interview that happened shows no exemption', async () => {
+    await renderDetail('app-009'); // interview-completed, not exempted
+    expect(screen.queryByText(content.timeline.exempted)).not.toBeInTheDocument();
   });
 
   it('shows the reviewer-authored rejection reason for a rejected application (never a bare status)', async () => {

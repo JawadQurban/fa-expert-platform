@@ -74,6 +74,7 @@ export default function TrainerDirectoryPage() {
         page,
         pageSize: PAGE_SIZE,
         search: filters.search,
+        specialty: filters.specialty,
       })
       .then((response) => {
         if (cancelled) {

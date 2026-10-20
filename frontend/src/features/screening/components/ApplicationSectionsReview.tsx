@@ -16,6 +16,11 @@ import styles from './ApplicationSectionsReview.module.css';
  * see which answers the advisory panel read (J-05/F4/AC-1) — the marker is
  * informational and never changes the field's own weight in the score.
  */
+/**
+ * A section's answers — and, for a repeatable section holding more than one
+ * entry, every entry under its own numbered heading, so a second qualification
+ * is read rather than silently dropped (`DEF-01`).
+ */
 function SectionFields({
   section,
   content,
@@ -25,9 +30,36 @@ function SectionFields({
   readonly content: ScreeningContent;
   readonly locale: Locale;
 }) {
+  const entries = section.entries ?? [];
+  if (entries.length < 2) {
+    return <FieldList fields={section.fields} content={content} locale={locale} />;
+  }
+  return (
+    <div className={styles.entries}>
+      {entries.map((entry, position) => (
+        <div key={entry.entryId ?? entry.index} className={styles.entry}>
+          <Typography as="h3" variant="text-md" weight="bold">
+            {content.form.entryHeading(position + 1)}
+          </Typography>
+          <FieldList fields={entry.fields} content={content} locale={locale} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FieldList({
+  fields,
+  content,
+  locale,
+}: {
+  readonly fields: ScreeningSectionDto['fields'];
+  readonly content: ScreeningContent;
+  readonly locale: Locale;
+}) {
   return (
     <dl className={styles.fields}>
-      {section.fields.map((field) => (
+      {fields.map((field) => (
         <div key={field.id} className={styles.field}>
           <dt className={styles.term}>
             <Typography as="span" variant="text-sm" color="muted">

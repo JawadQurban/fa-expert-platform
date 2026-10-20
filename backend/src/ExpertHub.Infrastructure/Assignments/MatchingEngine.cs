@@ -40,7 +40,7 @@ public sealed record MatchingResult(
     IReadOnlyList<RankedCandidate> Ranked, IReadOnlyList<ExcludedCandidate> Excluded);
 
 /// <summary>
-/// J-17's Matching Matrix: four EXCLUSIONARY rows and three WEIGHTED ones.
+/// J-17's Matching Matrix: TWO exclusionary rows and six weighted ones.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -52,16 +52,28 @@ public sealed record MatchingResult(
 /// a later edit that "just adds a big negative weight".
 /// </para>
 /// <para>
-/// The exclusions apply on BOTH paths — engine and manual search (F3/AC-3) —
-/// which is why <see cref="Match"/> is the only way in and the manual search
-/// runs through it too.
+/// Owner ruling (Notion J-17, UAT `BUG-038`/`RUN-011`): «المعايير الاقصائية ٢
+/// فقط: تعارض الارتباط، ملف المدرب غير مفعل». Specialization and location were
+/// exclusionary until then; they are WEIGHTED now — a mismatch lowers the score
+/// and never removes anyone, on the engine, the manual search and the
+/// named-nominee path alike (all three run through <see cref="Match"/>).
+/// </para>
+/// <para>
+/// Owner ruling (chat, 2026-10-20): a CONSULTANT's scheduling conflict lowers
+/// their score instead of excluding them — the `availability` row. For every
+/// other service an overlapping engagement is still exclusionary.
+/// </para>
+/// <para>
+/// Who is a candidate at all is not a matrix row: the matrix applies WITHIN a
+/// service category («applies across (Trainer, Content Developer, Question
+/// Writer)»), so a trainer not accredited for the requested service is not in
+/// the pool — neither ranked nor listed as excluded.
 /// </para>
 /// <para>
 /// ⚠️ `DM-GAP-05` — the weights arrive from the model row, never from here.
-/// ⚠️ `Q16` — the domain has no taxonomy, so the specialization row compares
-/// the request's free text against the trainer's, case-insensitively, and
-/// treats an ABSENT value on either side as "not a reason to exclude": a
-/// missing taxonomy must not silently rule everyone out.
+/// ⚠️ `Q16` — the domain has no taxonomy, so specialization and city compare
+/// normalised text (<see cref="MatchText"/>): letter forms, case and — for the
+/// cities it knows — the language a city was written in do not matter.
 /// </para>
 /// </remarks>
 public static class MatchingEngine
@@ -74,7 +86,7 @@ public static class MatchingEngine
         var ranked = new List<RankedCandidate>();
         var excluded = new List<ExcludedCandidate>();
 
-        foreach (var candidate in candidates)
+        foreach (var candidate in candidates.Where(c => IsInCategory(request, c)))
         {
             var reasons = Exclusions(request, candidate);
             if (reasons.Count > 0)
@@ -98,45 +110,27 @@ public static class MatchingEngine
             excluded);
     }
 
-    /// <summary>The four exclusionary rows. Each is a REASON, never a score.</summary>
+    /// <summary>Accredited for the requested service — who the pool is, not a row.</summary>
+    public static bool IsInCategory(MatchingContext request, MatchingCandidateInput candidate) =>
+        candidate.AccreditedServices.Contains(request.ServiceType);
+
+    /// <summary>The two exclusionary rows. Each is a REASON, never a score.</summary>
     private static List<string> Exclusions(
         MatchingContext request, MatchingCandidateInput candidate)
     {
         var reasons = new List<string>();
 
-        // Row 1 — specialization/domain, against the request's own field.
-        if (!string.IsNullOrWhiteSpace(request.SpecializationDomain)
-            && !string.IsNullOrWhiteSpace(candidate.SpecializationDomain)
-            && !string.Equals(
-                request.SpecializationDomain.Trim(),
-                candidate.SpecializationDomain.Trim(),
-                StringComparison.OrdinalIgnoreCase))
-        {
-            reasons.Add(MatchExclusionReasons.Specialization);
-        }
-
-        // Row 2 — location, UNLESS the delivery is online, in which case the
-        // row does not apply at all (J-17/F1/AC-2).
-        var isOnline = IsOnline(request.DeliveryMechanism);
-        if (!isOnline
-            && !string.IsNullOrWhiteSpace(request.City)
-            && !string.IsNullOrWhiteSpace(candidate.City)
-            && !string.Equals(request.City.Trim(), candidate.City.Trim(),
-                StringComparison.OrdinalIgnoreCase))
-        {
-            reasons.Add(MatchExclusionReasons.Location);
-        }
-
-        // Row 3 — a confirmed engagement overlapping the request's dates.
-        if (request.StartsAt is { } from && request.EndsAt is { } to
-            && candidate.ConfirmedEngagements.Any(e => e.From <= to && from <= e.To))
+        // A confirmed engagement overlapping the request's dates — weighted,
+        // not exclusionary, when a consultant is requested (ruling 2026-10-20).
+        if (HasConflict(request, candidate)
+            && request.ServiceType != ApplicationServices.Consultant)
         {
             reasons.Add(MatchExclusionReasons.ScheduleConflict);
         }
 
-        // Row 4 — the file status must be active. This is the internal-only
-        // status of `BR-0408`, used here as J-15 makes it visible internally.
-        // J-13's `idle` is an active agreement with no recent engagement, «for
+        // The file must be active. This is the internal-only status of
+        // `BR-0408`, used here as J-15 makes it visible internally. J-13's
+        // `idle` is an active agreement with no recent engagement, «for
         // monitoring purposes only, with no effect on matching eligibility» —
         // so it is eligible exactly as `active` is.
         if (candidate.FileStatus is not (TrainerFileStatuses.Active or TrainerFileStatuses.Idle))
@@ -144,17 +138,14 @@ public static class MatchingEngine
             reasons.Add(MatchExclusionReasons.FileStatus);
         }
 
-        // Not a matrix row, but the same kind of fact: a trainer who is not
-        // accredited for the requested service is not a candidate for it.
-        if (!candidate.AccreditedServices.Contains(request.ServiceType))
-        {
-            reasons.Add(MatchExclusionReasons.Specialization);
-        }
-
-        return [.. reasons.Distinct()];
+        return reasons;
     }
 
-    /// <summary>The three weighted rows. Each yields 0–1, then the model's weight.</summary>
+    private static bool HasConflict(MatchingContext request, MatchingCandidateInput candidate) =>
+        request.StartsAt is { } from && request.EndsAt is { } to
+        && candidate.ConfirmedEngagements.Any(e => e.From <= to && from <= e.To);
+
+    /// <summary>The six weighted rows. Each yields 0–1, then the model's weight.</summary>
     private static List<CriterionScore> Weighted(
         MatchingContext request,
         MatchingCandidateInput candidate,
@@ -162,6 +153,16 @@ public static class MatchingEngine
     {
         decimal Weight(string criterion) =>
             weights.TryGetValue(criterion, out var value) ? value : 0m;
+
+        // Specialization — the request's domain among the trainer's.
+        var specializationRaw =
+            MatchText.AnyEqual(request.SpecializationDomain, candidate.SpecializationDomain) ? 1m : 0m;
+
+        // Location — the request's city among the trainer's in-person cities.
+        // An online delivery has no location, so the row scores nothing for
+        // anyone (J-17's «unless online»), which leaves the ranking untouched.
+        var locationRaw = !IsOnline(request.DeliveryMechanism)
+            && MatchText.AnyCityEqual(request.City, candidate.City) ? 1m : 0m;
 
         var languageRaw = string.IsNullOrWhiteSpace(request.Language)
             ? 0m
@@ -182,9 +183,14 @@ public static class MatchingEngine
 
         return
         [
+            Line(WeightedCriteria.Specialization, specializationRaw),
+            Line(WeightedCriteria.Location, locationRaw),
             Line(WeightedCriteria.Language, languageRaw),
             Line(WeightedCriteria.DeliveryMode, modeRaw),
             Line(WeightedCriteria.Evaluation, evaluationRaw),
+            // Only a consultant can reach here with a conflict; everyone else
+            // ranked is free on the dates and scores the row in full.
+            Line(WeightedCriteria.Availability, HasConflict(request, candidate) ? 0m : 1m),
         ];
 
         CriterionScore Line(string criterion, decimal raw)

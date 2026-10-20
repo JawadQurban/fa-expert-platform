@@ -22,6 +22,7 @@ import type {
   AddServiceContextDto,
   AddServiceRequestDto,
   AddServiceRequestInput,
+  MyServiceRequestsDto,
 } from './addService.types';
 import { createMockApplicationsProvider } from './mockApplicationsProvider';
 
@@ -125,6 +126,8 @@ export interface ApplicationsService {
     id: string,
     input: AddServiceRequestInput
   ): Promise<Result<AddServiceRequestDto, ExpertHubApiError>>;
+  /** BUG-019 — the trainer's own add-service requests, with their numbers and status. */
+  listMyServiceRequests(): Promise<Result<MyServiceRequestsDto, ExpertHubApiError>>;
 }
 
 /** Future-API provider — already wired to the versioned endpoint shape. */
@@ -256,6 +259,9 @@ export function createHttpApplicationsProvider(
         `${APPLICATIONS_API_VERSION}/me/applications/${encodeURIComponent(id)}/services`,
         input
       );
+    },
+    listMyServiceRequests() {
+      return client.get<MyServiceRequestsDto>(`${APPLICATIONS_API_VERSION}/me/service-requests`);
     },
   };
 }

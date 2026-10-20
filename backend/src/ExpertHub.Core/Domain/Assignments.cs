@@ -342,6 +342,13 @@ public sealed class SubmissionRound
 
     public required string FileName { get; set; }
 
+    /// <summary>
+    /// The stored file (RUN-004) — the same `ATTACHMENT` record J-01 uploads
+    /// write. Null only for a round recorded before files were stored, when a
+    /// round held the file NAME alone.
+    /// </summary>
+    public Guid? AttachmentId { get; set; }
+
     /// <summary>`approved` | `changes_requested`, once decided.</summary>
     public string? Decision { get; set; }
 
@@ -364,25 +371,35 @@ public static class AssignmentRequestStatuses
     public const string Closed = "closed";
 }
 
-/// <summary>The four EXCLUSIONARY matrix rows — a closed union, so a fifth
-/// cannot appear without amending the matrix first (J-17/F1/AC-2).</summary>
+/// <summary>The two EXCLUSIONARY matrix rows — a closed union, so a third
+/// cannot appear without amending the matrix first (J-17/F1/AC-2). Owner
+/// ruling (UAT `BUG-038`): «المعايير الاقصائية ٢ فقط: تعارض الارتباط، ملف
+/// المدرب غير مفعل». `specialization` and `location` reasons may still sit in
+/// `MATCH_EXCLUSION` rows written before the ruling; nothing writes them now.</summary>
 public static class MatchExclusionReasons
 {
-    public const string Specialization = "specialization";
-    public const string Location = "location";
     public const string ScheduleConflict = "schedule-conflict";
     public const string FileStatus = "file-status";
 }
 
-/// <summary>The three WEIGHTED rows. None of them can exclude anyone
+/// <summary>The six WEIGHTED rows. None of them can exclude anyone
 /// (F1/AC-3) — which is why they are a different list entirely.</summary>
 public static class WeightedCriteria
 {
+    public const string Specialization = "specialization";
+    public const string Location = "location";
     public const string Language = "language";
     public const string DeliveryMode = "delivery-mode";
     public const string Evaluation = "evaluation";
 
-    public static readonly IReadOnlyList<string> All = [Language, DeliveryMode, Evaluation];
+    /// <summary>No confirmed engagement overlapping the request's dates. For a
+    /// CONSULTANT a conflict lowers the score rather than excluding (owner
+    /// ruling 2026-10-20); for every other service it still excludes
+    /// (<see cref="MatchExclusionReasons.ScheduleConflict"/>).</summary>
+    public const string Availability = "availability";
+
+    public static readonly IReadOnlyList<string> All =
+        [Specialization, Location, Language, DeliveryMode, Evaluation, Availability];
 }
 
 /// <summary>`BR-0505` / J-17/F2/AC-2 — exactly three per required person.</summary>

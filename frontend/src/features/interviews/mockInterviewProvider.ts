@@ -11,9 +11,10 @@ import {
 import type { InterviewService } from './interviewService';
 import {
   allMembersResponded,
-  noServicePassed,
   type CommitteeMemberResponseDto,
+  type EvaluationBlockedReason,
   type InterviewDetailDto,
+  type InterviewPhase,
   type InterviewEvaluationInput,
   type InterviewViewerDto,
   type PostInterviewDecisionInput,
@@ -155,7 +156,10 @@ export function createMockInterviewProvider(
       ]
     : [...SEED_EVALUATIONS];
   let rescheduleCount = 0;
-  let scheduledAt = '2026-07-30T08:00:00Z';
+  // Held the day before `now`, so the seeded interview is behind us and open
+  // for evaluation — the server's rule (RUN-036).
+  let scheduledAt: string | null = '2026-07-27T08:00:00Z';
+  let proposedSlots: readonly string[] = [];
   let decision: PostInterviewDecisionSummaryDto | null = null;
 
   const buildDetail = (applicationId: string): InterviewDetailDto | null => {
@@ -169,6 +173,21 @@ export function createMockInterviewProvider(
     const alreadyResponded = evaluations.some(
       (evaluation) => evaluation.memberId === viewerMemberId
     );
+    const status: InterviewPhase =
+      scheduledAt == null
+        ? 'awaiting-selection'
+        : complete
+          ? 'completed'
+          : new Date(scheduledAt).getTime() > now
+            ? 'scheduled'
+            : 'ended';
+    const blockedReason: EvaluationBlockedReason | null = alreadyResponded
+      ? 'already-responded'
+      : status === 'awaiting-selection'
+        ? 'awaiting-selection'
+        : status === 'scheduled'
+          ? 'not-started'
+          : null;
 
     return {
       applicationId: row.id,
@@ -180,23 +199,28 @@ export function createMockInterviewProvider(
       ticket: {
         number: `INT-${row.reference.slice(-5)}`,
         scheduledAt,
+        proposedSlots,
         // Teams is not in the CAP-12 integration table yet (J-06 open item 1).
         meetingUrl: null,
         rescheduleCount,
       },
+      status,
       model: MOCK_INTERVIEW_MODEL,
       committee,
       // `BR-0220` — no result at all until every member has responded.
       result: complete ? computeResults(row.services, evaluations) : null,
       viewer: {
         memberId: viewerMemberId,
-        canEvaluate: viewerOverride?.canEvaluate ?? !alreadyResponded,
+        canEvaluate: viewerOverride?.canEvaluate ?? blockedReason == null,
         // `BR-0208` — the screening decision-maker only.
         canDecide: viewerOverride?.canDecide ?? true,
         canReschedule: viewerOverride?.canReschedule ?? true,
         // As the server: only the decision-maker may reject.
         canReject: viewerOverride?.canReject ?? viewerOverride?.canDecide ?? true,
         fullNoShow: viewerOverride?.fullNoShow ?? false,
+        evaluationBlockedReason:
+          viewerOverride?.evaluationBlockedReason ??
+          (viewerOverride?.canEvaluate === false ? 'not-member' : blockedReason),
       },
       decision,
     };
@@ -241,18 +265,10 @@ export function createMockInterviewProvider(
       return resolveDetail(applicationId);
     },
 
-    async submitDecision(applicationId: string, input: PostInterviewDecisionInput) {
+    async submitDecision(_applicationId: string, input: PostInterviewDecisionInput) {
       await delay(latencyMs);
       if (failWith != null) {
         return { ok: false, error: failWith };
-      }
-      // The API's rule: nothing is forwarded when no service passed.
-      const current = buildDetail(applicationId);
-      if (
-        input.kind === 'forward' &&
-        noServicePassed(current?.result ?? null, current?.exemptedServices ?? [])
-      ) {
-        return { ok: false, error: { status: 409, message: 'no-service-passed' } };
       }
       const summary: PostInterviewDecisionSummaryDto = {
         kind: input.kind,
@@ -269,10 +285,9 @@ export function createMockInterviewProvider(
       if (failWith != null) {
         return { ok: false, error: failWith };
       }
-      const firstSlot = input.slots.find((slot) => slot.trim() !== '');
-      if (firstSlot != null) {
-        scheduledAt = new Date(firstSlot).toISOString();
-      }
+      // RUN-021 — proposals wait for the applicant; nothing is fixed here.
+      proposedSlots = input.slots.filter((slot) => slot.trim() !== '');
+      scheduledAt = null;
       // J-06/F4/AC-6 — the same interview ticket number is retained.
       rescheduleCount += 1;
       return resolveDetail(applicationId);

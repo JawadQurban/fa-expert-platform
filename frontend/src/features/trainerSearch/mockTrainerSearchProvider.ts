@@ -8,8 +8,10 @@ import type { TrainerSearchService } from './trainerSearchService';
 import { hasTrainerOnlyFilter } from './trainerSearch.types';
 import type {
   BioDecision,
+  FileStatusChoice,
   IdentityCardDto,
   PendingBioDto,
+  TrainerFileStatus,
   TrainerProfileDto,
   TrainerSearchFilters,
   TrainerSearchResultDto,
@@ -45,7 +47,7 @@ const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     trainerId: 'trn-001',
     name: 'د. سارة العتيبي',
     services: ['consultant', 'trainer'],
-    specialties: ['leadership', 'human-resources'],
+    specialties: ['dom-001', 'dom-008'],
     classification: 'expert',
     fileStatus: 'active',
     evaluationOverall: 4.5,
@@ -82,7 +84,7 @@ const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     trainerId: 'trn-002',
     name: 'أ. خالد المطيري',
     services: ['trainer'],
-    specialties: ['finance'],
+    specialties: ['dom-003'],
     classification: 'senior',
     // J-13: contractually active, but no engagement in the last 6 months.
     // "Monitoring purposes only, with NO effect on matching eligibility."
@@ -110,7 +112,7 @@ const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     trainerId: 'trn-003',
     name: 'م. نورة الشمري',
     services: ['trainer', 'content-developer'],
-    specialties: ['digital-transformation', 'data-analytics'],
+    specialties: ['dom-006', 'dom-017'],
     classification: 'certified',
     fileStatus: 'expired',
     // Not every trainer has a calculated rating yet (`02D`, P-06).
@@ -137,7 +139,7 @@ const MOCK_TRAINERS: readonly MockTrainerRecord[] = [
     trainerId: 'trn-004',
     name: 'أ. ريم القحطاني',
     services: ['question-writer'],
-    specialties: ['cybersecurity'],
+    specialties: ['dom-015'],
     classification: 'senior',
     fileStatus: 'suspended',
     evaluationOverall: 3.5,
@@ -245,7 +247,22 @@ export function createMockTrainerSearchProvider(
   // ⚠️ MOCK: one bio waiting, so the review screen is demonstrable.
   let pendingBios: PendingBioDto[] = [...MOCK_PENDING_BIOS];
 
-  return {
+  // RUN-025 — manual file statuses set in this session, by trainer.
+  const overrides = new Map<string, TrainerFileStatus>();
+
+  const provider: TrainerSearchService = {
+    async setFileStatus(trainerId: string, status: FileStatusChoice, reason: string) {
+      if (reason.trim() === '') {
+        return { ok: false, error: { status: 400, message: 'reason-required' } };
+      }
+      if (status === 'automatic') {
+        overrides.delete(trainerId);
+      } else {
+        overrides.set(trainerId, status);
+      }
+      return provider.getTrainerProfile(trainerId);
+    },
+
     async getPendingBios() {
       await delay(latencyMs);
       if (failWith != null) {
@@ -275,9 +292,13 @@ export function createMockTrainerSearchProvider(
       if (failWith != null) {
         return { ok: false, error: failWith };
       }
-      const search = filters.search.trim().toLowerCase();
+      // As the API: every word of the search must appear in the name.
+      const words = filters.search.toLowerCase().split(/\s+/).filter(Boolean);
       const items = MOCK_TRAINERS.filter((trainer) => {
-        if (search !== '' && !trainer.name.toLowerCase().includes(search)) {
+        if (!words.every((word) => trainer.name.toLowerCase().includes(word))) {
+          return false;
+        }
+        if (filters.domain !== 'all' && !trainer.specialties.includes(filters.domain)) {
           return false;
         }
         if (filters.service !== 'all' && !trainer.services.includes(filters.service)) {
@@ -331,7 +352,7 @@ export function createMockTrainerSearchProvider(
         yearsExperience: trainer.yearsExperience,
         academicQualification: trainer.academicQualification,
         certifications: trainer.certifications,
-        fileStatus: trainer.fileStatus,
+        fileStatus: overrides.get(trainer.trainerId) ?? trainer.fileStatus,
         record: trainer.record,
         evaluation: {
           overall: trainer.evaluationOverall,
@@ -343,8 +364,32 @@ export function createMockTrainerSearchProvider(
         agreement: trainer.agreement,
         identityCard: identityCardFor(trainer),
         bio: null,
+        applicationSections: [
+          {
+            id: 'personal',
+            title: { ar: 'المعلومات الأساسية', en: 'Basic information' },
+            fields: [
+              { id: 'idNumber', label: { ar: 'رقم الهوية', en: 'ID number' }, value: '1012345678' },
+              { id: 'nationality', label: { ar: 'الجنسية', en: 'Nationality' }, value: 'سعودي' },
+            ],
+          },
+        ],
+        attachments: [
+          {
+            id: 'att-cv',
+            name: 'cv.pdf',
+            type: { ar: 'السيرة الذاتية', en: 'CV' },
+            format: 'pdf',
+            sizeKb: 120,
+            previewUrl: null,
+          },
+        ],
+        bankData: null,
+        fileStatusManual: overrides.has(trainer.trainerId),
+        canSetFileStatus: true,
       };
       return { ok: true, value };
     },
   };
+  return provider;
 }

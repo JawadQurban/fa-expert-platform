@@ -28,9 +28,14 @@ internal static class Cap05SeedData
         {
             MatchingModelId,
             Version = MatchingModelVersion,
-            // The three weighted rows of J-17's matrix, evenly weighted —
-            // see the remarks: an even split is the only honest placeholder.
-            Weights = """{"language":34,"delivery-mode":33,"evaluation":33}""",
+            // The weighted rows of J-17's matrix, evenly weighted — see the
+            // remarks: an even split is the only honest placeholder. The
+            // owner's ruling (UAT `BUG-038`) moved specialization and location
+            // from exclusionary to weighted; they join at the same weight and
+            // the three original weights are kept as they were. A consultant's
+            // scheduling conflict became the weighted `availability` row
+            // (ruling 2026-10-20), at the same weight.
+            Weights = """{"specialization":33,"location":33,"language":34,"delivery-mode":33,"evaluation":33,"availability":33}""",
             TieBreakNoteAr = (string?)null,
             TieBreakNoteEn = (string?)null,
             IsActive = true,

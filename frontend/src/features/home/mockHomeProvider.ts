@@ -46,6 +46,13 @@ export const MOCK_HOME: PortalHomeDto = {
     },
   ],
   hasActivity: true,
+  upcomingInterview: {
+    applicationId: 'app-002',
+    reference: 'EH-2026-00012',
+    startsAt: '2026-08-03T07:00:00Z',
+    ticketNumber: 'INT-2026-0042',
+    reschedulePending: false,
+  },
 };
 
 /**
@@ -67,6 +74,7 @@ export const MOCK_HOME_EMPTY: PortalHomeDto = {
   visibilityConsent: false,
   notifications: [],
   hasActivity: false,
+  upcomingInterview: null,
 };
 
 export interface MockHomeProviderOptions {

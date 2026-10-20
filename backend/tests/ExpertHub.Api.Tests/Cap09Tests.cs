@@ -292,6 +292,64 @@ public sealed class Cap09Tests
         Assert.True(home.GetProperty("hasActivity").GetBoolean());
     }
 
+    [Fact]
+    public async Task Both_homes_show_the_upcoming_interview_and_staff_see_reschedule_requests()
+    {
+        // BUG-028 / BUG-029 — neither home showed an interview, and an
+        // applicant's reschedule request reached nobody.
+        using var trainer = await SignInAsync("cap09-interviewee", "مدرب المقابلة", null);
+        using var staff = await SignInAsync("cap09-staff-interviews", "موظف", RoleCode.Staff);
+        await SeedApplicationAsync("cap09-interviewee", ApplicationStatuses.InterviewScheduled);
+        await SeedApplicationAsync("cap09-rescheduler", ApplicationStatuses.InterviewScheduled);
+        var startsAt = DateTime.UtcNow.Date.AddDays(3).AddHours(9);
+        await using (var db = _database.CreateContext())
+        {
+            foreach (var subject in new[] { "cap09-interviewee", "cap09-rescheduler" })
+            {
+                var application = await db.Applications.SingleAsync(
+                    a => db.Users.Any(u => u.UserId == a.ApplicantUserId && u.ExternalIdentityId == subject));
+                var interview = new Interview
+                {
+                    InterviewId = Guid.NewGuid(),
+                    ApplicationId = application.ApplicationId,
+                    Status = InterviewStatuses.Scheduled,
+                    TicketNumber = $"T-{subject}",
+                    CreatedAt = DateTime.UtcNow,
+                };
+                db.Interviews.Add(interview);
+                await db.SaveChangesAsync();
+                var slot = new InterviewSlot
+                {
+                    SlotId = Guid.NewGuid(), InterviewId = interview.InterviewId, StartsAt = startsAt,
+                };
+                db.InterviewSlots.Add(slot);
+                await db.SaveChangesAsync();
+                interview.ConfirmedSlotId = slot.SlotId;
+                if (subject == "cap09-rescheduler")
+                {
+                    interview.RescheduleRequestedAt = DateTime.UtcNow;
+                    interview.RescheduleNote = "ظرف طارئ";
+                }
+                await db.SaveChangesAsync();
+            }
+        }
+
+        var home = await GetAsync(trainer, "/api/v1/me/home");
+        var upcoming = home.GetProperty("upcomingInterview");
+        Assert.Equal("T-cap09-interviewee", upcoming.GetProperty("ticketNumber").GetString());
+        Assert.False(upcoming.GetProperty("reschedulePending").GetBoolean());
+        Assert.Equal(startsAt, upcoming.GetProperty("startsAt").GetDateTime().ToUniversalTime());
+
+        var dashboard = await GetAsync(staff, "/api/v1/internal/dashboard");
+        // The one waiting on a reschedule has no time to keep — it is an action item instead.
+        Assert.Equal("T-cap09-interviewee",
+            dashboard.GetProperty("upcomingInterviews").EnumerateArray().Single()
+                .GetProperty("ticketNumber").GetString());
+        var request = dashboard.GetProperty("rescheduleRequests").EnumerateArray().Single();
+        Assert.Equal("cap09-rescheduler", request.GetProperty("applicantName").GetString());
+        Assert.Equal("ظرف طارئ", request.GetProperty("note").GetString());
+    }
+
     /* ── the seeded definitions ────────────────────────────────────────────── */
 
     [Fact]

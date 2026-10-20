@@ -14,7 +14,10 @@ import type {
 import { getAgreementLifecycleService } from './agreementLifecycleService';
 import { getAgreementLifecycleContent } from './agreementLifecycle.content';
 import { AgreementActionsPanel } from './components/AgreementActionsPanel';
+import { SigningSequenceTimeline } from '../agreements/components/SigningSequenceTimeline';
+import { getAgreementsContent } from '../agreements/agreements.content';
 import { PageLoadError } from '../../shared/components/PageLoadError';
+import { apiUrl } from '../../shared/services/apiClient';
 import { WorkspacePage } from '../../shared/workspace/WorkspacePage';
 import { RecordHead } from '../../shared/workspace/RecordHead';
 import { Panel } from '../../shared/workspace/Panel';
@@ -33,9 +36,10 @@ import { formatDate as formatLocaleDate } from '../../shared/formatting';
 type Phase = 'loading' | 'error' | 'not-found' | 'ready';
 
 const STATUS_VARIANT: Readonly<
-  Record<AgreementStatus, 'success' | 'warning' | 'error' | 'neutral'>
+  Record<AgreementStatus, 'success' | 'warning' | 'error' | 'neutral' | 'information'>
 > = {
   active: 'success',
+  'not-started': 'information',
   suspended: 'warning',
   expired: 'error',
   ended: 'neutral',
@@ -52,6 +56,7 @@ function formatDate(iso: string, locale: Locale): string {
 export default function AgreementDetailPage() {
   const { locale } = useLocale();
   const content = useMemo(() => getAgreementLifecycleContent(locale), [locale]);
+  const signingContent = useMemo(() => getAgreementsContent(locale), [locale]);
   const { agreementId } = useParams();
   const service = getAgreementLifecycleService();
 
@@ -228,11 +233,23 @@ export default function AgreementDetailPage() {
           </div>
         </dl>
 
-        {/* `G26` — document storage unresolved; no fabricated download. */}
-        {agreement.documentUrl == null && (
+        {/* BUG-001 — the file staff uploaded at J-10; a note only when none was. */}
+        {agreement.documentUrl == null ? (
           <Typography as="p" variant="text-xs" color="muted">
             {content.detail.documentUnavailable}
           </Typography>
+        ) : (
+          <div>
+            <Button
+              variant="secondary"
+              size="sm"
+              href={apiUrl(agreement.documentUrl)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {content.detail.openDocument}
+            </Button>
+          </div>
         )}
       </RecordHead>
 
@@ -276,6 +293,36 @@ export default function AgreementDetailPage() {
                 </li>
               ))}
             </ol>
+          </Panel>
+
+          {/* UAT RUN-037 — who signed it, each person's state, and the applicant. */}
+          <Panel
+            title={content.detail.signingHeading}
+            titleId="eh-agreement-signing"
+            icon="task-done-01"
+          >
+            {agreement.signing.sequence.length > 0 ? (
+              <SigningSequenceTimeline
+                sequence={agreement.signing.sequence}
+                viewerApproverId={null}
+                content={signingContent}
+                locale={locale}
+              />
+            ) : (
+              <Typography as="p" variant="text-sm" color="muted">
+                {content.detail.signingNone}
+              </Typography>
+            )}
+            {agreement.signing.applicantSignedAt != null && (
+              <Typography as="p" variant="text-sm">
+                <bdi>
+                  {content.detail.applicantSigned(
+                    agreement.signing.applicantSignatureName ?? agreement.trainerName,
+                    formatDate(agreement.signing.applicantSignedAt, locale)
+                  )}
+                </bdi>
+              </Typography>
+            )}
           </Panel>
         </div>
 

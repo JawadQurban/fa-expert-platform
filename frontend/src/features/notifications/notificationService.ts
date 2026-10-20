@@ -4,6 +4,7 @@ import { createExpertHubApiClient } from '../../shared/services/apiClient';
 import type { ExpertHubApiClient, ExpertHubApiError } from '../../shared/services/apiClient';
 import { createMockNotificationProvider } from './mockNotificationProvider';
 import type {
+  MyNotificationDto,
   NotificationLogDto,
   NotificationLogQuery,
   NotificationMatrixDto,
@@ -85,6 +86,12 @@ export interface NotificationService {
   listLog(
     query: NotificationLogQuery
   ): Promise<Result<readonly NotificationLogDto[], ExpertHubApiError>>;
+
+  /**
+   * J-25 — the caller's OWN in-platform notifications (ownership, not a
+   * feature): the header bell and «إشعاراتي» read this, for every role.
+   */
+  listMyNotifications(): Promise<Result<readonly MyNotificationDto[], ExpertHubApiError>>;
 }
 
 /** Future-API provider — already wired to the versioned endpoint shape. */
@@ -143,8 +150,19 @@ export function createHttpNotificationProvider(
       if (query.channel != null) {
         params.set('channel', query.channel);
       }
+      if (query.from != null) {
+        params.set('from', query.from);
+      }
+      if (query.to != null) {
+        params.set('to', query.to);
+      }
       const suffix = params.toString() === '' ? '' : `?${params.toString()}`;
       return client.get<readonly NotificationLogDto[]>(`${base}/log${suffix}`);
+    },
+    listMyNotifications() {
+      return client.get<readonly MyNotificationDto[]>(
+        `${NOTIFICATION_API_VERSION}/me/notifications`
+      );
     },
   };
 }

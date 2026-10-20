@@ -16,7 +16,7 @@ import { NotificationsPreview } from './components/NotificationsPreview';
 import { CompleteProfilePrompt } from './components/CompleteProfilePrompt';
 import styles from './PortalHomePage.module.css';
 import { PageLoadError } from '../../shared/components/PageLoadError';
-import { formatNumber } from '../../shared/formatting';
+import { formatDate, formatNumber } from '../../shared/formatting';
 
 /**
  * EH-TP-01 — Portal Home (`/expert-hub/home`, trainer). A read-only, **own-scope**
@@ -338,6 +338,47 @@ export default function PortalHomePage() {
               </div>
 
               <div className={styles.sideColumn}>
+                {/* BUG-028 — the next interview, first: it is the one dated commitment. */}
+                {home.upcomingInterview != null && (
+                  <Card effect="stroke" className={styles.card}>
+                    <SectionHead icon="co-present">{content.interview.heading}</SectionHead>
+                    {home.upcomingInterview.startsAt != null ? (
+                      <Typography as="p" variant="text-lg" weight="bold">
+                        <time dateTime={home.upcomingInterview.startsAt}>
+                          {formatDate(home.upcomingInterview.startsAt, locale, {
+                            dateStyle: 'full',
+                            timeStyle: 'short',
+                          })}
+                        </time>
+                      </Typography>
+                    ) : (
+                      <Typography as="p" variant="text-md">
+                        {content.interview.reschedulePending}
+                      </Typography>
+                    )}
+                    <Typography as="p" variant="text-sm" color="muted">
+                      <bdi>{content.interview.reference(home.upcomingInterview.reference)}</bdi>
+                      {home.upcomingInterview.ticketNumber != null && (
+                        <>
+                          {' · '}
+                          <bdi>{content.interview.ticket(home.upcomingInterview.ticketNumber)}</bdi>
+                        </>
+                      )}
+                    </Typography>
+                    <div>
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        href={expertHubPaths.applicationDetail(
+                          home.upcomingInterview.applicationId
+                        )}
+                      >
+                        {content.interview.open}
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+
                 <Card effect="stroke" className={styles.card}>
                   <SectionHead icon="note-01">{content.notifications.heading}</SectionHead>
                   <NotificationsPreview
@@ -345,6 +386,11 @@ export default function PortalHomePage() {
                     content={content}
                     locale={locale}
                   />
+                  <div>
+                    <Button variant="tertiary" size="sm" href={expertHubPaths.notifications}>
+                      {content.notifications.viewAll}
+                    </Button>
+                  </div>
                 </Card>
 
                 <Card effect="stroke" className={styles.card}>

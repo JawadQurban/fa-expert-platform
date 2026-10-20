@@ -186,7 +186,7 @@ export default function PublicTrainerProfilePage() {
                   {trainer.specialties.map((specialty) => (
                     <li key={specialty}>
                       <Tag variant="onColor" size="sm">
-                        {content.specialties[specialty]}
+                        {content.specialties[specialty] ?? specialty}
                       </Tag>
                     </li>
                   ))}

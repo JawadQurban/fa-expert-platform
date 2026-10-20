@@ -19,7 +19,8 @@ public sealed record FieldDefinition(
     FieldDependency? DependsOn,
     FieldValidation? Validation,
     IReadOnlyList<FieldOption>? Options,
-    bool? ReadOnly);
+    bool? ReadOnly,
+    FieldDependency? RequiredWhen = null);
 
 /// <summary>`dependsOn` — `equals` / `notEquals` are `string | boolean` on the
 /// wire, each optional (an absent one is <see cref="JsonValueKind.Undefined"/>);
@@ -29,8 +30,17 @@ public sealed record FieldDependency(
     [property: System.Text.Json.Serialization.JsonPropertyName("equals")] JsonElement EqualsValue,
     [property: System.Text.Json.Serialization.JsonPropertyName("notEquals")] JsonElement NotEqualsValue = default);
 
-/// <summary>`Min`/`Max` bound a `number` field (inclusive, whole numbers).</summary>
-public sealed record FieldValidation(int? MaxLength, string? Pattern, int? Min = null, int? Max = null);
+/// <summary>`Min`/`Max` bound a `number` field (inclusive, whole numbers).
+/// `MinDate`/`MaxDate` bound a `date` field (`today` or an ISO date);
+/// `NotBefore` names the date field in the same values it may not precede.</summary>
+public sealed record FieldValidation(
+    int? MaxLength,
+    string? Pattern,
+    int? Min = null,
+    int? Max = null,
+    string? MinDate = null,
+    string? MaxDate = null,
+    string? NotBefore = null);
 
 public sealed record FieldOption(string Value);
 
@@ -72,12 +82,18 @@ public static partial class ApplicationFormLogic
         {
             return false;
         }
-        if (field.DependsOn is not { } dependency)
+        return Holds(field.DependsOn, values);
+    }
+
+    /// <summary>A `dependsOn` / `requiredWhen` condition; none always holds.</summary>
+    private static bool Holds(FieldDependency? dependency, IReadOnlyDictionary<string, JsonElement> values)
+    {
+        if (dependency is null)
         {
             return true;
         }
-        // A missing value is Undefined: never equal to anything, so it hides an
-        // `equals` field and shows a `notEquals` one.
+        // A missing value is Undefined: never equal to anything, so it fails an
+        // `equals` condition and meets a `notEquals` one.
         values.TryGetValue(dependency.FieldId, out var actual);
         if (dependency.EqualsValue.ValueKind is not JsonValueKind.Undefined
             && !JsonValueEquals(actual, dependency.EqualsValue))
@@ -88,9 +104,11 @@ public static partial class ApplicationFormLogic
             || !JsonValueEquals(actual, dependency.NotEqualsValue);
     }
 
-    /// <summary>`BR-0104`: required when required by ≥1 selected service.</summary>
-    public static bool IsRequired(FieldDefinition field, IReadOnlyList<string> services) =>
-        field.RequiredFor.Any(services.Contains);
+    /// <summary>`BR-0104`: required when required by ≥1 selected service — and,
+    /// with `requiredWhen`, only while that condition holds (RUN-019).</summary>
+    public static bool IsRequired(
+        FieldDefinition field, IReadOnlyList<string> services, IReadOnlyDictionary<string, JsonElement> values) =>
+        field.RequiredFor.Any(services.Contains) && Holds(field.RequiredWhen, values);
 
     /// <summary>
     /// The completeness gate (`BR-0105`) — field codes that fail, in schema
@@ -114,18 +132,54 @@ public static partial class ApplicationFormLogic
             var isEmpty = IsEmpty(field, value);
             if (isEmpty)
             {
-                if (IsRequired(field, services))
+                if (IsRequired(field, services, values))
                 {
                     failed.Add(field.Id);
                 }
                 continue;
             }
-            if (!ShapeIsValid(field, value))
+            if (!ShapeIsValid(field, value) || PrecedesItsStart(field, value, values))
             {
                 failed.Add(field.Id);
             }
         }
         return failed;
+    }
+
+    /// <summary>
+    /// `notBefore` — an end date before its start (BUG-014/BUG-015). Judged
+    /// only when both are well-formed dates: a malformed start is the start
+    /// field's own failure.
+    /// </summary>
+    private static bool PrecedesItsStart(
+        FieldDefinition field, JsonElement value, IReadOnlyDictionary<string, JsonElement> values) =>
+        field.Validation?.NotBefore is { } startId
+        && values.TryGetValue(startId, out var start)
+        && TryParseDate(start.ValueKind is JsonValueKind.String ? start.GetString() : null, out var from)
+        && TryParseDate(value.GetString(), out var to)
+        && to < from;
+
+    private static bool TryParseDate(string? text, out DateOnly date) =>
+        DateOnly.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+
+    /// <summary>A `date` field's own shape: an ISO date inside its bounds.</summary>
+    private static bool DateIsValid(FieldDefinition field, string text)
+    {
+        if (!TryParseDate(text, out var date))
+        {
+            return false;
+        }
+        // `today` is the applicant's today, which the form resolves in their
+        // browser: the server accepts it in ANY time zone (UTC+14 for a
+        // ceiling, UTC-12 for a floor) rather than refuse a date the form
+        // allowed.
+        var now = DateTime.UtcNow;
+        DateOnly? Resolve(string? bound, int offsetHours) =>
+            bound == "today"
+                ? DateOnly.FromDateTime(now.AddHours(offsetHours))
+                : TryParseDate(bound, out var fixedDate) ? fixedDate : null;
+        return !(Resolve(field.Validation?.MaxDate, 14) is { } max && date > max)
+            && !(Resolve(field.Validation?.MinDate, -12) is { } min && date < min);
     }
 
     /// <summary>
@@ -276,6 +330,12 @@ public static partial class ApplicationFormLogic
             return value.EnumerateArray().All(item =>
                 item.ValueKind is JsonValueKind.String
                 && field.Options.Any(option => option.Value == item.GetString()));
+        }
+        if (field.Type is "date")
+        {
+            // BUG-014/BUG-015 — a date is a date: `yyyy-MM-dd`, within its
+            // bounds, whatever a client sent.
+            return value.ValueKind is JsonValueKind.String && DateIsValid(field, value.GetString()!);
         }
         if (value.ValueKind is JsonValueKind.String)
         {

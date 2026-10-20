@@ -357,4 +357,9 @@ public static class AgreementStatuses
     /// <summary>`expired` is DERIVED (active + past `ends_at`), never stored —
     /// a lapse is a fact about the calendar, not an act anyone performed.</summary>
     public const string Expired = "expired";
+
+    /// <summary>`not-started` is DERIVED too (active + `starts_at` still in the
+    /// future): signed, but not yet in effect — never «سارية» before its start
+    /// date (RUN-003).</summary>
+    public const string NotStarted = "not-started";
 }

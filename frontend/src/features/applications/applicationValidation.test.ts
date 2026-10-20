@@ -24,6 +24,7 @@ const messages: ValidationMessages = {
   invalidValue: 'invalid',
   dateNotFuture: 'future',
   dateNotPast: 'past',
+  dateBeforeStart: 'before-start',
   fileFormat: (formats) => `format:${formats}`,
   fileSize: (maxMb) => `size:${maxMb}`,
   fileCount: (max) => `count:${max}`,
@@ -170,7 +171,7 @@ describe('applicationValidation (schema engine)', () => {
   );
 
   it('the served schema is the supplied field map, not the retired mock', () => {
-    expect(APPLICATION_FORM_SCHEMA.version).toBe('dm-gap-01.2026-10-07');
+    expect(APPLICATION_FORM_SCHEMA.version).toBe('dm-gap-01.2026-10-19');
     // The six J-01 sections, in the workbook's own order.
     expect(APPLICATION_FORM_SCHEMA.sections.map((s) => s.id)).toEqual([
       'personal',
@@ -307,8 +308,8 @@ describe('applicationValidation (schema engine)', () => {
       'trainedBeforeDetails',
       'weekdayAvailability',
       'dailyTrainingHours',
-      'experienceEndDate',
-      'yearsOfExperience',
+      // `experienceEndDate` and `yearsOfExperience` left this list on
+      // 2026-10-19 (RUN-019) — see the experience rules test.
       'trainingLanguages',
       // `trainingExperienceYears` left this list on 2026-09-21: it became
       // required FOR TRAINERS by the approved per-service split below.
@@ -333,7 +334,9 @@ describe('applicationValidation (schema engine)', () => {
     expect(fieldById('universityName').type).toBe('select');
     expect(fieldById('universityName').options?.length).toBe(517);
     expect(fieldById('certificateName').type).toBe('select');
-    expect(fieldById('certificateName').options?.length).toBe(228);
+    // The delivered 228, plus «أخرى» (BUG-007, 2026-10-19).
+    expect(fieldById('certificateName').options?.length).toBe(229);
+    expect(fieldById('certificateName').options?.at(-1)?.value).toBe('other');
   });
 
   it('never carries a scoring column into the browser', () => {
@@ -408,8 +411,10 @@ describe('applicationValidation (schema engine)', () => {
       expect(sectionById(id).repeatable).not.toHaveProperty('maxEntries');
     }
     // The whole certifications section is optional, for all four services.
+    // (`certificateNameOther` shows only for «أخرى», naming a certificate the
+    // applicant DID add — it never makes the section itself mandatory.)
     for (const field of APPLICATION_FORM_SCHEMA.fields.filter(
-      (f) => f.sectionId === 'certifications'
+      (f) => f.sectionId === 'certifications' && f.dependsOn == null
     )) {
       expect(field.requiredFor).toEqual([]);
     }
@@ -583,5 +588,52 @@ describe('applicationValidation (schema engine)', () => {
       messages
     );
     expect(result.missingAttachmentRuleIds).not.toContain('qualification-certificate::education-1');
+  });
+
+  it('RUN-019 / BUG-014: the experience end date is mandatory while shown, and never before the start', () => {
+    const fields = APPLICATION_FORM_SCHEMA.fields.filter((f) => f.sectionId === 'experience');
+    const check = (values: Record<string, string | boolean>) =>
+      Object.fromEntries(
+        fields
+          .filter((f) => isFieldVisible(f, ['consultant'], values))
+          .map((f) => [
+            f.id,
+            validateFieldValue(f, values[f.id], ['consultant'], 'ar', messages, values),
+          ])
+      );
+    expect(check({ currentlyEmployed: false }).experienceEndDate).toBe(messages.required);
+    expect(check({ currentlyEmployed: true })).not.toHaveProperty('experienceEndDate');
+    // «عدد سنوات الخبرة» follows the same switch — but stays visible (ruling 2026-10-20).
+    expect(check({ currentlyEmployed: false }).yearsOfExperience).toBe(messages.required);
+    expect(check({}).yearsOfExperience).toBe(messages.required);
+    expect(check({ currentlyEmployed: true }).yearsOfExperience).toBeNull();
+    expect(
+      check({ experienceStartDate: '2020-05-01', experienceEndDate: '2019-12-31' })
+        .experienceEndDate
+    ).toBe(messages.dateBeforeStart);
+    expect(
+      check({ experienceStartDate: '2020-05-01', experienceEndDate: '2020-05-01' })
+        .experienceEndDate
+    ).toBeNull();
+    expect(check({ experienceStartDate: '01/05/2020' }).experienceStartDate).toBe(
+      messages.invalidValue
+    );
+  });
+
+  it('BUG-006 / BUG-007: «أخرى» opens a mandatory name', () => {
+    const named = (id: string, values: Record<string, string>) => {
+      const field = fieldById(id);
+      return isFieldVisible(field, ['trainer'], values)
+        ? validateFieldValue(field, values[id], ['trainer'], 'ar', messages, values)
+        : 'hidden';
+    };
+    expect(named('specializationOther', { specializationDetail: 'spec-024' })).toBe(
+      messages.required
+    );
+    expect(named('specializationOther', { specializationDetail: 'spec-001' })).toBe('hidden');
+    expect(named('certificateNameOther', { certificateName: 'other' })).toBe(messages.required);
+    expect(
+      named('certificateNameOther', { certificateName: 'other', certificateNameOther: 'CMA' })
+    ).toBeNull();
   });
 });

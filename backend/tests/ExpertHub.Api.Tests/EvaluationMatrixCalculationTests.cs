@@ -597,6 +597,21 @@ public sealed class EvaluationMatrixCalculationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Years_of_experience_left_blank_scores_zero_without_failing()
+    {
+        // RUN-019 (ruling 2026-10-20): optional while «أعمل حاليًا» is on, so an
+        // entry may carry no answer — the applicant's own 0, never «unresolved».
+        var none = await ScoreAsync(ApplicationServices.Trainer, new(), Entries());
+        var blankThenAnswered = await ScoreAsync(ApplicationServices.Trainer, new(), Entries(
+            ("yearsOfExperience", ["", "11-15"])));
+
+        Assert.Equal(0.00m, none.Total);
+        Assert.False(none.HasUnresolvedCriteria);
+        Assert.Equal(15.00m, blankThenAnswered.Total);
+        Assert.False(blankThenAnswered.HasUnresolvedCriteria);
+    }
+
+    [Fact]
     public async Task The_highest_qualification_scores_across_several_qualifications()
     {
         // A bachelor's (4.00) and a doctorate (5.00) → 5.00, and the related
