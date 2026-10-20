@@ -13,7 +13,14 @@ internal sealed record FastProgramOptionWire(
 /// The programme dropdown. <c>Available</c> false means the Training API is off
 /// or unreachable — the form then falls back to manual entry, as before.
 /// </summary>
-internal sealed record FastProgrammesWire(bool Available, IReadOnlyList<FastProgramOptionWire> Items);
+/// <remarks><c>Configured</c> — the Training API is set up here, so forms 1–2
+/// MUST link a plan (`P-362`), even while FAST is briefly unreachable.</remarks>
+internal sealed record FastProgrammesWire(
+    bool Available, IReadOnlyList<FastProgramOptionWire> Items, bool Configured = false);
+
+/// <summary>Form 4 — one programme, pulled (no plan): what it fills (`P-363`).</summary>
+internal sealed record FastProgrammePrefillWire(
+    string ProgramId, string? Code, FastPulledFieldsWire Fields, bool HasProspectus);
 
 /// <summary>An open plan of a programme (B-05).</summary>
 internal sealed record FastPlanOptionWire(
@@ -64,24 +71,30 @@ internal static class FastPlanSelection
     /// <summary>The request types whose form selects a FAST plan.</summary>
     internal static readonly string[] PlanDrivenTypes = ["general-program", "private-program"];
 
+    /// <summary>Form 4 (content development) picks a FAST programme, no plan (`P-363`).</summary>
+    internal static bool IsProgrammeDriven(string? requestType) =>
+        CentreRequestMatrix.RuleFor(requestType)?.Form == CentreRequestMatrix.RequestForm.ContentDevelopment;
+
     internal static void MapFastPlanLookups(RouteGroupBuilder requests)
     {
         // «اسم البرنامج» — the Academy's approved programmes (BUG-004), searched
         // by name or code, only those with an upcoming plan to assign to.
+        // `upcomingPlansOnly=false` — form 4 picks a programme, not a plan.
         requests.MapGet("/lookups/fast-programmes", async (
-            string? q, FastTrainingApi fast, CancellationToken ct) =>
+            string? q, bool? upcomingPlansOnly, FastTrainingApi fast, CancellationToken ct) =>
         {
             if (!fast.IsConfigured)
             {
                 return Results.Ok(new FastProgrammesWire(false, []));
             }
             var result = await fast.SearchProgramsAsync(
-                new FastProgramSearch(1, 50, string.IsNullOrWhiteSpace(q) ? null : q.Trim(), "active", true), ct);
+                new FastProgramSearch(1, 50, string.IsNullOrWhiteSpace(q) ? null : q.Trim(), "active",
+                    upcomingPlansOnly != false), ct);
             if (!result.Ok || result.Value is null)
             {
-                return Results.Ok(new FastProgrammesWire(false, []));
+                return Results.Ok(new FastProgrammesWire(false, [], Configured: true));
             }
-            return Results.Ok(new FastProgrammesWire(true, [.. result.Value.Items
+            return Results.Ok(new FastProgrammesWire(true, Configured: true, Items: [.. result.Value.Items
                 .Where(p => !string.IsNullOrWhiteSpace(p.ProgramId))
                 .Select(p => new FastProgramOptionWire(
                     p.ProgramId!, p.ProgramCode, p.NameAr ?? p.NameEn ?? p.ProgramId!,
@@ -111,6 +124,16 @@ internal static class FastPlanSelection
             .WithName("FastProgrammePlans")
             .RequireAnyFeature("F-0501", "F-0503");
 
+        // Form 4 — the programme, pulled: what the form fills and locks.
+        requests.MapGet("/lookups/fast-programmes/{programId}", async (
+            string programId, FastTrainingApi fast, CancellationToken ct) =>
+        {
+            var (prefill, problem) = await PullProgrammeAsync(fast, programId, ct);
+            return problem ?? Results.Ok(prefill);
+        })
+            .WithName("FastProgrammePrefill")
+            .RequireAnyFeature("F-0501", "F-0503");
+
         // The plan, pulled — what the form fills and locks.
         requests.MapGet("/lookups/fast-plans/{planId}", async (
             string planId, FastTrainingApi fast, CancellationToken ct) =>
@@ -132,7 +155,22 @@ internal static class FastPlanSelection
     {
         if (string.IsNullOrWhiteSpace(input.FastPlanId))
         {
-            return (input, null);
+            // P-362 — with the Training API configured, forms 1–2 must link a
+            // FAST plan. Without it, they stay manual, so an environment with
+            // no FAST still works.
+            if (fast.IsConfigured && PlanDrivenTypes.Contains(input.RequestType))
+            {
+                return (input, Results.Problem(statusCode: 400, detail: "fast-plan-required",
+                    extensions: new Dictionary<string, object?> { ["fields"] = PlanField }));
+            }
+            if (string.IsNullOrWhiteSpace(input.FastProgramId))
+            {
+                return (input, null);
+            }
+            // P-363 — form 4 may link a programme (optional); no other form does.
+            return IsProgrammeDriven(input.RequestType)
+                ? await ApplyProgrammeAsync(input, fast, ct)
+                : (input, InvalidProgramme());
         }
         if (!PlanDrivenTypes.Contains(input.RequestType))
         {
@@ -171,6 +209,65 @@ internal static class FastPlanSelection
     }
 
     private static readonly string[] PlanField = ["fastPlanId"];
+
+    private static readonly string[] ProgrammeField = ["fastProgramId"];
+
+    private static IResult InvalidProgramme() =>
+        Results.Problem(statusCode: 400, detail: "invalid-field-value",
+            extensions: new Dictionary<string, object?> { ["fields"] = ProgrammeField });
+
+    /// <summary>Form 4 — re-read the programme and lay its values over the entered ones.</summary>
+    private static async Task<(CreateRequestInputWire Input, IResult? Problem)> ApplyProgrammeAsync(
+        CreateRequestInputWire input, FastTrainingApi fast, CancellationToken ct)
+    {
+        var (prefill, problem) = await PullProgrammeAsync(fast, input.FastProgramId!, ct);
+        if (problem is not null)
+        {
+            return (input, problem);
+        }
+        var pulled = prefill!.Fields;
+        return (input with
+        {
+            ProgramName = pulled.ProgramName ?? input.ProgramName,
+            TraineeLevel = pulled.TraineeLevel ?? input.TraineeLevel,
+            AttachmentName = input.AttachmentName
+                ?? (prefill.HasProspectus && string.IsNullOrWhiteSpace(input.AttachmentId) ? "prospectus" : null),
+        }, null);
+    }
+
+    private static async Task<(FastProgrammePrefillWire? Prefill, IResult? Problem)> PullProgrammeAsync(
+        FastTrainingApi fast, string programId, CancellationToken ct)
+    {
+        if (!Guid.TryParse(programId, out _))
+        {
+            return (null, InvalidProgramme());
+        }
+        var program = await fast.ProgramDetailsAsync(programId, ct);
+        if (!program.Ok || program.Value is null)
+        {
+            return (null, program.StatusCode == 404
+                ? InvalidProgramme()
+                : Results.Problem(statusCode: 503, detail: "fast-unavailable"));
+        }
+        return (ProgrammePrefill(programId, program.Value), null);
+    }
+
+    /// <summary>Form 4's mapping — the programme's name and trainee level only.</summary>
+    internal static FastProgrammePrefillWire ProgrammePrefill(string programId, FastProgramDetails program) =>
+        new(
+            programId,
+            program.ProgramCode,
+            new FastPulledFieldsWire(
+                ProgramName: program.NameAr ?? program.NameEn,
+                DaysCount: null, DaysCountOther: null, DateFrom: null, DateTo: null, Period: null,
+                DeliveryMechanism: null, City: null, Language: null,
+                TraineeLevel: TraineeLevelOf(program.TraineeLevel),
+                ClientName: null),
+            HasProspectus(program));
+
+    private static bool HasProspectus(FastProgramDetails? program) =>
+        program?.Prospectus is { } prospectus
+            && (prospectus.FileName is not null || prospectus.DownloadUrl is not null);
 
     private static IResult Invalid() =>
         Results.Problem(statusCode: 400, detail: "invalid-field-value",
@@ -243,8 +340,7 @@ internal static class FastPlanSelection
             plan.Status?.Code,
             FastPlanStatuses.IsAssignable(plan.Status, plan.FinalClosedOn, last, today),
             fields,
-            HasProspectus: program?.Prospectus is { } prospectus
-                && (prospectus.FileName is not null || prospectus.DownloadUrl is not null));
+            HasProspectus: HasProspectus(program));
     }
 
     /// <summary>The largest prospectus Expert Hub copies from FAST (FAST's own limit).</summary>

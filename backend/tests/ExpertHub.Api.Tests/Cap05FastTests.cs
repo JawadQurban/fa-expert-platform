@@ -169,6 +169,99 @@ public sealed partial class Cap05Tests
         await PostAsync(centre, "/api/v1/internal/assignment-requests/", GeneralProgramRequest());
     }
 
+    /* ── P-362 — forms 1–2 must link a plan once FAST is configured ─────── */
+
+    [Theory]
+    [InlineData("general-program")]
+    [InlineData("private-program")]
+    public async Task With_FAST_configured_a_programme_request_without_a_plan_is_refused(string requestType)
+    {
+        UseFakeFast();
+        using var centre = await SignInAsync($"cap05-fast-required-{requestType}", "منسق المركز", RoleCode.CentreCoordinator);
+
+        var programmes = await GetAsync(centre, "/api/v1/internal/assignment-requests/lookups/fast-programmes");
+        Assert.True(programmes.GetProperty("configured").GetBoolean());
+
+        var body = GeneralProgramRequest();
+        body["requestType"] = requestType;
+        body["clientName"] = "عميل";
+        var refused = await centre.PostAsJsonAsync("/api/v1/internal/assignment-requests/", body);
+
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        var problem = await refused.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("fast-plan-required", problem.GetProperty("detail").GetString());
+        Assert.Equal("fastPlanId", problem.GetProperty("fields")[0].GetString());
+    }
+
+    [Fact]
+    public async Task With_FAST_configured_but_down_the_plan_is_still_required()
+    {
+        var fast = UseFakeFast();
+        fast.Down = true;
+        using var centre = await SignInAsync("cap05-fast-required-down", "منسق المركز", RoleCode.CentreCoordinator);
+
+        var programmes = await GetAsync(centre, "/api/v1/internal/assignment-requests/lookups/fast-programmes");
+        Assert.False(programmes.GetProperty("available").GetBoolean());
+        Assert.True(programmes.GetProperty("configured").GetBoolean());
+        var refused = await centre.PostAsJsonAsync("/api/v1/internal/assignment-requests/", GeneralProgramRequest());
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+    }
+
+    /* ── P-363 — form 4 picks a FAST programme, no plan, optionally ───────── */
+
+    [Fact]
+    public async Task A_content_development_request_can_take_its_programme_from_FAST()
+    {
+        var fast = UseFakeFast();
+        using var centre = await SignInAsync("cap05-fast-form4", "منسق المركز", RoleCode.CentreCoordinator);
+
+        // Every approved programme, not only those with an upcoming plan.
+        await GetAsync(centre, "/api/v1/internal/assignment-requests/lookups/fast-programmes?upcomingPlansOnly=false");
+        var search = JsonSerializer.Deserialize<JsonElement>(
+            fast.Seen.Last(c => c.Url.Contains("Program/Search", StringComparison.Ordinal)).Body);
+        Assert.False(search.GetProperty("hasUpcomingPlans").GetBoolean());
+
+        var prefill = await GetAsync(centre, $"/api/v1/internal/assignment-requests/lookups/fast-programmes/{FastProgramId}");
+        Assert.Equal("برنامج القيادة المالية", prefill.GetProperty("fields").GetProperty("programName").GetString());
+        Assert.True(prefill.GetProperty("hasProspectus").GetBoolean());
+
+        var body = GeneralProgramRequest();
+        body["requestType"] = "content-development-request";
+        body["fastProgramId"] = FastProgramId;
+        body["programName"] = "اسم مكتوب يدويًا";
+        body.Remove("attachmentId");
+        body.Remove("attachmentName");
+        var created = await PostAsync(centre, "/api/v1/internal/assignment-requests/", body);
+
+        await using var db = _database.CreateContext();
+        var stored = JsonSerializer.Deserialize<JsonElement>(
+            (await db.AssignmentRequests.SingleAsync(r => r.RequestId == Guid.Parse(created.GetProperty("requestId").GetString()!))).FormValues);
+        Assert.Equal(FastProgramId, stored.GetProperty("fastProgramId").GetString());
+        Assert.Equal("برنامج القيادة المالية", stored.GetProperty("programName").GetString());
+        Assert.Equal("advanced", stored.GetProperty("traineeLevel").GetString());
+        Assert.Equal("prospectus-ar.pdf", stored.GetProperty("attachmentName").GetString());
+        Assert.DoesNotContain(fast.Seen, c => c.Url.Contains("GetPlanDetails", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Form_4_without_a_programme_still_submits_and_other_forms_cannot_link_one()
+    {
+        UseFakeFast();
+        using var centre = await SignInAsync("cap05-fast-form4-optional", "منسق المركز", RoleCode.CentreCoordinator);
+
+        var manual = GeneralProgramRequest();
+        manual["requestType"] = "content-development-request";
+        await PostAsync(centre, "/api/v1/internal/assignment-requests/", manual);
+
+        var seminar = GeneralProgramRequest();
+        seminar["requestType"] = "seminar";
+        seminar["fastProgramId"] = FastProgramId;
+        var refused = await centre.PostAsJsonAsync("/api/v1/internal/assignment-requests/", seminar);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Equal("fastProgramId",
+            (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("fields")[0].GetString());
+    }
+
     [Fact]
     public void A_FAST_value_outside_Expert_Hubs_vocabulary_is_left_for_the_centre()
     {
@@ -255,7 +348,11 @@ public sealed partial class Cap05Tests
         using var staff = await SignInAsync("cap05-b07-manual-staff", "موظف", RoleCode.Manager);
         using var centre = await SignInAsync("cap05-b07-manual-centre", "منسق المركز", RoleCode.CentreCoordinator);
         using var trainers = await SeedTrainersAsync(3);
-        var requestId = await CreateRequestAsync(centre);
+        // A seminar (form 3) never links a FAST plan; forms 1–2 must (P-362).
+        var body = GeneralProgramRequest();
+        body["requestType"] = "seminar";
+        var requestId = (await PostAsync(centre, "/api/v1/internal/assignment-requests/", body))
+            .GetProperty("requestId").GetString()!;
         var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
         var offerId = await CurrentOfferIdAsync(staff, requestId);
         await PostAsync(trainers.Clients[eligible[0]],

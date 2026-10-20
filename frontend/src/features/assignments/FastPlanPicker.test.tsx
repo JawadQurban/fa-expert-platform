@@ -11,7 +11,7 @@ import { expertHubPaths } from '../../app/router/paths';
 import type { ExpertHubApiClient } from '../../shared/services/apiClient';
 import { createHttpAssignmentProvider, setAssignmentServiceForTesting } from './assignmentService';
 import { getAssignmentsContent } from './assignments.content';
-import type { CreateCentreRequestInput } from './centreRequestForm.types';
+import { validateCentreRequest, type CreateCentreRequestInput } from './centreRequestForm.types';
 import {
   MOCK_FAST_CLOSED_PLAN,
   MOCK_FAST_OPEN_PLAN,
@@ -181,10 +181,75 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
     await provider.listFastProgrammes(' قيادة ');
     await provider.listFastPlans('prg 1');
     await provider.getFastPlan(MOCK_FAST_CLOSED_PLAN);
+    await provider.listFastProgrammes('', false);
+    await provider.getFastProgramme('prg 1');
     expect(gets).toEqual([
       `v1/internal/assignment-requests/lookups/fast-programmes?q=${encodeURIComponent('قيادة')}`,
       'v1/internal/assignment-requests/lookups/fast-programmes/prg%201/plans',
       `v1/internal/assignment-requests/lookups/fast-plans/${MOCK_FAST_CLOSED_PLAN}`,
+      'v1/internal/assignment-requests/lookups/fast-programmes?upcomingPlansOnly=false',
+      'v1/internal/assignment-requests/lookups/fast-programmes/prg%201',
     ]);
   });
+
+  /* ── P-362 — with FAST configured, forms 1–2 must link a plan ─────────── */
+
+  it('P-362: with FAST configured, a general programme cannot be submitted without a plan', async () => {
+    const { user } = await openGeneralProgram();
+    await user.click(screen.getByRole('button', { name: form.submit }));
+
+    expect(await screen.findAllByText(form.errors['fast-plan-required'])).not.toHaveLength(0);
+    expect(sent).toHaveLength(0);
+  }, 20000);
+
+  it('P-362: the plan is required on forms 1–2 only, and only while FAST is configured', () => {
+    expect(validateCentreRequest({ requestType: 'general-program' })).not.toContain(
+      'fast-plan-required'
+    );
+    expect(
+      validateCentreRequest({ requestType: 'general-program' }, { fastPlanRequired: true })
+    ).toContain('fast-plan-required');
+    expect(
+      validateCentreRequest({ requestType: 'seminar' }, { fastPlanRequired: true })
+    ).not.toContain('fast-plan-required');
+  });
+
+  /* ── P-363 — form 4 picks a programme, no plan ─────────────────────────── */
+
+  it('P-363: a content-development request links a FAST programme without a plan', async () => {
+    seedExpertHubSession(['internal']);
+    const { user } = renderExpertHubAt(expertHubPaths.internalAssignmentNew);
+    await screen.findByRole('heading', { level: 1, name: form.title });
+    await pickOption(user, form.centreLabel, 'البنوك والتمويل');
+    await pickOption(user, form.requestTypeLabel, form.requestTypes['content-development-request']);
+    await pickOption(user, new RegExp(form.responsibleLabel), 'منسّق البرامج');
+
+    expect(screen.getByRole('heading', { name: fast.programmeHeading })).toBeInTheDocument();
+    await pickOption(user, fast.programmeLabel, 'PRG-001 — برنامج القيادة المالية');
+    expect(await screen.findByText(fast.programmePulled('PRG-001'))).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: fast.planLabel })).not.toBeInTheDocument();
+    const name = screen.getByLabelText(new RegExp(form.fields.contentTitle));
+    expect(name).toHaveValue('برنامج القيادة المالية');
+    expect(name).toHaveAttribute('readonly');
+
+    // The rest is the centre's: no plan supplies it.
+    await pickOption(user, form.fields.daysCount, '3');
+    for (const trigger of [form.fields.requiredDateFrom, form.fields.requiredDateTo]) {
+      await user.click(
+        screen.getByRole('button', { name: new RegExp(trigger.replace(/[()]/g, '\\$&')) })
+      );
+      await user.click(await screen.findByRole('button', { name: /^اليوم/ }));
+    }
+    await pickOption(user, form.fields.period, form.options.periods.morning);
+    await pickOption(user, form.fields.deliveryMechanism, form.options.deliveryModes.onsite);
+    await user.type(screen.getByRole('textbox', { name: new RegExp(form.fields.city) }), 'الرياض');
+    await pickOption(user, form.fields.contentLanguage, form.options.languages.ar);
+    await pickOption(user, form.fields.traineeLevel, form.options.traineeLevels.advanced);
+    await pickOption(user, form.fields.specializationDomain, 'التحليل المالي والتمويل');
+    await user.click(screen.getByRole('button', { name: form.submit }));
+
+    expect(await screen.findByText(form.successTitle)).toBeInTheDocument();
+    expect(sent[0].fastProgramId).toBe('fast-prg-001');
+    expect(sent[0].fastPlanId).toBeNull();
+  }, 40000);
 });

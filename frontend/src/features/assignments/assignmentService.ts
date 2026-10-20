@@ -61,6 +61,8 @@ export interface FastProgramOptionDto {
 /** `available: false` — FAST is off or unreachable; the form is filled by hand. */
 export interface FastProgrammesDto {
   readonly available: boolean;
+  /** The Training API is set up here: forms 1–2 must then link a plan (`P-362`). */
+  readonly configured: boolean;
   readonly items: readonly FastProgramOptionDto[];
 }
 
@@ -102,9 +104,32 @@ export interface FastPlanPrefillDto {
   readonly hasProspectus: boolean;
 }
 
+/** Form 4 — one programme, pulled (no plan, `P-363`). */
+export interface FastProgrammePrefillDto {
+  readonly programId: string;
+  readonly code: string | null;
+  readonly fields: FastPulledFieldsDto;
+  readonly hasProspectus: boolean;
+}
+
+/** What a request is linked to in FAST — a plan (forms 1–2) or a programme (form 4). */
+export interface FastLinkDto {
+  readonly planId: string | null;
+  readonly programId: string;
+  /** The plan code or programme code, as shown to the centre. */
+  readonly label: string;
+  readonly hasProspectus: boolean;
+  readonly fields: FastPulledFieldsDto;
+}
+
 export interface AssignmentService {
   /** RUN-030 / BUG-004 — FAST's approved programmes with an upcoming plan. */
-  listFastProgrammes(query: string): Promise<Result<FastProgrammesDto, ExpertHubApiError>>;
+  listFastProgrammes(
+    query: string,
+    upcomingPlansOnly?: boolean
+  ): Promise<Result<FastProgrammesDto, ExpertHubApiError>>;
+  /** Form 4 — one programme, pulled. */
+  getFastProgramme(programId: string): Promise<Result<FastProgrammePrefillDto, ExpertHubApiError>>;
   /** The programme's open plans. */
   listFastPlans(
     programId: string
@@ -189,9 +214,18 @@ export function createHttpAssignmentProvider(
 ): AssignmentService {
   const base = `${ASSIGNMENTS_API_VERSION}/internal/assignment-requests`;
   return {
-    listFastProgrammes(query) {
-      const suffix = query.trim() === '' ? '' : `?q=${encodeURIComponent(query.trim())}`;
+    listFastProgrammes(query, upcomingPlansOnly = true) {
+      const params = [
+        ...(query.trim() === '' ? [] : [`q=${encodeURIComponent(query.trim())}`]),
+        ...(upcomingPlansOnly ? [] : ['upcomingPlansOnly=false']),
+      ];
+      const suffix = params.length === 0 ? '' : `?${params.join('&')}`;
       return client.get<FastProgrammesDto>(`${base}/lookups/fast-programmes${suffix}`);
+    },
+    getFastProgramme(programId) {
+      return client.get<FastProgrammePrefillDto>(
+        `${base}/lookups/fast-programmes/${encodeURIComponent(programId)}`
+      );
     },
     listFastPlans(programId) {
       return client.get<readonly FastPlanOptionDto[]>(

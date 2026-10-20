@@ -3,6 +3,7 @@ import type { AssignmentService, FastPlanPrefillDto } from './assignmentService'
 import type { AssignmentRequestSummaryDto, PulledRequestDataDto } from './assignment.types';
 import {
   brochureFileIssue,
+  isPlanDriven,
   isProgramLike,
   headcountOf,
   nomineesOf,
@@ -669,7 +670,11 @@ export function createMockAssignmentProvider(
       await delay(latencyMs);
       return {
         ok: true,
-        value: { available: fastAvailable, items: fastAvailable ? [MOCK_FAST_PROGRAMME] : [] },
+        value: {
+          available: fastAvailable,
+          configured: fastAvailable,
+          items: fastAvailable ? [MOCK_FAST_PROGRAMME] : [],
+        },
       };
     },
 
@@ -698,6 +703,31 @@ export function createMockAssignmentProvider(
           },
         ],
       };
+    },
+
+    async getFastProgramme(programId: string) {
+      await delay(latencyMs);
+      const prefill = mockFastPrefill(MOCK_FAST_OPEN_PLAN);
+      return fastAvailable
+        ? {
+            ok: true,
+            value: {
+              programId,
+              code: MOCK_FAST_PROGRAMME.code,
+              hasProspectus: true,
+              fields: {
+                ...prefill.fields,
+                daysCount: null,
+                dateFrom: null,
+                dateTo: null,
+                period: null,
+                deliveryMechanism: null,
+                city: null,
+                language: null,
+              },
+            },
+          }
+        : { ok: false, error: { status: 503, message: 'fast-unavailable' } };
     },
 
     async getFastPlan(planId: string) {
@@ -766,7 +796,13 @@ export function createMockAssignmentProvider(
       // The same per-type gates the UI applies, applied again server-side —
       // and the brochure must be a document this server actually stored.
       // RUN-030 — the open mock plan's prospectus stands in for the brochure.
-      const fromFast = input.fastPlanId === MOCK_FAST_OPEN_PLAN;
+      const fromFast =
+        input.fastPlanId === MOCK_FAST_OPEN_PLAN ||
+        input.fastProgramId === MOCK_FAST_PROGRAMME.programId;
+      // P-362 — with FAST configured, forms 1–2 must link a plan.
+      if (fastAvailable && isPlanDriven(input.requestType) && input.fastPlanId == null) {
+        return { ok: false, error: { status: 400, message: 'fast-plan-required' } };
+      }
       if (
         validateCentreRequest(input, { brochureFromFast: fromFast }).length > 0 ||
         (!fromFast && !brochures.has(input.attachmentId ?? ''))

@@ -24,7 +24,13 @@ The history before this repository existed is in
     then the programme's open plans; the plan fills the programme name, days,
     dates, period, delivery mode, city, language, trainee level and client, and
     those fields are locked. A closed, final-closed, cancelled or ended plan is
-    refused. The programme's FAST prospectus can stand in for the brochure.
+    refused. The programme's FAST prospectus (up to 50 MB) can stand in for the
+    brochure. **Once the Training API is configured, forms 1–2 cannot be
+    submitted without a FAST plan** (`400 fast-plan-required`, owner ruling,
+    `P-362`); without it they stay manual.
+  - **A content-development request (form 4) may pick a FAST programme**, no plan;
+    its name and trainee level are filled and locked (`P-363`). «مجال التخصص» keeps
+    Expert Hub's own list.
   - **The trainer is assigned to the FAST plan when they confirm, and removed when
     the engagement ends** (B-07, B-08); **approved training material is sent to the
     plan** (B-09).

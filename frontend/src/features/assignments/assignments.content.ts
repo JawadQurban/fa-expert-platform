@@ -169,6 +169,10 @@ export interface AssignmentsContent {
       readonly closed: string;
       readonly failed: string;
       readonly clear: string;
+      /** Form 4 — a programme, no plan (`P-363`). */
+      readonly programmeHeading: string;
+      readonly programmeIntro: string;
+      readonly programmePulled: (code: string) => string;
       /** The brochure is optional: FAST's prospectus is attached otherwise. */
       readonly prospectusHint: string;
     };
@@ -409,6 +413,11 @@ const ar: AssignmentsContent = {
       closed: 'هذه الخطة مغلقة أو منتهية أو ملغاة، ولا يمكن ربط الطلب بها. اختر خطة أخرى.',
       failed: 'تعذّر جلب بيانات الخطة من فاست. حاول مرة أخرى، أو أدخل البيانات يدويًا.',
       clear: 'إلغاء الربط والإدخال يدويًا',
+      programmeHeading: 'الربط ببرنامج في فاست',
+      programmeIntro:
+        'اختياري: اختر البرنامج من فاست لتُعبّأ بيانات البرنامج تلقائيًا. لا تُختار خطة لطلبات تطوير المحتوى.',
+      programmePulled: (code) =>
+        `عُبّئت بيانات البرنامج ${code} من فاست، ولا تُعدَّل هنا. الحقول الأخرى تُدخل يدويًا.`,
       prospectusHint: 'إن لم ترفع ملفًا، تُرفق النشرة التعريفية للبرنامج من فاست.',
     },
     submit: 'إرسال الطلب',
@@ -441,6 +450,7 @@ const ar: AssignmentsContent = {
       'hours-invalid': 'أدخل عدد ساعات صحيحًا (1 فأكثر).',
       'consultation-type-required': 'اختر نوع الاستشارة.',
       'attachment-required': 'أرفق الملف المطلوب.',
+      'fast-plan-required': 'اختر خطة البرنامج من فاست؛ الربط بخطة إلزامي لهذا النوع من الطلبات.',
       'domain-required': 'اختر مجال التخصص.',
       'service-type-required': 'اختر الفئة المطلوبة.',
       'headcount-invalid': 'أدخل عددًا صحيحًا للخبراء (1 فأكثر).',
@@ -678,6 +688,11 @@ const en: AssignmentsContent = {
       failed:
         'The plan’s details could not be read from FAST. Try again, or enter the details by hand.',
       clear: 'Unlink and enter by hand',
+      programmeHeading: 'Link to a FAST programme',
+      programmeIntro:
+        'Optional: choose the programme in FAST to fill in its details. Content-development requests do not pick a plan.',
+      programmePulled: (code) =>
+        `Programme ${code}’s details were filled in from FAST and cannot be changed here. Other fields are entered by hand.`,
       prospectusHint: 'If you upload no file, the programme’s prospectus is attached from FAST.',
     },
     submit: 'Submit request',
@@ -710,6 +725,8 @@ const en: AssignmentsContent = {
       'hours-invalid': 'Enter a valid number of hours (1 or more).',
       'consultation-type-required': 'Choose the consultation type.',
       'attachment-required': 'Attach the required file.',
+      'fast-plan-required':
+        'Choose the programme’s plan in FAST; this request type must be linked to a plan.',
       'domain-required': 'Choose the specialization / domain.',
       'service-type-required': 'Choose the required category.',
       'headcount-invalid': 'Enter a valid number of experts (1 or more).',

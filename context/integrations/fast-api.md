@@ -43,6 +43,10 @@ conventions around that boundary.
   reference sync's 14 lookups (B-15).
 - A request is linked to FAST by `fastPlanId`/`fastProgramId` in its form
   values; the trainer by `FAST_PROFILE_REPLICA.fast_user_id` from sign-in.
+- **Configured changes the rules (`P-362`, `P-363`):** with `Fast__TrainingBaseUrl`
+  set, forms 1–2 must link a plan (`400 fast-plan-required`); form 4 may link a
+  programme (no plan); no other form links anything. Without it, every form is
+  entered by hand as before.
 
 ## Conventions
 

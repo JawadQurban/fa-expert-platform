@@ -255,8 +255,9 @@ public static class AssignmentEndpoints
             // (`POST internal/attachments`), not a file name. Requests saved
             // before this carry only the name, and still read.
             var brochure = await Documents.AttachmentUploads.FindAsync(db, input.AttachmentId, ct)
-                // RUN-030 — a FAST-linked request may take FAST's prospectus.
-                ?? (string.IsNullOrWhiteSpace(input.FastPlanId)
+                // RUN-030 / P-363 — a request linked to a FAST plan or
+                // programme may take the programme's prospectus.
+                ?? (string.IsNullOrWhiteSpace(input.FastProgramId)
                     ? null
                     : await FastPlanSelection.ProspectusAsync(
                         fast, input.FastProgramId, actor.UserId, db, documents, scanner, ct));

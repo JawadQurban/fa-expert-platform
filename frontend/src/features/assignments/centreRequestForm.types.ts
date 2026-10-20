@@ -209,6 +209,8 @@ export interface CreateCentreRequestInput {
    * plan's own values for the fields it fills.
    */
   readonly fastPlanId?: string | null;
+  /** The FAST programme — set by a linked plan, or picked on form 4 (`P-363`). */
+  readonly fastProgramId?: string | null;
   /**
    * «العدد المطلوب» — how many experts this request needs. `>= 1`, and 1 when
    * absent. **No approved maximum**, so none is invented here.
@@ -311,6 +313,7 @@ export type CentreRequestValidationCode =
   | 'hours-invalid'
   | 'consultation-type-required'
   | 'attachment-required'
+  | 'fast-plan-required'
   | 'domain-required'
   | 'headcount-invalid'
   | 'duplicate-nominee'
@@ -328,7 +331,11 @@ function notOneOf(value: string | undefined, allowed: readonly string[]): boolea
 export function validateCentreRequest(
   input: Partial<CreateCentreRequestInput>,
   /** RUN-030 — the linked FAST plan's prospectus stands in for the brochure. */
-  options: { readonly brochureFromFast?: boolean } = {}
+  options: {
+    readonly brochureFromFast?: boolean;
+    /** P-362 — FAST is configured, so forms 1–2 must link a plan. */
+    readonly fastPlanRequired?: boolean;
+  } = {}
 ): readonly CentreRequestValidationCode[] {
   const issues: CentreRequestValidationCode[] = [];
   if (missing(input.centreId)) {
@@ -403,6 +410,14 @@ export function validateCentreRequest(
   // An uploaded document, not a chosen file name.
   if (missing(input.attachmentId) && options.brochureFromFast !== true) {
     issues.push('attachment-required');
+  }
+  if (
+    options.fastPlanRequired === true &&
+    input.requestType != null &&
+    isPlanDriven(input.requestType) &&
+    missing(input.fastPlanId ?? undefined)
+  ) {
+    issues.push('fast-plan-required');
   }
   if (missing(input.specializationDomain)) {
     issues.push('domain-required');

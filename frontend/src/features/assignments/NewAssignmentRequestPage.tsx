@@ -33,7 +33,7 @@ import {
 } from './centreRequestForm.types';
 import {
   getAssignmentService,
-  type FastPlanPrefillDto,
+  type FastLinkDto,
   type FastPulledFieldsDto,
   type RequestLookupOptionDto,
   type UploadedAttachmentDto,
@@ -145,12 +145,14 @@ export default function NewAssignmentRequestPage() {
   const [nomineeRefusal, setNomineeRefusal] = useState<string | null>(null);
   const [created, setCreated] = useState<AssignmentRequestSummaryDto | null>(null);
   /** RUN-030 — the FAST plan the request is linked to; its values are locked. */
-  const [fastPlan, setFastPlan] = useState<FastPlanPrefillDto | null>(null);
+  const [fastPlan, setFastPlan] = useState<FastLinkDto | null>(null);
+  /** P-362 — the Training API is configured here, so forms 1–2 must link a plan. */
+  const [fastConfigured, setFastConfigured] = useState(false);
   /** The server's refusal of the linked plan (closed meanwhile, or FAST down). */
   const [fastRefusal, setFastRefusal] = useState<string | null>(null);
   const pulledValues = fastPlan == null ? {} : valuesFromFast(fastPlan.fields);
   const locked = (key: string) => key in pulledValues;
-  const linkFastPlan = (prefill: FastPlanPrefillDto | null) => {
+  const linkFastPlan = (prefill: FastLinkDto | null) => {
     setFastPlan(prefill);
     setFastRefusal(null);
     if (prefill != null) {
@@ -324,6 +326,7 @@ export default function NewAssignmentRequestPage() {
     traineeLevel: values.traineeLevel,
     clientName: values.clientName,
     fastPlanId: fastPlan?.planId ?? null,
+    fastProgramId: fastPlan?.programId ?? null,
     requiredHeadcount: headcount ?? 1,
     specificNominees: namedNominees,
     consultationTopic: values.consultationTopic,
@@ -409,7 +412,10 @@ export default function NewAssignmentRequestPage() {
 
   const submit = () => {
     const input = buildInput();
-    const found = validateCentreRequest(input, { brochureFromFast: fastPlan?.hasProspectus });
+    const found = validateCentreRequest(input, {
+      brochureFromFast: fastPlan?.hasProspectus,
+      fastPlanRequired: fastConfigured,
+    });
     setIssues(found);
     if (found.length > 0) {
       return;
@@ -423,6 +429,8 @@ export default function NewAssignmentRequestPage() {
       if (result.ok) {
         setCreated(result.value);
         setPhase('submitted');
+      } else if (result.error.message === 'fast-plan-required') {
+        setIssues(['fast-plan-required']);
       } else if (
         result.error.message === 'fast-plan-closed' ||
         result.error.message === 'fast-unavailable'
@@ -623,14 +631,18 @@ export default function NewAssignmentRequestPage() {
               {copy.noCreateNote}
             </Alert>
 
-            {/* RUN-030 / BUG-004 — forms 1–2 link the request to a FAST plan. */}
-            {isPlanDriven(requestType) && (
+            {/* RUN-030 / BUG-004 — forms 1–2 link a FAST plan (mandatory once
+                FAST is configured, P-362); form 4 may link a programme (P-363). */}
+            {(isPlanDriven(requestType) || form === 'content-development') && (
               <FastPlanPicker
                 key={requestType}
                 copy={copy.fast}
                 locale={locale}
+                mode={isPlanDriven(requestType) ? 'plan' : 'programme'}
                 linked={fastPlan}
                 onLinked={linkFastPlan}
+                onConfigured={setFastConfigured}
+                errorText={errorFor('fast-plan-required')}
               />
             )}
 
