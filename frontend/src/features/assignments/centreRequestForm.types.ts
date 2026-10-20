@@ -325,7 +325,9 @@ function notOneOf(value: string | undefined, allowed: readonly string[]): boolea
 
 /** The matrix's field rules, enforced per request type. */
 export function validateCentreRequest(
-  input: Partial<CreateCentreRequestInput>
+  input: Partial<CreateCentreRequestInput>,
+  /** RUN-030 — the linked FAST plan's prospectus stands in for the brochure. */
+  options: { readonly brochureFromFast?: boolean } = {}
 ): readonly CentreRequestValidationCode[] {
   const issues: CentreRequestValidationCode[] = [];
   if (missing(input.centreId)) {
@@ -398,7 +400,7 @@ export function validateCentreRequest(
     issues.push('language-required');
   }
   // An uploaded document, not a chosen file name.
-  if (missing(input.attachmentId)) {
+  if (missing(input.attachmentId) && options.brochureFromFast !== true) {
     issues.push('attachment-required');
   }
   if (missing(input.specializationDomain)) {

@@ -468,6 +468,7 @@ function mockFastPrefill(planId: string): FastPlanPrefillDto {
     planCode: planId === MOCK_FAST_OPEN_PLAN ? 'PL-2026-01' : 'PL-2025-09',
     status: planId === MOCK_FAST_OPEN_PLAN ? 'open' : 'closed',
     assignable: planId === MOCK_FAST_OPEN_PLAN,
+    hasProspectus: planId === MOCK_FAST_OPEN_PLAN,
     fields: {
       programName: MOCK_FAST_PROGRAMME.nameAr,
       daysCount: 3,
@@ -764,7 +765,12 @@ export function createMockAssignmentProvider(
       }
       // The same per-type gates the UI applies, applied again server-side —
       // and the brochure must be a document this server actually stored.
-      if (validateCentreRequest(input).length > 0 || !brochures.has(input.attachmentId ?? '')) {
+      // RUN-030 — the open mock plan's prospectus stands in for the brochure.
+      const fromFast = input.fastPlanId === MOCK_FAST_OPEN_PLAN;
+      if (
+        validateCentreRequest(input, { brochureFromFast: fromFast }).length > 0 ||
+        (!fromFast && !brochures.has(input.attachmentId ?? ''))
+      ) {
         return { ok: false, error: { status: 400, message: 'required-field-missing' } };
       }
       // RUN-030 — the server re-reads the plan and refuses one no longer open.

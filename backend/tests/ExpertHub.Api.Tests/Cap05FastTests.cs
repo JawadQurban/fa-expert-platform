@@ -74,6 +74,29 @@ public sealed partial class Cap05Tests
         Assert.Equal("2026-12-06", stored.GetProperty("dateFrom").GetString());
     }
 
+    [Fact]
+    public async Task A_FAST_linked_request_takes_the_programmes_prospectus_when_no_brochure_is_uploaded()
+    {
+        UseFakeFast();
+        using var centre = await SignInAsync("cap05-fast-prospectus", "منسق المركز", RoleCode.CentreCoordinator);
+
+        var prefill = await GetAsync(centre, $"/api/v1/internal/assignment-requests/lookups/fast-plans/{FastPlanId}");
+        Assert.True(prefill.GetProperty("hasProspectus").GetBoolean());
+
+        var body = GeneralProgramRequest();
+        body["fastPlanId"] = FastPlanId;
+        body.Remove("attachmentId");
+        body.Remove("attachmentName");
+        var created = await PostAsync(centre, "/api/v1/internal/assignment-requests/", body);
+
+        await using var db = _database.CreateContext();
+        var stored = JsonSerializer.Deserialize<JsonElement>(
+            (await db.AssignmentRequests.SingleAsync(r => r.RequestId == Guid.Parse(created.GetProperty("requestId").GetString()!))).FormValues);
+        Assert.Equal("prospectus-ar.pdf", stored.GetProperty("attachmentName").GetString());
+        var attachment = await db.Attachments.SingleAsync(a => a.FileName == "prospectus-ar.pdf");
+        Assert.Equal("application/pdf", attachment.MimeType);
+    }
+
     [Theory]
     [InlineData("closed", null)]
     [InlineData("final-closed", "2026-10-01T00:00:00")]
@@ -568,6 +591,16 @@ public sealed partial class Cap05Tests
             {
                 throw new HttpRequestException("connection refused");
             }
+            if (url.Contains("/Prospectus/File", StringComparison.Ordinal))
+            {
+                var file = new ByteArrayContent("%PDF-1.4 prospectus"u8.ToArray());
+                file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+                file.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+                {
+                    FileName = "prospectus-ar.pdf",
+                };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = file };
+            }
             var (status, json) = Respond(url);
             return new HttpResponseMessage(status)
             {
@@ -611,6 +644,7 @@ public sealed partial class Cap05Tests
                 {
                     programId = FastProgramId, nameAr = "برنامج القيادة المالية", nameEn = "Financial Leadership",
                     traineeLevel = new { id = "3", nameAr = "متقدم", nameEn = "Advanced" },
+                    prospectus = new { fileName = "prospectus-ar.pdf", downloadUrl = $"api/v1/Program/{FastProgramId}/Prospectus/File" },
                 }));
             }
             if (url.Contains("Plan/AssignTrainer", StringComparison.Ordinal))

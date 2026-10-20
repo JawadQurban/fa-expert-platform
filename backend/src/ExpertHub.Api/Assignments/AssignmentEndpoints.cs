@@ -180,6 +180,8 @@ public static class AssignmentEndpoints
             ExpertHubDbContext db,
             NotificationDispatcher dispatcher,
             FastTrainingApi fast,
+            ExpertHub.Infrastructure.Documents.IDocumentStore documents,
+            ExpertHub.Infrastructure.Documents.IUploadScanner scanner,
             CancellationToken ct) =>
         {
             // P-351 — a centre-scoped requester submits for their own centre,
@@ -252,7 +254,12 @@ public static class AssignmentEndpoints
             // «النشرة التعريفية» / «المرفقات» — the uploaded DOCUMENT, by id
             // (`POST internal/attachments`), not a file name. Requests saved
             // before this carry only the name, and still read.
-            var brochure = await Documents.AttachmentUploads.FindAsync(db, input.AttachmentId, ct);
+            var brochure = await Documents.AttachmentUploads.FindAsync(db, input.AttachmentId, ct)
+                // RUN-030 — a FAST-linked request may take FAST's prospectus.
+                ?? (string.IsNullOrWhiteSpace(input.FastPlanId)
+                    ? null
+                    : await FastPlanSelection.ProspectusAsync(
+                        fast, input.FastProgramId, actor.UserId, db, documents, scanner, ct));
             if (brochure is null)
             {
                 return Results.Problem(

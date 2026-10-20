@@ -98,6 +98,8 @@ export interface FastPlanPrefillDto {
   /** False for a closed, final-closed, cancelled or ended plan. */
   readonly assignable: boolean;
   readonly fields: FastPulledFieldsDto;
+  /** FAST holds the programme's prospectus: the brochure need not be uploaded. */
+  readonly hasProspectus: boolean;
 }
 
 export interface AssignmentService {

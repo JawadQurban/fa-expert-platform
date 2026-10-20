@@ -169,6 +169,8 @@ export interface AssignmentsContent {
       readonly closed: string;
       readonly failed: string;
       readonly clear: string;
+      /** The brochure is optional: FAST's prospectus is attached otherwise. */
+      readonly prospectusHint: string;
     };
     readonly submit: string;
     /** «النشرة التعريفية» — stored before the request is sent. */
@@ -407,6 +409,7 @@ const ar: AssignmentsContent = {
       closed: 'هذه الخطة مغلقة أو منتهية أو ملغاة، ولا يمكن ربط الطلب بها. اختر خطة أخرى.',
       failed: 'تعذّر جلب بيانات الخطة من فاست. حاول مرة أخرى، أو أدخل البيانات يدويًا.',
       clear: 'إلغاء الربط والإدخال يدويًا',
+      prospectusHint: 'إن لم ترفع ملفًا، تُرفق النشرة التعريفية للبرنامج من فاست.',
     },
     submit: 'إرسال الطلب',
     upload: {
@@ -675,6 +678,7 @@ const en: AssignmentsContent = {
       failed:
         'The plan’s details could not be read from FAST. Try again, or enter the details by hand.',
       clear: 'Unlink and enter by hand',
+      prospectusHint: 'If you upload no file, the programme’s prospectus is attached from FAST.',
     },
     submit: 'Submit request',
     upload: {

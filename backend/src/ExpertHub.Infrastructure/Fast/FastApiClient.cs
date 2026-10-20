@@ -11,6 +11,9 @@ namespace ExpertHub.Infrastructure.Fast;
 /// </summary>
 public sealed record FastResult<T>(bool Ok, T? Value, string? Error, int? StatusCode);
 
+/// <summary>A file FAST served: its bytes, media type and (when sent) name.</summary>
+public sealed record FastFile(byte[] Bytes, string ContentType, string? FileName);
+
 /// <summary>Builds a <see cref="FastResult{T}"/> — non-generic so the factory
 /// methods do not sit on the generic type itself.</summary>
 public static class FastResult
@@ -142,6 +145,47 @@ public sealed class FastApiClient
         return result.Ok
             ? FastResult.Success<bool>(true)
             : FastResult.Failure<bool>(result.Error ?? "Unknown error.", result.StatusCode);
+    }
+
+    /// <summary>
+    /// A file download (the Training API's prospectus and material files):
+    /// the bytes, their type and FAST's file name. Fails closed like the rest.
+    /// </summary>
+    public async Task<FastResult<FastFile>> GetFileAsync(string path, CancellationToken cancellationToken)
+    {
+        if (!IsConfigured)
+        {
+            return FastResult.Failure<FastFile>("The FAST API is not configured.");
+        }
+        var token = await _tokens.GetTokenAsync(cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return FastResult.Failure<FastFile>(
+                "No FAST access token is available for this call. See IFastTokenProvider.");
+        }
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/{path.TrimStart('/')}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        try
+        {
+            using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return FastResult.Failure<FastFile>(
+                    response.ReasonPhrase ?? "FAST rejected the request.", (int)response.StatusCode);
+            }
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            return FastResult.Success(new FastFile(
+                bytes,
+                response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream",
+                response.Content.Headers.ContentDisposition?.FileNameStar
+                    ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')));
+        }
+        // A timeout is a TaskCanceledException — a failure here, never an escape.
+        catch (Exception exception) when (exception is not OperationCanceledException
+            || !cancellationToken.IsCancellationRequested)
+        {
+            return FastResult.Failure<FastFile>($"FAST could not be reached: {exception.Message}");
+        }
     }
 
     /// <summary>

@@ -90,6 +90,22 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
     expect(sent[0].programName).toBe('برنامج القيادة المالية');
   }, 30000);
 
+  it('a linked plan with a FAST prospectus needs no uploaded brochure', async () => {
+    const { user } = await openGeneralProgram();
+    await pickOption(user, fast.programmeLabel, 'PRG-001 — برنامج القيادة المالية');
+    await pickOption(user, fast.planLabel, openPlanLabel);
+    await screen.findByText(fast.pulled('PL-2026-01'));
+    expect(screen.getByText(new RegExp(fast.prospectusHint))).toBeInTheDocument();
+
+    await pickOption(user, form.fields.traineeLevel, form.options.traineeLevels.advanced);
+    await pickOption(user, form.fields.specializationDomain, 'التحليل المالي والتمويل');
+    await user.click(screen.getByRole('button', { name: form.submit }));
+
+    expect(await screen.findByText(form.successTitle)).toBeInTheDocument();
+    expect(sent[0].attachmentId).toBeNull();
+    expect(sent[0].fastPlanId).toBe(MOCK_FAST_OPEN_PLAN);
+  }, 30000);
+
   it('a closed plan is refused and links nothing', async () => {
     const { user } = await openGeneralProgram();
     await pickOption(user, fast.programmeLabel, 'PRG-001 — برنامج القيادة المالية');

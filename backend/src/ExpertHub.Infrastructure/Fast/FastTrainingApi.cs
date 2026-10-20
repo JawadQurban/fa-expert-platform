@@ -193,6 +193,11 @@ public sealed class FastTrainingApi
         _client.GetAsync<FastProgramDetails>(
             $"api/v1/Program/GetProgramDetails?programId={Uri.EscapeDataString(programId)}", "ar", ct);
 
+    /// <summary>B-04 — the programme's prospectus file («النشرة التعريفية»).</summary>
+    public Task<FastResult<FastFile>> ProspectusAsync(string programId, string language, CancellationToken ct) =>
+        _client.GetFileAsync(
+            $"api/v1/Program/{Uri.EscapeDataString(programId)}/Prospectus/File?lang={(language == "en" ? "en" : "ar")}", ct);
+
     /// <summary>B-05 — <paramref name="status"/> <c>open</c> means new or open plans.</summary>
     public Task<FastResult<List<FastPlanListItem>>> PlansAsync(
         string programId, string? status, DateTime? fromDate, CancellationToken ct)

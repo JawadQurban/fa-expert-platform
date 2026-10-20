@@ -30,9 +30,11 @@ internal sealed record FastPulledFieldsWire(
     string? TraineeLevel, string? ClientName);
 
 /// <summary>One plan, pulled: whether it may be assigned, and the fields it fills.</summary>
+/// <remarks><c>HasProspectus</c> — FAST holds the programme's prospectus, so
+/// «النشرة التعريفية» need not be uploaded: the server attaches FAST's file.</remarks>
 internal sealed record FastPlanPrefillWire(
     string PlanId, string? ProgramId, string? PlanCode, string? Status, bool Assignable,
-    FastPulledFieldsWire Fields);
+    FastPulledFieldsWire Fields, bool HasProspectus = false);
 
 /// <summary>
 /// RUN-030 / BUG-004 — J-16/F2–F3 against the FAST Training API: the centre
@@ -161,6 +163,10 @@ internal static class FastPlanSelection
             Language = pulled.Language ?? input.Language,
             TraineeLevel = pulled.TraineeLevel ?? input.TraineeLevel,
             ClientName = pulled.ClientName ?? input.ClientName,
+            // FAST's prospectus stands in for an un-uploaded brochure; the
+            // file itself is fetched when the brochure is resolved.
+            AttachmentName = input.AttachmentName
+                ?? (prefill.HasProspectus && string.IsNullOrWhiteSpace(input.AttachmentId) ? "prospectus" : null),
         }, null);
     }
 
@@ -236,7 +242,47 @@ internal static class FastPlanSelection
             plan.PlanCode,
             plan.Status?.Code,
             FastPlanStatuses.IsAssignable(plan.Status, plan.FinalClosedOn, last, today),
-            fields);
+            fields,
+            HasProspectus: program?.Prospectus is { } prospectus
+                && (prospectus.FileName is not null || prospectus.DownloadUrl is not null));
+    }
+
+    /// <summary>The largest prospectus Expert Hub copies from FAST (FAST's own limit).</summary>
+    private const int ProspectusMaxSizeMb = 50;
+
+    /// <summary>
+    /// «النشرة التعريفية» from FAST — the programme's prospectus, stored as the
+    /// request's brochure when the centre uploaded none. It goes through the
+    /// same format and content checks as an upload; only the size limit is
+    /// FAST's, because the file is the Academy's own, not a user's. Null when
+    /// FAST has none or cannot serve it — the brochure is then still required.
+    /// </summary>
+    internal static async Task<ExpertHub.Core.Domain.Attachment?> ProspectusAsync(
+        FastTrainingApi fast, string? programId, Guid uploadedBy,
+        ExpertHub.Infrastructure.Persistence.ExpertHubDbContext db,
+        ExpertHub.Infrastructure.Documents.IDocumentStore store,
+        ExpertHub.Infrastructure.Documents.IUploadScanner scanner,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(programId))
+        {
+            return null;
+        }
+        var file = await fast.ProspectusAsync(programId, "ar", ct);
+        if (!file.Ok || file.Value is null || file.Value.Bytes.Length == 0)
+        {
+            return null;
+        }
+        var name = file.Value.FileName is { Length: > 0 } given ? given : "prospectus.pdf";
+        using var stream = new MemoryStream(file.Value.Bytes);
+        var form = new FormFile(stream, 0, file.Value.Bytes.Length, "file", name)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = file.Value.ContentType,
+        };
+        var (attachment, _) = await Documents.AttachmentUploads.StoreAsync(
+            form, Documents.AttachmentUploads.DocumentFormats, ProspectusMaxSizeMb, uploadedBy, db, store, scanner, ct);
+        return attachment;
     }
 
     /// <summary>⚠️ Needs Confirmation — by FAST's code if it has one, else by name.</summary>

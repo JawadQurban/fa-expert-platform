@@ -409,7 +409,7 @@ export default function NewAssignmentRequestPage() {
 
   const submit = () => {
     const input = buildInput();
-    const found = validateCentreRequest(input);
+    const found = validateCentreRequest(input, { brochureFromFast: fastPlan?.hasProspectus });
     setIssues(found);
     if (found.length > 0) {
       return;
@@ -744,9 +744,13 @@ export default function NewAssignmentRequestPage() {
             {/* «النشرة التعريفية» (forms 1–5) / «المرفقات» (form 6) — mandatory. */}
             <FileUploader
               label={attachmentLabel}
-              hint={copy.upload.hint}
+              hint={
+                fastPlan?.hasProspectus === true
+                  ? `${copy.upload.hint} ${copy.fast.prospectusHint}`
+                  : copy.upload.hint
+              }
               accept={BROCHURE_FORMATS.map((format) => `.${format}`).join(',')}
-              requiredField
+              requiredField={fastPlan?.hasProspectus !== true}
               files={brochureFile == null ? [] : [brochureFile]}
               onFilesSelected={selectBrochure}
               onRemove={removeBrochure}
