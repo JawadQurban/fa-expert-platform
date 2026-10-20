@@ -153,6 +153,23 @@ export interface AssignmentsContent {
     readonly optionalHint: string;
     /** F2/AC-3 survives the redesign: the request creates nothing in FAST. */
     readonly noCreateNote: string;
+    /** RUN-030 / BUG-004 — picking the FAST programme and plan (forms 1–2). */
+    readonly fast: {
+      readonly heading: string;
+      readonly intro: string;
+      readonly unavailable: string;
+      readonly searchLabel: string;
+      readonly programmeLabel: string;
+      readonly planLabel: string;
+      readonly loading: string;
+      readonly noProgrammes: string;
+      readonly noPlans: string;
+      readonly planOption: (code: string, from: string, to: string, city: string) => string;
+      readonly pulled: (code: string) => string;
+      readonly closed: string;
+      readonly failed: string;
+      readonly clear: string;
+    };
     readonly submit: string;
     /** «النشرة التعريفية» — stored before the request is sent. */
     readonly upload: {
@@ -372,6 +389,25 @@ const ar: AssignmentsContent = {
     notesPlaceholder: 'اكتب ملاحظاتك هنا',
     optionalHint: 'اختياري.',
     noCreateNote: 'هذا الطلب يصف الاحتياج فقط؛ لا يُنشئ برنامجًا أو خطة في نظام FAST بأي حال.',
+    fast: {
+      heading: 'الربط بخطة في فاست',
+      intro:
+        'اختر البرنامج ثم خطته من فاست لتُعبّأ بيانات الخطة تلقائيًا. تُعرض البرامج المعتمدة التي لها خطة قادمة فقط.',
+      unavailable: 'قائمة برامج فاست غير متاحة الآن؛ أدخل بيانات البرنامج يدويًا.',
+      searchLabel: 'ابحث عن البرنامج بالاسم أو الرمز',
+      programmeLabel: 'البرنامج (فاست)',
+      planLabel: 'الخطة',
+      loading: 'جارٍ التحميل…',
+      noProgrammes: 'لا توجد برامج مطابقة.',
+      noPlans: 'لا توجد خطط مفتوحة لهذا البرنامج.',
+      planOption: (code, from, to, city) =>
+        `${code} · ${from} – ${to}${city === '' ? '' : ` · ${city}`}`,
+      pulled: (code) =>
+        `عُبّئت بيانات الخطة ${code} من فاست، ولا تُعدَّل هنا. الحقول الفارغة تُدخل يدويًا.`,
+      closed: 'هذه الخطة مغلقة أو منتهية أو ملغاة، ولا يمكن ربط الطلب بها. اختر خطة أخرى.',
+      failed: 'تعذّر جلب بيانات الخطة من فاست. حاول مرة أخرى، أو أدخل البيانات يدويًا.',
+      clear: 'إلغاء الربط والإدخال يدويًا',
+    },
     submit: 'إرسال الطلب',
     upload: {
       hint: 'الصيغ المقبولة: PDF وDOC وDOCX — الحد الأقصى 1 م.ب.',
@@ -618,6 +654,28 @@ const en: AssignmentsContent = {
     optionalHint: 'Optional.',
     noCreateNote:
       'This request only describes the need; it never creates a programme or plan in FAST.',
+    fast: {
+      heading: 'Link to a FAST plan',
+      intro:
+        'Choose the programme and then its plan in FAST, and the plan’s details are filled in for you. Only approved programmes with an upcoming plan are listed.',
+      unavailable:
+        'The FAST programme list is not available right now; enter the programme details by hand.',
+      searchLabel: 'Search the programme by name or code',
+      programmeLabel: 'Programme (FAST)',
+      planLabel: 'Plan',
+      loading: 'Loading…',
+      noProgrammes: 'No matching programmes.',
+      noPlans: 'This programme has no open plans.',
+      planOption: (code, from, to, city) =>
+        `${code} · ${from} – ${to}${city === '' ? '' : ` · ${city}`}`,
+      pulled: (code) =>
+        `Plan ${code}’s details were filled in from FAST and cannot be changed here. Empty fields are entered by hand.`,
+      closed:
+        'This plan is closed, over or cancelled, so the request cannot be linked to it. Choose another plan.',
+      failed:
+        'The plan’s details could not be read from FAST. Try again, or enter the details by hand.',
+      clear: 'Unlink and enter by hand',
+    },
     submit: 'Submit request',
     upload: {
       hint: 'Accepted formats: PDF, DOC, DOCX — up to 1 MB.',

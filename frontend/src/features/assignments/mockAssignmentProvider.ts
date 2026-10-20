@@ -1,5 +1,5 @@
 import type { ExpertHubApiError } from '../../shared/services/apiClient';
-import type { AssignmentService } from './assignmentService';
+import type { AssignmentService, FastPlanPrefillDto } from './assignmentService';
 import type { AssignmentRequestSummaryDto, PulledRequestDataDto } from './assignment.types';
 import {
   brochureFileIssue,
@@ -442,6 +442,47 @@ export interface MockAssignmentProviderOptions {
    * session can walk the journey; tests narrow it to check the split.
    */
   readonly viewer?: { readonly canMatch?: boolean; readonly canApprove?: boolean };
+  /**
+   * RUN-030 — whether the FAST Training API answers. Off by default, which is
+   * what an environment without it sees: the form is filled by hand.
+   */
+  readonly fastAvailable?: boolean;
+}
+
+/** ⚠️ MOCK — one FAST programme, one open plan and one closed plan. */
+export const MOCK_FAST_PROGRAMME = {
+  programId: 'fast-prg-001',
+  code: 'PRG-001',
+  nameAr: 'برنامج القيادة المالية',
+  nameEn: 'Financial Leadership',
+  isCustom: false,
+} as const;
+
+export const MOCK_FAST_OPEN_PLAN = 'fast-plan-open';
+export const MOCK_FAST_CLOSED_PLAN = 'fast-plan-closed';
+
+function mockFastPrefill(planId: string): FastPlanPrefillDto {
+  return {
+    planId,
+    programId: MOCK_FAST_PROGRAMME.programId,
+    planCode: planId === MOCK_FAST_OPEN_PLAN ? 'PL-2026-01' : 'PL-2025-09',
+    status: planId === MOCK_FAST_OPEN_PLAN ? 'open' : 'closed',
+    assignable: planId === MOCK_FAST_OPEN_PLAN,
+    fields: {
+      programName: MOCK_FAST_PROGRAMME.nameAr,
+      daysCount: 3,
+      daysCountOther: null,
+      dateFrom: '2026-12-06',
+      dateTo: '2026-12-08',
+      period: 'morning',
+      deliveryMechanism: 'onsite',
+      city: 'الرياض',
+      language: 'ar',
+      // FAST's level had no Expert Hub equivalent: left for the centre.
+      traineeLevel: null,
+      clientName: null,
+    },
+  };
 }
 
 function delay(ms: number): Promise<void> {
@@ -451,7 +492,7 @@ function delay(ms: number): Promise<void> {
 export function createMockAssignmentProvider(
   options: MockAssignmentProviderOptions = {}
 ): AssignmentService {
-  const { latencyMs = 300, failWith, now = MOCK_NOW, viewer } = options;
+  const { latencyMs = 300, failWith, now = MOCK_NOW, viewer, fastAvailable = false } = options;
 
   let requests: AssignmentRequestSummaryDto[] = SEED_REQUESTS.map((request) => ({ ...request }));
   let counter = SEED_REQUESTS.length;
@@ -623,6 +664,48 @@ export function createMockAssignmentProvider(
       };
     },
 
+    async listFastProgrammes() {
+      await delay(latencyMs);
+      return {
+        ok: true,
+        value: { available: fastAvailable, items: fastAvailable ? [MOCK_FAST_PROGRAMME] : [] },
+      };
+    },
+
+    async listFastPlans() {
+      await delay(latencyMs);
+      return {
+        ok: true,
+        value: [
+          {
+            planId: MOCK_FAST_OPEN_PLAN,
+            planCode: 'PL-2026-01',
+            startDate: '2026-12-06',
+            endDate: '2026-12-08',
+            city: { ar: 'الرياض', en: 'Riyadh' },
+            deliveryMode: 'in-class',
+            hasTrainer: false,
+          },
+          {
+            planId: MOCK_FAST_CLOSED_PLAN,
+            planCode: 'PL-2025-09',
+            startDate: '2026-12-13',
+            endDate: '2026-12-14',
+            city: { ar: 'جدة', en: 'Jeddah' },
+            deliveryMode: 'in-class',
+            hasTrainer: false,
+          },
+        ],
+      };
+    },
+
+    async getFastPlan(planId: string) {
+      await delay(latencyMs);
+      return fastAvailable
+        ? { ok: true, value: mockFastPrefill(planId) }
+        : { ok: false, error: { status: 503, message: 'fast-unavailable' } };
+    },
+
     async listCentres() {
       await delay(latencyMs);
       return failWith != null ? { ok: false, error: failWith } : { ok: true, value: MOCK_CENTRES };
@@ -683,6 +766,10 @@ export function createMockAssignmentProvider(
       // and the brochure must be a document this server actually stored.
       if (validateCentreRequest(input).length > 0 || !brochures.has(input.attachmentId ?? '')) {
         return { ok: false, error: { status: 400, message: 'required-field-missing' } };
+      }
+      // RUN-030 — the server re-reads the plan and refuses one no longer open.
+      if (input.fastPlanId === MOCK_FAST_CLOSED_PLAN) {
+        return { ok: false, error: { status: 400, message: 'fast-plan-closed' } };
       }
 
       counter += 1;

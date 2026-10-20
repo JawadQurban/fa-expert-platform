@@ -6,6 +6,7 @@ using ExpertHub.Api.Profiles;
 using ExpertHub.Api.ServiceRequests;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Assignments;
+using ExpertHub.Infrastructure.Fast;
 using ExpertHub.Infrastructure.Notifications;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -112,7 +113,12 @@ internal sealed record CreateRequestInputWire(
     IReadOnlyList<string>? SpecificNominees = null,
     // Notion «Assignment Matrix» (2026-09-29): «عروض فنية / محاور البرامج» →
     // «مطوّر محتوى أو مدرب». Required only where the type allows several.
-    string? ServiceType = null);
+    string? ServiceType = null,
+    // RUN-030 — the FAST plan the request is for (forms 1–2), and its
+    // programme. Set, the plan's operational fields come from FAST
+    // (`FastPlanSelection`), and the trainer is later assigned to it (B-07).
+    string? FastPlanId = null,
+    string? FastProgramId = null);
 
 internal sealed record SendPoolInputWire(IReadOnlyList<string>? TrainerIds);
 
@@ -173,6 +179,7 @@ public static class AssignmentEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             NotificationDispatcher dispatcher,
+            FastTrainingApi fast,
             CancellationToken ct) =>
         {
             // P-351 — a centre-scoped requester submits for their own centre,
@@ -190,6 +197,13 @@ public static class AssignmentEndpoints
                         : input.CentreId,
                     ResponsibleEmployee = actor.UserId.ToString(),
                 };
+            }
+            // RUN-030 — a FAST plan fills the plan's fields, and a plan that can
+            // no longer be assigned is refused, before the matrix checks them.
+            (input, var fastProblem) = await FastPlanSelection.ApplyAsync(input, fast, ct);
+            if (fastProblem is not null)
+            {
+                return fastProblem;
             }
             if (string.IsNullOrWhiteSpace(input.CentreId)
                 || string.IsNullOrWhiteSpace(input.RequestType)
@@ -422,6 +436,9 @@ public static class AssignmentEndpoints
         })
             .WithName("CreateAssignmentRequest")
             .RequireFeature("F-0501");
+
+        // RUN-030 / BUG-004 — FAST programme → plan → pulled fields.
+        FastPlanSelection.MapFastPlanLookups(requests);
 
         // «اسم المركز» — the approved operational centres (Assignment Matrix).
         // Not `/internal/centres`: that list is access scope, and empty (`P-276`).

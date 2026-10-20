@@ -21,6 +21,7 @@ import {
   deliveryModesFor,
   formFor,
   hasClientField,
+  isPlanDriven,
   isProgramLike,
   nomineesOf,
   serviceChoicesFor,
@@ -32,9 +33,12 @@ import {
 } from './centreRequestForm.types';
 import {
   getAssignmentService,
+  type FastPlanPrefillDto,
+  type FastPulledFieldsDto,
   type RequestLookupOptionDto,
   type UploadedAttachmentDto,
 } from './assignmentService';
+import { FastPlanPicker } from './FastPlanPicker';
 import { getAssignmentsContent } from './assignments.content';
 import { WorkspacePage } from '../../shared/workspace/WorkspacePage';
 import { PageHead } from '../../shared/workspace/PageHead';
@@ -49,8 +53,9 @@ import { numberFormatter } from '../../shared/formatting';
  * - **The request type opens its form** — ten types, six forms, each with its
  *   own fields, labels, order, mandatory fields and option lists
  *   (`centreRequestForm.types.ts`, mirrored from the API's matrix).
- * - **The centre enters the data by hand** — the matrix's FAST auto-fill needs
- *   a FAST read that does not exist. Nothing here creates a programme or plan
+ * - **Forms 1–2 can link a FAST plan** (RUN-030, `FastPlanPicker`): the plan's
+ *   data is pulled from FAST and locked; what FAST cannot answer, and every
+ *   other form, is entered by hand. Nothing here creates a programme or plan
  *   in FAST (J-16/F2/AC-3), and the page says so.
  *
  * - **The headcount is real** — the request says how many experts it needs, and
@@ -73,6 +78,30 @@ function toIsoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** RUN-030 — the form values a pulled FAST plan supplies (null fields stay manual). */
+function valuesFromFast(fields: FastPulledFieldsDto): Record<string, string> {
+  const pulled: Record<string, string | null> = {
+    programName: fields.programName,
+    daysCount:
+      fields.daysCountOther === true
+        ? DAYS_OTHER
+        : fields.daysCount == null
+          ? null
+          : String(fields.daysCount),
+    dateFrom: fields.dateFrom,
+    dateTo: fields.dateTo,
+    period: fields.period,
+    deliveryMechanism: fields.deliveryMechanism,
+    city: fields.city,
+    language: fields.language,
+    traineeLevel: fields.traineeLevel,
+    clientName: fields.clientName,
+  };
+  return Object.fromEntries(
+    Object.entries(pulled).filter((entry): entry is [string, string] => entry[1] != null)
+  );
 }
 
 function parseIsoDate(value: string): Date | null {
@@ -115,6 +144,19 @@ export default function NewAssignmentRequestPage() {
   /** The server's own verdict on the named experts — the authoritative backstop. */
   const [nomineeRefusal, setNomineeRefusal] = useState<string | null>(null);
   const [created, setCreated] = useState<AssignmentRequestSummaryDto | null>(null);
+  /** RUN-030 — the FAST plan the request is linked to; its values are locked. */
+  const [fastPlan, setFastPlan] = useState<FastPlanPrefillDto | null>(null);
+  /** The server's refusal of the linked plan (closed meanwhile, or FAST down). */
+  const [fastRefusal, setFastRefusal] = useState<string | null>(null);
+  const pulledValues = fastPlan == null ? {} : valuesFromFast(fastPlan.fields);
+  const locked = (key: string) => key in pulledValues;
+  const linkFastPlan = (prefill: FastPlanPrefillDto | null) => {
+    setFastPlan(prefill);
+    setFastRefusal(null);
+    if (prefill != null) {
+      setValues((current) => ({ ...current, ...valuesFromFast(prefill.fields) }));
+    }
+  };
 
   /* Focus follows the row that was added, or what is left after a removal. */
   const nomineeRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -281,6 +323,7 @@ export default function NewAssignmentRequestPage() {
     language: values.language,
     traineeLevel: values.traineeLevel,
     clientName: values.clientName,
+    fastPlanId: fastPlan?.planId ?? null,
     requiredHeadcount: headcount ?? 1,
     specificNominees: namedNominees,
     consultationTopic: values.consultationTopic,
@@ -374,11 +417,17 @@ export default function NewAssignmentRequestPage() {
     setBusy(true);
     setSubmitFailed(false);
     setNomineeRefusal(null);
+    setFastRefusal(null);
     void service.createRequest(input as CreateCentreRequestInput).then((result) => {
       setBusy(false);
       if (result.ok) {
         setCreated(result.value);
         setPhase('submitted');
+      } else if (
+        result.error.message === 'fast-plan-closed' ||
+        result.error.message === 'fast-unavailable'
+      ) {
+        setFastRefusal(result.error.message);
       } else if (nomineeRefusalFor(result.error.message) != null) {
         // The server is the authority on the named experts, even where the
         // page already refuses the same thing.
@@ -397,6 +446,7 @@ export default function NewAssignmentRequestPage() {
       label={label}
       value={values[key] == null || values[key] === '' ? null : parseIsoDate(values[key])}
       onChange={(date) => set(key, toIsoDate(date))}
+      disabled={locked(key)}
       locale={locale}
       requiredField
       errorText={errorFor('dates-required')}
@@ -419,6 +469,7 @@ export default function NewAssignmentRequestPage() {
       options={[...options]}
       value={values[key] == null || values[key] === '' ? undefined : values[key]}
       onValueChange={(next) => set(key, next)}
+      readOnly={locked(key)}
       requiredField
       errorText={errorFor(code)}
     />
@@ -444,6 +495,7 @@ export default function NewAssignmentRequestPage() {
       helperText={copy.cityHint}
       value={values.city ?? ''}
       onChange={(event) => set('city', event.target.value)}
+      readOnly={locked('city')}
       requiredField
       errorText={errorFor('city-required')}
     />
@@ -478,6 +530,7 @@ export default function NewAssignmentRequestPage() {
                 setHeadcount(1);
                 setNomineeRows([]);
                 setNomineeRefusal(null);
+                linkFastPlan(null);
                 removeBrochure();
                 setCreated(null);
                 setIssues([]);
@@ -526,6 +579,7 @@ export default function NewAssignmentRequestPage() {
               setRequestType(next as CentreRequestType);
               setServiceType('');
               setIssues([]);
+              linkFastPlan(null);
             }}
             requiredField
             errorText={errorFor('request-type-required')}
@@ -569,6 +623,17 @@ export default function NewAssignmentRequestPage() {
               {copy.noCreateNote}
             </Alert>
 
+            {/* RUN-030 / BUG-004 — forms 1–2 link the request to a FAST plan. */}
+            {isPlanDriven(requestType) && (
+              <FastPlanPicker
+                key={requestType}
+                copy={copy.fast}
+                locale={locale}
+                linked={fastPlan}
+                onLinked={linkFastPlan}
+              />
+            )}
+
             {/* The form's fields, in the matrix's order, up to the attachment. */}
             <div className={styles.fieldGrid}>
               {programLike && (
@@ -577,6 +642,7 @@ export default function NewAssignmentRequestPage() {
                     label={nameLabel}
                     value={values.programName ?? ''}
                     onChange={(event) => set('programName', event.target.value)}
+                    readOnly={locked('programName')}
                     requiredField
                     errorText={errorFor('program-name-required')}
                   />
@@ -620,6 +686,7 @@ export default function NewAssignmentRequestPage() {
                       helperText={clientRequired(requestType) ? undefined : copy.optionalHint}
                       value={values.clientName ?? ''}
                       onChange={(event) => set('clientName', event.target.value)}
+                      readOnly={locked('clientName')}
                       requiredField={clientRequired(requestType)}
                       errorText={errorFor('client-required')}
                     />
@@ -827,6 +894,11 @@ export default function NewAssignmentRequestPage() {
           {submitFailed && (
             <Alert tone="error" surface="tinted" role="alert">
               {content.errors.submitFailed}
+            </Alert>
+          )}
+          {fastRefusal != null && (
+            <Alert tone="error" surface="tinted" role="alert">
+              {fastRefusal === 'fast-plan-closed' ? copy.fast.closed : copy.fast.failed}
             </Alert>
           )}
 

@@ -17,7 +17,7 @@ namespace ExpertHub.Api.Tests;
 /// an offer nobody sends, re-routing that is slot-scoped, and three distinct
 /// end states.
 /// </summary>
-public sealed class Cap05Tests
+public sealed partial class Cap05Tests
     : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime, IDisposable
 {
     private readonly WebApplicationFactory<Program> _factory;

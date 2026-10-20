@@ -49,7 +49,66 @@ export interface UploadedAttachmentDto {
   readonly scanStatus: string | null;
 }
 
+/** RUN-030 / BUG-004 — one of the Academy's approved FAST programmes. */
+export interface FastProgramOptionDto {
+  readonly programId: string;
+  readonly code: string | null;
+  readonly nameAr: string;
+  readonly nameEn: string;
+  readonly isCustom: boolean;
+}
+
+/** `available: false` — FAST is off or unreachable; the form is filled by hand. */
+export interface FastProgrammesDto {
+  readonly available: boolean;
+  readonly items: readonly FastProgramOptionDto[];
+}
+
+/** An open plan of a programme. */
+export interface FastPlanOptionDto {
+  readonly planId: string;
+  readonly planCode: string | null;
+  readonly startDate: string | null;
+  readonly endDate: string | null;
+  readonly city: { readonly ar: string; readonly en: string } | null;
+  readonly deliveryMode: string | null;
+  readonly hasTrainer: boolean;
+}
+
+/** The request fields a FAST plan fills; `null` is left for the centre to enter. */
+export interface FastPulledFieldsDto {
+  readonly programName: string | null;
+  readonly daysCount: number | null;
+  readonly daysCountOther: boolean | null;
+  readonly dateFrom: string | null;
+  readonly dateTo: string | null;
+  readonly period: string | null;
+  readonly deliveryMechanism: string | null;
+  readonly city: string | null;
+  readonly language: string | null;
+  readonly traineeLevel: string | null;
+  readonly clientName: string | null;
+}
+
+export interface FastPlanPrefillDto {
+  readonly planId: string;
+  readonly programId: string | null;
+  readonly planCode: string | null;
+  readonly status: string | null;
+  /** False for a closed, final-closed, cancelled or ended plan. */
+  readonly assignable: boolean;
+  readonly fields: FastPulledFieldsDto;
+}
+
 export interface AssignmentService {
+  /** RUN-030 / BUG-004 — FAST's approved programmes with an upcoming plan. */
+  listFastProgrammes(query: string): Promise<Result<FastProgrammesDto, ExpertHubApiError>>;
+  /** The programme's open plans. */
+  listFastPlans(
+    programId: string
+  ): Promise<Result<readonly FastPlanOptionDto[], ExpertHubApiError>>;
+  /** One plan, pulled: may it be assigned, and what it fills. */
+  getFastPlan(planId: string): Promise<Result<FastPlanPrefillDto, ExpertHubApiError>>;
   listRequests(): Promise<Result<readonly AssignmentRequestSummaryDto[], ExpertHubApiError>>;
   getRequest(requestId: string): Promise<Result<AssignmentRequestDetailDto, ExpertHubApiError>>;
   /** «اسم المركز» — the centres list (reference data, served like P-144's). */
@@ -128,6 +187,20 @@ export function createHttpAssignmentProvider(
 ): AssignmentService {
   const base = `${ASSIGNMENTS_API_VERSION}/internal/assignment-requests`;
   return {
+    listFastProgrammes(query) {
+      const suffix = query.trim() === '' ? '' : `?q=${encodeURIComponent(query.trim())}`;
+      return client.get<FastProgrammesDto>(`${base}/lookups/fast-programmes${suffix}`);
+    },
+    listFastPlans(programId) {
+      return client.get<readonly FastPlanOptionDto[]>(
+        `${base}/lookups/fast-programmes/${encodeURIComponent(programId)}/plans`
+      );
+    },
+    getFastPlan(planId) {
+      return client.get<FastPlanPrefillDto>(
+        `${base}/lookups/fast-plans/${encodeURIComponent(planId)}`
+      );
+    },
     listRequests() {
       return client.get<readonly AssignmentRequestSummaryDto[]>(base);
     },

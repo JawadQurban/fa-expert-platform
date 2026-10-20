@@ -84,6 +84,14 @@ export function isProgramLike(type: CentreRequestType): boolean {
   return formFor(type) !== 'consultation';
 }
 
+/**
+ * RUN-030 — the forms that pick a FAST plan: general and private programmes.
+ * Events (form 3) and exams (form 5) have no FAST operation yet.
+ */
+export function isPlanDriven(type: CentreRequestType): boolean {
+  return type === 'general-program' || type === 'private-program';
+}
+
 /** «اسم العميل» — on forms 2–5 (absent on form 1). */
 export function hasClientField(type: CentreRequestType): boolean {
   return isProgramLike(type) && formFor(type) !== 'general-program';
@@ -194,6 +202,12 @@ export interface CreateCentreRequestInput {
   readonly traineeLevel?: string;
   /** «اسم العميل (البرامج الخاصة)». */
   readonly clientName?: string;
+  /**
+   * RUN-030 — the FAST plan this request is for (forms 1–2). When set, the
+   * server re-reads the plan, refuses one that is closed or over, and takes the
+   * plan's own values for the fields it fills.
+   */
+  readonly fastPlanId?: string | null;
   /**
    * «العدد المطلوب» — how many experts this request needs. `>= 1`, and 1 when
    * absent. **No approved maximum**, so none is invented here.
