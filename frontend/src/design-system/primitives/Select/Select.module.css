@@ -120,6 +120,18 @@
   white-space: nowrap;
   text-align: start;
 }
+/* `searchable` — the text field inherits the trigger's type and colour. */
+.searchInput {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+.searchInput::placeholder {
+  color: var(--fads-sys-select-text-placeholder);
+}
 .value[data-placeholder] {
   color: var(--fads-sys-select-text-placeholder);
 }

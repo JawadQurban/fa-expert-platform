@@ -74,6 +74,15 @@ export interface SelectProps {
   readonly loadingText?: ReactNode;
   /** Shown in the open panel when there are no options to display. */
   readonly noOptionsText?: ReactNode;
+  /**
+   * Type-to-filter: the field itself becomes a text input (WAI-ARIA APG
+   * "Editable Combobox With List Autocomplete") and the list shows only the
+   * options whose label contains what was typed. The `ref` is not forwarded
+   * in this mode.
+   */
+  readonly searchable?: boolean;
+  /** Called with each typed query — for lists the caller fetches per query. */
+  readonly onSearchChange?: (query: string) => void;
   /** Native form participation, mirroring the selected value (same technique `Switch` uses). */
   readonly name?: string;
   readonly className?: string;
@@ -89,28 +98,38 @@ type RenderRow =
       readonly index: number;
     };
 
+/** Case-insensitive "label contains query"; an empty query keeps everything. */
+function matches(option: SelectOption, query: string): boolean {
+  return query === '' || option.label.toLowerCase().includes(query);
+}
+
 function buildRows(
   options: readonly SelectOption[] | undefined,
-  groups: readonly SelectOptionGroup[] | undefined
+  groups: readonly SelectOptionGroup[] | undefined,
+  query = ''
 ): RenderRow[] {
   if (groups?.length) {
     const rows: RenderRow[] = [];
     let index = 0;
     groups.forEach((group, groupIndex) => {
+      const shown = group.options.filter((option) => matches(option, query));
+      if (shown.length === 0) return;
       rows.push({ kind: 'group', key: `group-${groupIndex}`, label: group.label });
-      group.options.forEach((option) => {
+      shown.forEach((option) => {
         rows.push({ kind: 'option', key: option.value, option, index });
         index += 1;
       });
     });
     return rows;
   }
-  return (options ?? []).map((option, index) => ({
-    kind: 'option',
-    key: option.value,
-    option,
-    index,
-  }));
+  return (options ?? [])
+    .filter((option) => matches(option, query))
+    .map((option, index) => ({
+      kind: 'option',
+      key: option.value,
+      option,
+      index,
+    }));
 }
 
 export function Select({
@@ -132,6 +151,8 @@ export function Select({
   loading = false,
   loadingText = 'Loading…',
   noOptionsText = 'No options available',
+  searchable = false,
+  onSearchChange,
   name,
   className,
   ref,
@@ -146,13 +167,21 @@ export function Select({
   const [internalValue, setInternalValue] = useState(defaultValue);
   const selectedValue = isControlled ? value : internalValue;
 
-  const rows = useMemo(() => buildRows(options, groups), [options, groups]);
+  const [query, setQuery] = useState('');
+  const filter = searchable ? query.trim().toLowerCase() : '';
+  const rows = useMemo(() => buildRows(options, groups, filter), [options, groups, filter]);
   const flatOptions = useMemo(
     () =>
       rows.filter((row): row is Extract<RenderRow, { kind: 'option' }> => row.kind === 'option'),
     [rows]
   );
-  const selectedOption = flatOptions.find((row) => row.option.value === selectedValue)?.option;
+  const selectedOption = useMemo(
+    () =>
+      buildRows(options, groups)
+        .map((row) => (row.kind === 'option' ? row.option : undefined))
+        .find((option) => option?.value === selectedValue),
+    [options, groups, selectedValue]
+  );
   const enabledIndices = flatOptions.filter((row) => !row.option.disabled).map((row) => row.index);
 
   const [open, setOpen] = useState(false);
@@ -163,7 +192,7 @@ export function Select({
   const [announce, setAnnounce] = useState('');
 
   const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | HTMLInputElement>(null);
   const panelRef = useRef<HTMLUListElement>(null);
   const optionRefs = useRef<Record<string, HTMLLIElement | null>>({});
   const typeAheadRef = useRef('');
@@ -171,6 +200,11 @@ export function Select({
 
   const openPanel = (initialIndex?: number) => {
     if (disabled || readOnly) return;
+    // A fresh search each time the list opens; closed, the field shows the value.
+    if (query !== '') {
+      setQuery('');
+      onSearchChange?.('');
+    }
     setOpen(true);
     const selectedIdx = flatOptions.findIndex((row) => row.option.value === selectedValue);
     const fallback = enabledIndices[0] ?? -1;
@@ -236,8 +270,21 @@ export function Select({
     setActiveIndex(enabledIndices[nextPos]);
   };
 
-  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+  // Typing narrows the list: the first enabled match becomes active.
+  const search = (next: string) => {
+    setQuery(next);
+    onSearchChange?.(next);
+    setOpen(true);
+    const first = buildRows(options, groups, next.trim().toLowerCase()).find(
+      (row) => row.kind === 'option' && !row.option.disabled
+    );
+    setActiveIndex(first?.kind === 'option' ? first.index : -1);
+  };
+
+  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (disabled || readOnly) return;
+    // In a text field, Space, Home and End edit the query.
+    if (searchable && (event.key === ' ' || event.key === 'Home' || event.key === 'End')) return;
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
@@ -277,7 +324,7 @@ export function Select({
         if (open) closePanel();
         break;
       default:
-        if (event.key.length === 1 && /\S/.test(event.key)) {
+        if (!searchable && event.key.length === 1 && /\S/.test(event.key)) {
           window.clearTimeout(typeAheadTimer.current);
           typeAheadRef.current += event.key.toLowerCase();
           const match = flatOptions.find(
@@ -317,41 +364,82 @@ export function Select({
           <span>{label}</span>
         </label>
       </div>
-      <button
-        ref={(node) => {
-          triggerRef.current = node;
-          if (typeof ref === 'function') ref(node);
-          else if (ref) (ref as { current: HTMLButtonElement | null }).current = node;
-        }}
-        id={id}
-        type="button"
-        role="combobox"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listboxId}
-        aria-activedescendant={
-          open && activeOption ? `${id}-option-${activeOption.value}` : undefined
-        }
-        aria-describedby={describedBy}
-        aria-invalid={invalid || undefined}
-        aria-required={requiredField || undefined}
-        aria-readonly={readOnly || undefined}
-        disabled={disabled}
-        className={styles.trigger}
-        data-size={size}
-        data-surface={surface}
-        data-invalid={invalid || undefined}
-        data-disabled={disabled || undefined}
-        data-readonly={readOnly || undefined}
-        data-open={open || undefined}
-        onClick={() => (open ? closePanel() : openPanel())}
-        onKeyDown={handleTriggerKeyDown}
-      >
-        <span className={styles.value} data-placeholder={!selectedOption || undefined} dir="auto">
-          {selectedOption ? selectedOption.label : (placeholder ?? '')}
-        </span>
-        <span className={styles.chevron} aria-hidden="true" data-open={open || undefined} />
-      </button>
+      {searchable ? (
+        <div
+          className={styles.trigger}
+          data-size={size}
+          data-surface={surface}
+          data-invalid={invalid || undefined}
+          data-disabled={disabled || undefined}
+          data-readonly={readOnly || undefined}
+          data-open={open || undefined}
+        >
+          <input
+            ref={(node) => {
+              triggerRef.current = node;
+            }}
+            id={id}
+            type="text"
+            role="combobox"
+            autoComplete="off"
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            aria-activedescendant={
+              open && activeOption ? `${id}-option-${activeOption.value}` : undefined
+            }
+            aria-describedby={describedBy}
+            aria-invalid={invalid || undefined}
+            aria-required={requiredField || undefined}
+            disabled={disabled}
+            readOnly={readOnly}
+            className={cn(styles.value, styles.searchInput)}
+            dir="auto"
+            placeholder={selectedOption?.label ?? placeholder}
+            value={open ? query : (selectedOption?.label ?? '')}
+            onClick={() => !open && openPanel()}
+            onChange={(event) => search(event.target.value)}
+            onKeyDown={handleTriggerKeyDown}
+          />
+          <span className={styles.chevron} aria-hidden="true" data-open={open || undefined} />
+        </div>
+      ) : (
+        <button
+          ref={(node) => {
+            triggerRef.current = node;
+            if (typeof ref === 'function') ref(node);
+            else if (ref) (ref as { current: HTMLButtonElement | null }).current = node;
+          }}
+          id={id}
+          type="button"
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-activedescendant={
+            open && activeOption ? `${id}-option-${activeOption.value}` : undefined
+          }
+          aria-describedby={describedBy}
+          aria-invalid={invalid || undefined}
+          aria-required={requiredField || undefined}
+          aria-readonly={readOnly || undefined}
+          disabled={disabled}
+          className={styles.trigger}
+          data-size={size}
+          data-surface={surface}
+          data-invalid={invalid || undefined}
+          data-disabled={disabled || undefined}
+          data-readonly={readOnly || undefined}
+          data-open={open || undefined}
+          onClick={() => (open ? closePanel() : openPanel())}
+          onKeyDown={handleTriggerKeyDown}
+        >
+          <span className={styles.value} data-placeholder={!selectedOption || undefined} dir="auto">
+            {selectedOption ? selectedOption.label : (placeholder ?? '')}
+          </span>
+          <span className={styles.chevron} aria-hidden="true" data-open={open || undefined} />
+        </button>
+      )}
       {name != null && <input type="hidden" name={name} value={selectedValue ?? ''} />}
 
       {open &&

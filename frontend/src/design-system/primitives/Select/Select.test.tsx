@@ -222,4 +222,52 @@ describe('Select', () => {
     );
     await expectNoA11yViolations(container);
   });
+
+  describe('searchable', () => {
+    const programmes = [
+      { value: 'p1', label: 'PRG-001 — القيادة المالية' },
+      { value: 'p2', label: 'PRG-002 — إدارة المخاطر' },
+      { value: 'p3', label: 'PRG-003 — المخاطر التشغيلية' },
+    ];
+
+    it('typing in the field filters the list and Enter picks the first match', async () => {
+      const onValueChange = vi.fn();
+      const onSearchChange = vi.fn();
+      const { user } = renderWithProviders(
+        <Select
+          label="البرنامج"
+          options={programmes}
+          searchable
+          onValueChange={onValueChange}
+          onSearchChange={onSearchChange}
+        />
+      );
+      await user.type(screen.getByRole('combobox', { name: 'البرنامج' }), 'مخاطر');
+
+      const listbox = screen.getByRole('listbox');
+      expect(
+        within(listbox)
+          .getAllByRole('option')
+          .map((o) => o.textContent)
+      ).toEqual(['PRG-002 — إدارة المخاطر', 'PRG-003 — المخاطر التشغيلية']);
+      expect(onSearchChange).toHaveBeenLastCalledWith('مخاطر');
+
+      await user.keyboard('{Enter}');
+      expect(onValueChange).toHaveBeenCalledWith('p2');
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox')).toHaveValue('PRG-002 — إدارة المخاطر');
+    });
+
+    it('matches the code too, says when nothing matches, and passes axe', async () => {
+      const { user, container } = renderWithProviders(
+        <Select label="البرنامج" options={programmes} searchable noOptionsText="لا نتائج" />
+      );
+      await user.type(screen.getByRole('combobox'), 'prg-003');
+      expect(screen.getAllByRole('option')).toHaveLength(1);
+      await expectNoA11yViolations(container);
+      await user.clear(screen.getByRole('combobox'));
+      await user.type(screen.getByRole('combobox'), 'غير موجود');
+      expect(screen.getByText('لا نتائج')).toBeInTheDocument();
+    });
+  });
 });

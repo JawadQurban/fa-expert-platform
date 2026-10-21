@@ -48,6 +48,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 export const Required: Story = { args: { requiredField: true } };
+/** Type in the field to filter the list. */
+export const Searchable: Story = { args: { searchable: true } };
 export const WithHelper: Story = { args: { helperText: 'اختر الإدارة المعنية بالابتكار.' } };
 export const WithError: Story = { args: { errorText: 'الرجاء اختيار التصنيف' } };
 export const ReadOnly: Story = { args: { readOnly: true, defaultValue: 'ops' } };
