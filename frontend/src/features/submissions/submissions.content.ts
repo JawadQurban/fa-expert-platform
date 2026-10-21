@@ -113,7 +113,7 @@ const ar: SubmissionsContent = {
   },
   kindReason: {
     'training-material': 'فُتح باب الرفع لأن الخطة لا تتضمن مادة علمية مرفقة.',
-    'service-content': 'فُتح باب الرفع فور تأكيد ارتباطك، ولا يعتمد على أي حقل في نظام FAST.',
+    'service-content': 'فُتح باب الرفع فور تأكيد ارتباطك.',
   },
   statuses: {
     [SUBMISSION_STATUS.awaitingUpload]: 'بانتظار الرفع',
@@ -138,8 +138,8 @@ const ar: SubmissionsContent = {
   coordinatorNote: 'ملاحظة المنسّق',
   approvedTitle: 'اعتُمد الملف',
   approvedBody: {
-    'training-material': 'أُرسلت نسخة من المادة لتحديث الخطة في نظام FAST.',
-    'service-content': 'حُفظ المحتوى داخل المنصة، ولا تُرسل نسخة إلى نظام FAST في هذا المسار.',
+    'training-material': 'أُرسلت نسخة من المادة لتحديث الخطة.',
+    'service-content': 'حُفظ المحتوى داخل المنصة.',
   },
 
   roundsHeading: 'سجل المراجعة',
@@ -173,19 +173,19 @@ const ar: SubmissionsContent = {
     submitRequest: 'إرسال الملاحظة',
     cancel: 'إلغاء',
     approvedTitle: 'اعتُمد الملف',
-    approvedSync: 'أُرسلت نسخة لتحديث حقل المادة العلمية على الخطة في نظام FAST.',
-    approvedNoSync: 'حُفظ المحتوى داخل المنصة، ولا يُزامَن مع نظام FAST في هذا المسار.',
+    approvedSync: 'أُرسلت نسخة لتحديث المادة العلمية على الخطة.',
+    approvedNoSync: 'حُفظ المحتوى داخل المنصة.',
     requestedTitle: 'أُرسلت الملاحظة',
     requestedBody: 'فُتحت فرصة رفع جديدة، وستُعاد المراجعة عند وصول النسخة الجديدة.',
     noSlaNote: '⚠️ لم تُحدَّد مدة قياسية للاعتماد في هذا المسار بعد.',
-    syncHeading: 'المزامنة مع نظام FAST',
+    syncHeading: 'حالة المزامنة',
     syncStates: {
       none: 'لم تبدأ',
       processing: 'قيد المزامنة',
       synchronized: 'تمت المزامنة',
-      'not-linked': 'غير مرتبط بخطة في فاست',
+      'not-linked': 'غير مرتبط بخطة',
     },
-    syncDirectionNote: 'تُدار حالة المادة داخل المنصة، والمزامنة باتجاه واحد: من المنصة إلى FAST.',
+    syncDirectionNote: 'تُدار حالة المادة داخل المنصة، وتُرسل نسخة منها إلى الخطة.',
   },
 
   errors: {
@@ -210,8 +210,7 @@ const en: SubmissionsContent = {
   },
   kindReason: {
     'training-material': 'Uploading is open because the plan carries no training material.',
-    'service-content':
-      'Uploading opened the moment your engagement was confirmed; it depends on no FAST field.',
+    'service-content': 'Uploading opened the moment your engagement was confirmed.',
   },
   statuses: {
     [SUBMISSION_STATUS.awaitingUpload]: 'Awaiting upload',
@@ -236,8 +235,8 @@ const en: SubmissionsContent = {
   coordinatorNote: 'Coordinator’s note',
   approvedTitle: 'File approved',
   approvedBody: {
-    'training-material': 'A copy has been sent to update the plan in FAST.',
-    'service-content': 'The content is stored in the platform; this path sends no copy to FAST.',
+    'training-material': 'A copy has been sent to update the plan.',
+    'service-content': 'The content is stored in the platform.',
   },
 
   roundsHeading: 'Review history',
@@ -274,21 +273,21 @@ const en: SubmissionsContent = {
     submitRequest: 'Send the note',
     cancel: 'Cancel',
     approvedTitle: 'File approved',
-    approvedSync: 'A copy has been sent to update the training material field on the plan in FAST.',
-    approvedNoSync: 'The content is stored in the platform; this path is not synced to FAST.',
+    approvedSync: 'A copy has been sent to update the training material on the plan.',
+    approvedNoSync: 'The content is stored in the platform.',
     requestedTitle: 'Note sent',
     requestedBody:
       'A new upload opportunity is open, and review resumes when the new file arrives.',
     noSlaNote: '⚠️ No approval timeframe has been defined for this path yet.',
-    syncHeading: 'FAST sync',
+    syncHeading: 'Sync status',
     syncStates: {
       none: 'Not started',
       processing: 'Syncing',
       synchronized: 'Synced',
-      'not-linked': 'No FAST plan',
+      'not-linked': 'No linked plan',
     },
     syncDirectionNote:
-      'Material status is managed inside the platform, and sync flows one way only: platform → FAST.',
+      'Material status is managed inside the platform, and a copy is sent to the plan.',
   },
 
   errors: {

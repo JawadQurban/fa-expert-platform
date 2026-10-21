@@ -89,6 +89,12 @@ The history before this repository existed is in
 
 ### Changed
 
+- **No screen names FAST any more (`P-371`).** Engagements, slot re-routing,
+  execution, speakers, submissions and withdrawal now say what the thing is
+  («أُلغيت الخطة», «حالة المزامنة», «غير مرتبط بخطة», «رمز سبب إلغاء الخطة»)
+  instead of «في نظام FAST». The integration console and server logs still name
+  the system, since that is what operators need there.
+
 - **The assignment request form shows errors only, and never names FAST (`P-371`).**
   The «هذا الطلب يصف الاحتياج فقط…» note, the picker's intro, the «عُبّئت بيانات
   الخطة من فاست» confirmation, the prospectus hint and the "FAST unavailable" note

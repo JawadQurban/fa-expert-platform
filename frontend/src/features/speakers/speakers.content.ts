@@ -215,13 +215,12 @@ const ar: SpeakersContent = {
     bioEmpty: 'لم تُضف نبذة بعد.',
     contactHeading: 'التواصل',
     emailLabel: 'البريد الإلكتروني',
-    emailPendingFast: 'غير متاح بعد — يُقرأ من ملف المتحدث في نظام فاست (FAST) حين يُتيحه النظام.',
+    emailPendingFast: 'غير متاح بعد — يُقرأ من ملف المتحدث حين يتوفر.',
     emailUnavailable: 'غير متاح حاليًا.',
     historyHeading: 'سجل المشاركات',
     historyPendingTitle: 'سيظهر سجل المشاركات تلقائيًا',
-    historyPendingBody:
-      'يُبنى سجل مشاركات المتحدث من نظام فاست (FAST)، وسيظهر هنا تلقائيًا حين يربط النظام المتحدث بالفعاليات.',
-    historyEmpty: 'لا توجد مشاركات مسجّلة في نظام فاست (FAST) لهذا المتحدث.',
+    historyPendingBody: 'سيظهر سجل مشاركات المتحدث هنا تلقائيًا حين يُربط بالفعاليات.',
+    historyEmpty: 'لا توجد مشاركات مسجّلة لهذا المتحدث.',
     historyLabel: 'مشاركات المتحدث',
     historyColumns: {
       event: 'الفعالية',
@@ -238,7 +237,7 @@ const ar: SpeakersContent = {
     editTitle: 'تعديل سجل المتحدث',
     editLead: (name) => `تعديل بيانات ${name}.`,
     emailNotice:
-      'البريد الإلكتروني للمتحدث يُقرأ من ملفه في نظام فاست (FAST) ولا يُدخل هنا. ولأن النظام لا يُتيحه بعد، فلن تُرسل رسالة الإنشاء إلى المتحدث حاليًا.',
+      'البريد الإلكتروني للمتحدث يُقرأ من ملفه ولا يُدخل هنا. ولأنه غير متوفر بعد، فلن تُرسل رسالة الإنشاء إلى المتحدث حاليًا.',
     sections: {
       identity: 'الصورة والصفة',
       arabicName: 'الاسم بالعربية',
@@ -363,14 +362,13 @@ const en: SpeakersContent = {
     bioEmpty: 'No bio has been added yet.',
     contactHeading: 'Contact',
     emailLabel: 'Email',
-    emailPendingFast:
-      'Not available yet — read from the speaker’s FAST profile once FAST provides it.',
+    emailPendingFast: 'Not available yet — read from the speaker’s profile once it is available.',
     emailUnavailable: 'Not available at the moment.',
     historyHeading: 'Participation history',
     historyPendingTitle: 'The participation history will appear automatically',
     historyPendingBody:
-      'A speaker’s participation history comes from FAST, and it will appear here automatically once FAST links the speaker to events.',
-    historyEmpty: 'FAST has no recorded participations for this speaker.',
+      'The speaker’s participation history will appear here automatically once the speaker is linked to events.',
+    historyEmpty: 'No participations are recorded for this speaker.',
     historyLabel: 'Speaker participations',
     historyColumns: {
       event: 'Event',
@@ -388,7 +386,7 @@ const en: SpeakersContent = {
     editTitle: 'Edit speaker record',
     editLead: (name) => `Edit the details of ${name}.`,
     emailNotice:
-      'The speaker’s email is read from their FAST profile and is not entered here. Because FAST does not provide it yet, the creation email will not be sent to the speaker for now.',
+      'The speaker’s email is read from their profile and is not entered here. Because it is not available yet, the creation email will not be sent to the speaker for now.',
     sections: {
       identity: 'Photo and title',
       arabicName: 'Name in Arabic',

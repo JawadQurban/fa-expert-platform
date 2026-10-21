@@ -101,27 +101,27 @@ const ar: ExecutionContent = {
 
   scheduleChangedTitle: 'تغيّرت مواعيد الخطة',
   scheduleChangedBody: (date) =>
-    `حُدِّثت مواعيد الخطة في نظام FAST بتاريخ ${date}، والمواعيد المعروضة هنا هي المواعيد الجديدة.`,
+    `حُدِّثت مواعيد الخطة بتاريخ ${date}، والمواعيد المعروضة هنا هي المواعيد الجديدة.`,
 
   detailsHeading: 'بيانات البرنامج والخطة',
 
   locationHeading: 'مكان التنفيذ',
   onlineLabel: 'رابط الجلسة التدريبية',
   joinAction: 'فتح الجلسة',
-  meetingUnavailable: 'لم يصل رابط الجلسة من نظام FAST بعد.',
+  meetingUnavailable: 'لم يصل رابط الجلسة بعد.',
   venueLabel: 'المقر',
-  venueUnavailable: 'لم تصل تفاصيل المقر من نظام FAST بعد؛ المعروض هو المدينة المحددة في الطلب.',
+  venueUnavailable: 'لم تصل تفاصيل المقر بعد؛ المعروض هو المدينة المحددة في الطلب.',
 
   enrolmentHeading: 'المسجّلون',
   enrolmentCount: (count) => (count === 1 ? 'مسجّل واحد' : `${fmtAr(count)} مسجّلين`),
   namesOnlyNote: 'تُعرض الأسماء فقط، دون أي بيانات أخرى عن المسجّلين.',
-  sourceNote: 'المصدر: جدول المسجّلين في نظام FAST.',
+  sourceNote: 'المصدر: جدول المسجّلين في الخطة.',
   enrolmentEmpty: 'لا يوجد مسجّلون بعد.',
   enrolmentUnavailable:
-    'بيانات المسجّلين غير متاحة حاليًا؛ الطلب غير مرتبط بخطة في نظام FAST، أو تعذّر الوصول إليه.',
+    'بيانات المسجّلين غير متاحة حاليًا؛ الطلب غير مرتبط بخطة، أو تعذّر الوصول إليها.',
   attendanceHeading: 'الحضور والغياب',
   attendanceUnavailable:
-    'بيانات الحضور غير متاحة حاليًا؛ الطلب غير مرتبط بخطة في نظام FAST، أو تعذّر الوصول إليه.',
+    'بيانات الحضور غير متاحة حاليًا؛ الطلب غير مرتبط بخطة، أو تعذّر الوصول إليها.',
   attendanceDay: (date, present, absent) => `${date}: حاضر ${present}، غائب ${absent}`,
   attendanceEmpty: 'لم يُسجَّل حضور بعد.',
 
@@ -130,7 +130,7 @@ const ar: ExecutionContent = {
     'تصل هذه التقييمات مباشرة من نظام MTM بقيمها كما وردت، وهي ليست التقييم المحتسب لملفك.',
   evaluationsEmpty: 'لم تصل تقييمات بعد.',
   evaluationsUnavailable:
-    'تقييمات المتدربين غير متاحة حاليًا؛ الطلب غير مرتبط بخطة في نظام FAST، أو تعذّر الوصول إليه.',
+    'تقييمات المتدربين غير متاحة حاليًا؛ الطلب غير مرتبط بخطة، أو تعذّر الوصول إليها.',
   evaluationRating: (overall, responses) =>
     `تقييم MTM للمدرب في الخطة: ${overall} (${responses} استجابة)`,
   evaluationValue: (value, low, high) => `${value} على مقياس من ${low} إلى ${high}`,
@@ -164,28 +164,27 @@ const en: ExecutionContent = {
 
   scheduleChangedTitle: 'The plan’s dates changed',
   scheduleChangedBody: (date) =>
-    `The plan’s dates were updated in FAST on ${date}; the dates shown here are the new ones.`,
+    `The plan’s dates were updated on ${date}; the dates shown here are the new ones.`,
 
   detailsHeading: 'Programme and plan details',
 
   locationHeading: 'Where it takes place',
   onlineLabel: 'Training session link',
   joinAction: 'Open the session',
-  meetingUnavailable: 'The session link has not arrived from FAST yet.',
+  meetingUnavailable: 'The session link has not arrived yet.',
   venueLabel: 'Venue',
-  venueUnavailable:
-    'Venue details have not arrived from FAST yet; the city shown is the one on the request.',
+  venueUnavailable: 'Venue details have not arrived yet; the city shown is the one on the request.',
 
   enrolmentHeading: 'Enrollees',
   enrolmentCount: (count) => (count === 1 ? '1 enrollee' : `${count} enrollees`),
   namesOnlyNote: 'Only names are shown — no other data about enrollees.',
-  sourceNote: 'Source: the enrollee table in FAST.',
+  sourceNote: 'Source: the plan’s enrollee table.',
   enrolmentEmpty: 'Nobody has enrolled yet.',
   enrolmentUnavailable:
-    'Enrollee data is not available; the request is not linked to a FAST plan, or FAST could not be reached.',
+    'Enrollee data is not available; the request is not linked to a plan, or the plan could not be reached.',
   attendanceHeading: 'Attendance',
   attendanceUnavailable:
-    'Attendance data is not available; the request is not linked to a FAST plan, or FAST could not be reached.',
+    'Attendance data is not available; the request is not linked to a plan, or the plan could not be reached.',
   attendanceDay: (date, present, absent) => `${date}: ${present} present, ${absent} absent`,
   attendanceEmpty: 'No attendance has been recorded yet.',
 
@@ -194,7 +193,7 @@ const en: ExecutionContent = {
     'These arrive directly from MTM with the values as submitted; they are not the calculated rating on your profile.',
   evaluationsEmpty: 'No evaluations have arrived yet.',
   evaluationsUnavailable:
-    'Trainee evaluations are not available; the request is not linked to a FAST plan, or FAST could not be reached.',
+    'Trainee evaluations are not available; the request is not linked to a plan, or the plan could not be reached.',
   evaluationRating: (overall, responses) =>
     `MTM rating of the trainer on this plan: ${overall} (${responses} responses)`,
   evaluationValue: (value, low, high) => `${value} on a scale of ${low} to ${high}`,

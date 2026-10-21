@@ -147,7 +147,7 @@ const ar: ReRoutingContent = {
     expired: 'انتهاء المدة دون رد',
     withdrawn: 'اعتذار بعد التأكيد',
     delinked: 'إلغاء ارتباط من الأكاديمية',
-    cancelled: 'أُلغي في نظام FAST',
+    cancelled: 'أُلغيت الخطة',
   },
   historyRow: (name, sentOn) => `${name} — أُرسل العرض في ${sentOn}`,
 
@@ -260,7 +260,7 @@ const en: ReRoutingContent = {
     expired: 'Expired with no response',
     withdrawn: 'Withdrew after confirming',
     delinked: 'De-linked by the Academy',
-    cancelled: 'Cancelled in FAST',
+    cancelled: 'Plan cancelled',
   },
   historyRow: (name, sentOn) => `${name} — offered on ${sentOn}`,
 

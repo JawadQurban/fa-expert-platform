@@ -114,7 +114,7 @@ const ar: WithdrawalContent = {
     action: 'فك ارتباط المدرب',
     heading: 'فك ارتباط المدرب',
     intro: 'اختر سبب فك الارتباط. يُبلَّغ المدرب بالسبب المختار.',
-    planUntouched: 'فك الارتباط إجراء داخل المنصة فقط، ولا يُلغي الخطة في نظام FAST.',
+    planUntouched: 'فك الارتباط إجراء داخل المنصة فقط، ولا يُلغي الخطة.',
     reasonLegend: 'سبب فك الارتباط',
     reasons: {
       'operational-need-change': 'تغيّر الاحتياج التشغيلي',
@@ -140,7 +140,7 @@ const ar: WithdrawalContent = {
     withdrawnByStaff: 'فكّ فريق الأكاديمية ارتباطك بهذا المقعد.',
     cancelledByAcademy: 'أُلغي هذا الارتباط لإلغاء الخطة بالكامل من قِبل الأكاديمية.',
     reasonLabel: 'السبب',
-    fastReason: (code) => `رمز سبب الإلغاء في نظام FAST: ${code}`,
+    fastReason: (code) => `رمز سبب إلغاء الخطة: ${code}`,
     terminatedOn: (date) => `بتاريخ ${date}`,
   },
 
@@ -180,8 +180,7 @@ const en: WithdrawalContent = {
     action: 'De-link the trainer',
     heading: 'De-link the trainer',
     intro: 'Choose a reason. The trainer is notified, along with the reason you select.',
-    planUntouched:
-      'De-linking is a platform-side action only; it does not cancel the plan in FAST.',
+    planUntouched: 'De-linking is a platform-side action only; it does not cancel the plan.',
     reasonLegend: 'Reason for de-linking',
     reasons: {
       // J-22/F2/AC-2's wording: Operational Need Change / Administrative Decision / Other (free text).
@@ -210,7 +209,7 @@ const en: WithdrawalContent = {
     cancelledByAcademy:
       'This engagement was cancelled because the Academy cancelled the plan in full.',
     reasonLabel: 'Reason',
-    fastReason: (code) => `FAST cancellation reason code: ${code}`,
+    fastReason: (code) => `Plan cancellation reason code: ${code}`,
     terminatedOn: (date) => `on ${date}`,
   },
 
