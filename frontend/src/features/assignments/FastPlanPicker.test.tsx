@@ -37,6 +37,10 @@ async function openGeneralProgram() {
 }
 
 const openPlanLabel = fast.planOption('PL-2026-01', '2026-12-06', '2026-12-08', 'الرياض');
+/** The plan's programme name, filled in and locked once the plan is linked. */
+const linkedName = async () =>
+  expect(await screen.findByDisplayValue('برنامج القيادة المالية')).toHaveAttribute('readonly');
+
 const closedPlanLabel = fast.planOption('PL-2025-09', '2026-12-13', '2026-12-14', 'جدة');
 
 describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => {
@@ -66,7 +70,7 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
     await pickOption(user, fast.programmeLabel, 'PRG-001 — برنامج القيادة المالية');
     await pickOption(user, fast.planLabel, openPlanLabel);
 
-    expect(await screen.findByText(fast.pulled('PL-2026-01'))).toBeInTheDocument();
+    await linkedName();
     const name = screen.getByLabelText(new RegExp(form.fields.programName));
     expect(name).toHaveValue('برنامج القيادة المالية');
     expect(name).toHaveAttribute('readonly');
@@ -94,8 +98,7 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
     const { user } = await openGeneralProgram();
     await pickOption(user, fast.programmeLabel, 'PRG-001 — برنامج القيادة المالية');
     await pickOption(user, fast.planLabel, openPlanLabel);
-    await screen.findByText(fast.pulled('PL-2026-01'));
-    expect(screen.getByText(new RegExp(fast.prospectusHint))).toBeInTheDocument();
+    await linkedName();
 
     await pickOption(user, form.fields.traineeLevel, form.options.traineeLevels.advanced);
     await pickOption(user, form.fields.specializationDomain, 'التحليل المالي والتمويل');
@@ -112,7 +115,6 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
     await pickOption(user, fast.planLabel, closedPlanLabel);
 
     expect(await screen.findByText(fast.closed)).toBeInTheDocument();
-    expect(screen.queryByText(fast.pulled('PL-2025-09'))).not.toBeInTheDocument();
     expect(screen.getByLabelText(new RegExp(form.fields.programName))).not.toHaveAttribute(
       'readonly'
     );
@@ -122,13 +124,12 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
     const { user } = await openGeneralProgram();
     await pickOption(user, fast.programmeLabel, 'PRG-001 — برنامج القيادة المالية');
     await pickOption(user, fast.planLabel, openPlanLabel);
-    await screen.findByText(fast.pulled('PL-2026-01'));
+    await linkedName();
 
     await user.click(screen.getByRole('button', { name: fast.clear }));
     expect(screen.getByLabelText(new RegExp(form.fields.programName))).not.toHaveAttribute(
       'readonly'
     );
-    expect(screen.queryByText(fast.pulled('PL-2026-01'))).not.toBeInTheDocument();
   }, 20000);
 
   it('passes axe with the picker open', async () => {
@@ -137,10 +138,13 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
     await expectNoA11yViolations(container);
   }, 20000);
 
-  it('without FAST the form says so and stays manual', async () => {
+  it('without FAST the picker is hidden and the form stays manual', async () => {
     setAssignmentServiceForTesting(createMockAssignmentProvider({ latencyMs: 0 }));
     await openGeneralProgram();
-    expect(await screen.findByText(fast.unavailable)).toBeInTheDocument();
+    expect(await screen.findByLabelText(new RegExp(form.fields.programName))).not.toHaveAttribute(
+      'readonly'
+    );
+    expect(screen.queryByRole('heading', { name: fast.heading })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: fast.programmeLabel })).not.toBeInTheDocument();
   }, 20000);
 
@@ -157,7 +161,7 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
     const { user } = await openGeneralProgram();
     await pickOption(user, fast.programmeLabel, 'PRG-001 — برنامج القيادة المالية');
     await pickOption(user, fast.planLabel, openPlanLabel);
-    await screen.findByText(fast.pulled('PL-2026-01'));
+    await linkedName();
     await pickOption(user, form.fields.traineeLevel, form.options.traineeLevels.advanced);
     await user.upload(
       document.querySelector<HTMLInputElement>('input[type="file"]') as HTMLInputElement,
@@ -226,7 +230,7 @@ describe('RUN-030 / BUG-004 — linking a centre request to a FAST plan', () => 
 
     expect(screen.getByRole('heading', { name: fast.programmeHeading })).toBeInTheDocument();
     await pickOption(user, fast.programmeLabel, 'PRG-001 — برنامج القيادة المالية');
-    expect(await screen.findByText(fast.programmePulled('PRG-001'))).toBeInTheDocument();
+    await linkedName();
     expect(screen.queryByRole('combobox', { name: fast.planLabel })).not.toBeInTheDocument();
     const name = screen.getByLabelText(new RegExp(form.fields.contentTitle));
     expect(name).toHaveValue('برنامج القيادة المالية');

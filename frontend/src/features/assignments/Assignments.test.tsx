@@ -321,10 +321,11 @@ describe('EH-INT-09 — the centre request form (طلب تقديم البرنا�
 
   /* ── what survives J-16 ────────────────────────────────────────────────── */
 
-  it('F2/AC-3 still holds: the request creates nothing in FAST, and the page says so', async () => {
+  it('the form shows no FAST explanation, only fields and errors', async () => {
     const { user } = await renderForm();
     await pickOption(user, form.requestTypeLabel, form.requestTypes['general-program']);
-    expect(await screen.findByText(form.noCreateNote)).toBeInTheDocument();
+    await screen.findByRole('heading', { name: form.detailsHeading });
+    expect(screen.queryByText(/FAST|فاست/)).not.toBeInTheDocument();
   });
 
   /* ── validation + submission ───────────────────────────────────────────── */

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert } from '@ds/composite';
-import { Button, SearchBox, Select, Typography } from '@ds/primitives';
+import { Button, Select, Typography } from '@ds/primitives';
 import type { AssignmentsContent } from './assignments.content';
 import {
   getAssignmentService,
@@ -20,14 +20,13 @@ import styles from './NewAssignmentRequestPage.module.css';
  * - **`programme` mode (form 4):** a programme only — no plan — and its name,
  *   trainee level and prospectus are pulled (`P-363`). Optional.
  *
- * When FAST is not configured the section says so and the form stays manual.
+ * When FAST is not configured the section is hidden and the form stays manual.
  * The picker never writes to FAST.
  */
 export function FastPlanPicker({
   copy,
   locale,
   mode,
-  linked,
   onLinked,
   onConfigured,
   errorText,
@@ -35,8 +34,6 @@ export function FastPlanPicker({
   readonly copy: AssignmentsContent['form']['fast'];
   readonly locale: 'ar' | 'en';
   readonly mode: 'plan' | 'programme';
-  /** What the request is linked to, or `null` for manual entry. */
-  readonly linked: FastLinkDto | null;
   readonly onLinked: (link: FastLinkDto | null) => void;
   /** Whether the Training API is configured here (the plan is then mandatory). */
   readonly onConfigured?: (configured: boolean) => void;
@@ -44,7 +41,6 @@ export function FastPlanPicker({
   readonly errorText?: string;
 }) {
   const service = getAssignmentService();
-  const [query, setQuery] = useState('');
   const [available, setAvailable] = useState(true);
   const [configured, setConfigured] = useState(false);
   const [programmes, setProgrammes] = useState<readonly FastProgramOptionDto[] | null>(null);
@@ -57,7 +53,7 @@ export function FastPlanPicker({
   useEffect(() => {
     let active = true;
     setProgrammes(null);
-    void service.listFastProgrammes(query, planMode).then((result) => {
+    void service.listFastProgrammes('', planMode).then((result) => {
       if (!active) {
         return;
       }
@@ -71,7 +67,7 @@ export function FastPlanPicker({
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, planMode]);
+  }, [planMode]);
 
   const chooseProgramme = (next: string) => {
     setProgrammeId(next);
@@ -129,12 +125,9 @@ export function FastPlanPicker({
     onLinked(null);
   };
 
+  // Not configured here: the form stays manual and says nothing (errors only).
   if (!available && !configured) {
-    return (
-      <Alert tone="info" surface="tinted" role="note">
-        {copy.unavailable}
-      </Alert>
-    );
+    return null;
   }
 
   const label = (ar: string, en: string) => (locale === 'en' ? en : ar);
@@ -144,22 +137,17 @@ export function FastPlanPicker({
       <Typography as="h3" id="eh-new-assignment-fast" variant="text-md" weight="bold">
         {planMode ? copy.heading : copy.programmeHeading}
       </Typography>
-      <Typography as="p" variant="text-xs" color="muted">
-        {planMode ? copy.intro : copy.programmeIntro}
-      </Typography>
       {!available && (
         <Alert tone="error" surface="tinted" role="alert">
           {copy.failed}
         </Alert>
       )}
       <div className={styles.fieldGrid}>
-        <SearchBox
-          label={copy.searchLabel}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        {/* The list loads once; typing in the field filters it in place. */}
         <Select
           label={copy.programmeLabel}
+          searchable
+          placeholder={copy.searchLabel}
           options={(programmes ?? []).map((programme) => ({
             value: programme.programId,
             label:
@@ -197,11 +185,6 @@ export function FastPlanPicker({
           />
         )}
       </div>
-      {linked != null && (
-        <Alert tone="success" surface="tinted" role="status">
-          {planMode ? copy.pulled(linked.label) : copy.programmePulled(linked.label)}
-        </Alert>
-      )}
       {issue != null && (
         <Alert tone="error" surface="tinted" role="alert">
           {issue === 'closed' ? copy.closed : copy.failed}

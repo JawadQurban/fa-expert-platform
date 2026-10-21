@@ -626,11 +626,6 @@ export default function NewAssignmentRequestPage() {
         <>
           {/* — بيانات البرنامج التدريبي — the type's own field set. */}
           <Panel shape="inline" title={copy.detailsHeading} titleId="eh-new-assignment-details">
-            {/* F2/AC-3 survives the redesign, and the page still says so. */}
-            <Alert tone="info" surface="tinted" role="note">
-              {copy.noCreateNote}
-            </Alert>
-
             {/* RUN-030 / BUG-004 — forms 1–2 link a FAST plan (mandatory once
                 FAST is configured, P-362); form 4 may link a programme (P-363). */}
             {(isPlanDriven(requestType) || form === 'content-development') && (
@@ -639,7 +634,6 @@ export default function NewAssignmentRequestPage() {
                 copy={copy.fast}
                 locale={locale}
                 mode={isPlanDriven(requestType) ? 'plan' : 'programme'}
-                linked={fastPlan}
                 onLinked={linkFastPlan}
                 onConfigured={setFastConfigured}
                 errorText={errorFor('fast-plan-required')}
@@ -756,11 +750,7 @@ export default function NewAssignmentRequestPage() {
             {/* «النشرة التعريفية» (forms 1–5) / «المرفقات» (form 6) — mandatory. */}
             <FileUploader
               label={attachmentLabel}
-              hint={
-                fastPlan?.hasProspectus === true
-                  ? `${copy.upload.hint} ${copy.fast.prospectusHint}`
-                  : copy.upload.hint
-              }
+              hint={copy.upload.hint}
               accept={BROCHURE_FORMATS.map((format) => `.${format}`).join(',')}
               requiredField={fastPlan?.hasProspectus !== true}
               files={brochureFile == null ? [] : [brochureFile]}

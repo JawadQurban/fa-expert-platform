@@ -89,6 +89,19 @@ The history before this repository existed is in
 
 ### Changed
 
+- **The assignment request form shows errors only, and never names FAST (`P-371`).**
+  The «هذا الطلب يصف الاحتياج فقط…» note, the picker's intro, the «عُبّئت بيانات
+  الخطة من فاست» confirmation, the prospectus hint and the "FAST unavailable" note
+  are gone; the labels read «البرنامج والخطة» / «البرنامج». The rule itself (the
+  request creates nothing in FAST, J-16 F2/AC-3) is unchanged.
+- **The programme field is searchable in place.** The separate search box is gone:
+  you type in «البرنامج» itself and the list narrows as you type (name or code).
+  The list loads FAST's full page (200, was 50) once.
+- **Design system: `Select` gains `searchable` and `onSearchChange`** (WAI-ARIA
+  APG editable combobox with list autocomplete). Off by default, so every other
+  dropdown is unchanged. _Needs Confirmation:_ no live Figma check — the Figma
+  MCP was not connected; it reuses the Dropdown Input's trigger and panel as they are.
+
 - **A consultant's scheduling conflict lowers their score instead of excluding
   them** (owner ruling, 2026-10-20). Matching gains a sixth weighted row,
   «عدم تعارض المواعيد» (`availability`, weight 33, migration **M47**). For every
