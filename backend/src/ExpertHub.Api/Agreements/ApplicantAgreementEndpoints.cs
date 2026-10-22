@@ -174,6 +174,7 @@ public static partial class ApplicantAgreementEndpoints
             BankDataInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
@@ -216,8 +217,13 @@ public static partial class ApplicantAgreementEndpoints
                     extensions: new Dictionary<string, object?> { ["invalidFields"] = invalid });
             }
             var now = DateTime.UtcNow;
+            var firstCompletion = record.CompletedAt is null;
             record.Fields = JsonSerializer.Serialize(fields);
             record.CompletedAt = now;
+            if (firstCompletion)
+            {
+                await RaiseBankCompletedAsync(db, dispatcher, actor.UserId, ct);
+            }
             await db.SaveChangesAsync(ct);
             return Results.Ok(new
             {
@@ -228,6 +234,50 @@ public static partial class ApplicantAgreementEndpoints
         }).RequireAuthorization().WithName("SaveBankData");
 
         return v1;
+    }
+
+    private static Task<DispatchOutcome> RaiseAsync(
+        NotificationDispatcher dispatcher, string eventCode, Application application, Agreement row,
+        Guid? staffUserId, CancellationToken ct) =>
+        dispatcher.RaiseAsync(
+            eventCode,
+            new NotificationEventContext(
+                SourceEntityId: row.AgreementId,
+                RecordSubjectUserId: application.ApplicantUserId,
+                ActingStaffUserId: staffUserId),
+            new Dictionary<string, string>
+            {
+                ["referenceNumber"] = row.Reference ?? application.Reference ?? string.Empty,
+            },
+            ct);
+
+    /// <summary>
+    /// P-372 E-024 — the bank data is complete; whoever formed the approved
+    /// committee sequence may now prepare the agreement.
+    /// </summary>
+    private static async Task RaiseBankCompletedAsync(
+        ExpertHubDbContext db, NotificationDispatcher dispatcher, Guid applicantUserId, CancellationToken ct)
+    {
+        var approved = await (
+            from application in db.Applications
+            join sequence in db.CommitteeSequences on application.ApplicationId equals sequence.ApplicationId
+            where application.ApplicantUserId == applicantUserId
+                && sequence.Status == CommitteeSequenceStatuses.Approved
+            orderby sequence.DecidedAt descending
+            select new { application.ApplicationId, application.Reference, sequence.CreatedBy })
+            .FirstOrDefaultAsync(ct);
+        if (approved is null)
+        {
+            return;
+        }
+        await dispatcher.RaiseAsync(
+            "EV-0215",
+            new NotificationEventContext(
+                SourceEntityId: approved.ApplicationId,
+                RecordSubjectUserId: applicantUserId,
+                ActingStaffUserId: approved.CreatedBy),
+            new Dictionary<string, string> { ["referenceNumber"] = approved.Reference ?? string.Empty },
+            ct);
     }
 
     /// <summary>
@@ -304,6 +354,9 @@ public static partial class ApplicantAgreementEndpoints
 
             application.Status = ApplicationStatuses.Active;
             application.UpdatedAt = now;
+            // P-372 E-031 + E-038 — signed and activated; the profile exists.
+            await RaiseAsync(dispatcher, "EV-0310", application, row, null, ct);
+            await RaiseAsync(dispatcher, "EV-0401", application, row, null, ct);
             // `DEF-06` — they are a trainer as of this request, so their
             // session says so as of this request. Without it the person who
             // just signed is bounced off every trainer page until they sign
@@ -324,6 +377,8 @@ public static partial class ApplicantAgreementEndpoints
 
             application.Status = ApplicationStatuses.Closed;
             application.UpdatedAt = now;
+            // P-372 E-030 — the preparer learns the agreement was declined.
+            await RaiseAsync(dispatcher, "EV-0309", application, row, row.CreatedBy, ct);
         }
         else if (string.Equals(input.Kind, "request-modification", StringComparison.Ordinal))
         {
@@ -349,6 +404,8 @@ public static partial class ApplicantAgreementEndpoints
 
             application.Status = ApplicationStatuses.ApprovalInProgress;
             application.UpdatedAt = now;
+            // P-372 E-029 — back to the preparer, who acts on the note.
+            await RaiseAsync(dispatcher, "EV-0308", application, row, row.CreatedBy, ct);
         }
         else
         {
@@ -363,7 +420,6 @@ public static partial class ApplicantAgreementEndpoints
             // out the role.
             await AuthenticationSetup.AddSessionRoleAsync(http, ExpertHubClaims.TrainerRole);
         }
-        _ = dispatcher; // J-11 states no notification of its own; CAP-07 has none catalogued.
         return Results.Ok(await ApplicationEndpoints.DetailWireForAsync(db, application, ct));
     }
 

@@ -32,7 +32,14 @@
 - Template text and recipients come from the database (`NOTIFICATION_TEMPLATE`,
   the matrix), never from code.
 - One primary language per recipient, from their `preferred_communication_language`
-  — not one bilingual message.
+  — not one bilingual message. A placeholder value that reads differently in
+  English is passed a second time as `name@en`.
+- The templates and their routing are seeded from the owner's Notion «Email
+  Notification Matrix» (`EmailMatrixSeedData`, `P-372`); a template's code is
+  its Notion id (`E-001`…). Audiences are the record's subject, ONE named staff
+  member passed as `ActingStaffUserId`, or a whole role.
+- `{{actionUrl}}` falls back to `Notifications:PortalUrl`
+  (`EXPERT_HUB_PORTAL_URL`) when the raise names no page of its own.
 - `NOTIFICATION_LOG` and `NOTIFICATION_OCCURRENCE` are append-only: a failed send
   is followed up, never edited away.
 
@@ -41,7 +48,10 @@
 - A screen that says "notified" means the event was raised — check
   `NOTIFICATION_LOG.status` before concluding a person was told. With no SMTP
   settings nothing is delivered at all.
-- The template is plain text; the gateway HTML-encodes it and wraps it in
+- The template is plain text; the gateway HTML-encodes it and sets it inside
+  the Academy's unified email layout (v1: header and footer images from
+  `cdn.fa.gov.sa/facdn-container/Emails/Templates/Unified/v1/`), with
   `dir="rtl"` (or `ltr` for English) so Arabic reads correctly in mail clients.
+  The layout is `NotificationsGatewayEmail.UnifiedLayout`.
 - The SLA deadlines that drive reminders are read from `SLA_MATRIX`, never
   restated in code (`BR-0705`).

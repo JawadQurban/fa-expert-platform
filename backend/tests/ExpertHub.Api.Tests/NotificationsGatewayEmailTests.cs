@@ -43,6 +43,12 @@ public sealed class NotificationsGatewayEmailTests
         var html = body.RootElement.GetProperty("htmlMessage").GetString()!;
         Assert.Contains("dir=\"rtl\"", html, StringComparison.Ordinal);
         Assert.Contains("مرحبًا<br>رقم الطلب &lt;EH-1&gt;", html, StringComparison.Ordinal);
+        // The Academy's unified layout, in the recipient's direction.
+        Assert.Contains("Unified/v1/EmailHeader.jpg", html, StringComparison.Ordinal);
+        Assert.Contains("Unified/v1/EmailFooter.jpg", html, StringComparison.Ordinal);
+        Assert.Contains("direction: rtl;", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("{dir}", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("{Body}", html, StringComparison.Ordinal);
     }
 
     [Fact]

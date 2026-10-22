@@ -483,9 +483,12 @@ public static class NotificationEndpoints
         var rows = await db.NotificationMatrixRows.OrderBy(r => r.EventCode).ToListAsync(ct);
         var templates = await (
             from template in db.NotificationTemplates
-            join user in db.Users on template.UpdatedBy equals user.UserId
+            join user in db.Users on template.UpdatedBy equals (Guid?)user.UserId into savers
+            from user in savers.DefaultIfEmpty()
             orderby template.Code
-            select new { template, user.FullNameAr }).ToListAsync(ct);
+            // P-372 — a seeded template was saved by nobody; it says where it came from.
+            select new { template, FullNameAr = user != null ? user.FullNameAr : "مصفوفة البريد الإلكتروني" })
+            .ToListAsync(ct);
 
         return new MatrixWire(
             events.Select(e => new EventWire(

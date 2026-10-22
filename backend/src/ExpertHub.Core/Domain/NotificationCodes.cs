@@ -76,6 +76,11 @@ public static class NotificationPlaceholders
         "reasonText",
         "actionUrl",
         "deadlineDate",
+        // P-372 — the owner's email matrix uses these four as well.
+        "serviceList",
+        "date",
+        "time",
+        "counterpartName",
     ];
 }
 

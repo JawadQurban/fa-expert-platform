@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using ExpertHub.Api.Auth;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Fast;
+using ExpertHub.Infrastructure.Notifications;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -233,6 +234,7 @@ public static class AccessEndpoints
             AssignRoleRequest request,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             if (!Guid.TryParse(userId, out var targetId))
@@ -299,6 +301,7 @@ public static class AccessEndpoints
             });
             AppendAudit(db, actor, RoleAssigned, "USER_ROLE", targetId,
                 new AccessAuditPayload(null, RoleCodes.ToWire(roleCode), null, target.FullNameAr));
+            await RaiseRolesUpdatedAsync(dispatcher, targetId, actor.UserId, ct);
             await db.SaveChangesAsync(ct);
 
             var wires = await ToUserWiresAsync(db, [target], ct);
@@ -311,6 +314,7 @@ public static class AccessEndpoints
             string role,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             if (!Guid.TryParse(userId, out var targetId))
@@ -368,6 +372,7 @@ public static class AccessEndpoints
             var actor = await ResolveActorAsync(http, db, ct);
             AppendAudit(db, actor, RoleRevoked, "USER_ROLE", targetId,
                 new AccessAuditPayload(null, RoleCodes.ToWire(roleCode), null, target.FullNameAr));
+            await RaiseRolesUpdatedAsync(dispatcher, targetId, actor.UserId, ct);
             await db.SaveChangesAsync(ct);
 
             var wires = await ToUserWiresAsync(db, [target], ct);
@@ -613,4 +618,16 @@ public static class AccessEndpoints
         HttpContext http,
         ExpertHubDbContext db,
         CancellationToken ct) => ActorResolution.ResolveActorAsync(http, db, ct);
+
+    /// <summary>P-372 E-050 — the person whose roles changed is told.</summary>
+    private static Task<DispatchOutcome> RaiseRolesUpdatedAsync(
+        NotificationDispatcher dispatcher, Guid targetId, Guid actorUserId, CancellationToken ct) =>
+        dispatcher.RaiseAsync(
+            "EV-0801",
+            new NotificationEventContext(
+                SourceEntityId: targetId,
+                RecordSubjectUserId: targetId,
+                ActingStaffUserId: actorUserId),
+            new Dictionary<string, string>(),
+            ct);
 }

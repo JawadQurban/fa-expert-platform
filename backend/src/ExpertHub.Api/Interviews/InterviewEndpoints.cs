@@ -156,6 +156,7 @@ public static class InterviewEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             IConfiguration configuration,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var loaded = await LoadAsync(id, db, ct);
@@ -284,6 +285,16 @@ public static class InterviewEndpoints
                 interviewRow.Status = InterviewStatuses.Completed;
                 application.Status = ApplicationStatuses.InterviewCompleted;
                 application.UpdatedAt = now;
+
+                // P-372 E-072 — the result is ready; the decision-maker is asked to decide.
+                await dispatcher.RaiseAsync(
+                    "EV-0217",
+                    new NotificationEventContext(
+                        SourceEntityId: application.ApplicationId,
+                        RecordSubjectUserId: application.ApplicantUserId,
+                        ActingStaffUserId: await ScreeningDeciderAsync(db, application.ApplicationId, ct)),
+                    new Dictionary<string, string> { ["referenceNumber"] = application.Reference ?? string.Empty },
+                    ct);
             }
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -296,6 +307,7 @@ public static class InterviewEndpoints
             PostInterviewDecisionInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var loaded = await LoadAsync(id, db, ct);
@@ -349,6 +361,19 @@ public static class InterviewEndpoints
                 interviewRow.DecisionReasonText = input.ReasonOther;
                 application.Status = ApplicationStatuses.Rejected;
                 application.RejectionReason = reason.RequiresText ? input.ReasonOther : reason.LabelAr;
+                // P-372 E-019 — the applicant hears the post-interview rejection.
+                await dispatcher.RaiseAsync(
+                    "EV-0210",
+                    new NotificationEventContext(
+                        SourceEntityId: application.ApplicationId,
+                        RecordSubjectUserId: application.ApplicantUserId,
+                        ActingStaffUserId: actor.UserId),
+                    new Dictionary<string, string>
+                    {
+                        ["referenceNumber"] = application.Reference ?? string.Empty,
+                        ["reasonText"] = application.RejectionReason ?? string.Empty,
+                    },
+                    ct);
                 var serviceRows = await db.ApplicationServices
                     .Where(s => s.ApplicationId == application.ApplicationId)
                     .ToListAsync(ct);
@@ -660,6 +685,17 @@ public static class InterviewEndpoints
             .ToListAsync(ct);
         return responses.Count > 0 && responses.All(r => r.SubmittedAt != null && r.DidNotAttend);
     }
+
+    /// <summary>Who decided the application's screening — the J-05/J-07
+    /// decision-maker the email matrix addresses (E-016, E-072).</summary>
+    internal static Task<Guid> ScreeningDeciderAsync(
+        ExpertHubDbContext db, Guid applicationId, CancellationToken ct) =>
+        (
+            from result in db.ScreeningResults
+            join service in db.ApplicationServices
+                on result.ApplicationServiceId equals service.ApplicationServiceId
+            where service.ApplicationId == applicationId
+            select result.DecidedBy).FirstOrDefaultAsync(ct);
 
     internal static async Task<bool> IsScreeningDeciderAsync(
         ExpertHubDbContext db, Guid applicationId, Guid userId, CancellationToken ct) =>

@@ -36,6 +36,7 @@ public sealed class NotificationTemplate
 
     public DateTime UpdatedAt { get; set; }
 
-    /// <summary>The System Administrator who last saved it (`BR-0704`).</summary>
-    public Guid UpdatedBy { get; set; }
+    /// <summary>The System Administrator who last saved it (`BR-0704`); null
+    /// for a template seeded from the owner's email matrix (`P-372`).</summary>
+    public Guid? UpdatedBy { get; set; }
 }

@@ -284,8 +284,20 @@ public static partial class OfferService
             OpenedAt = now,
         });
 
-        _ = dispatcher; // J-18 catalogues no confirmation event of its own.
-        _ = trainerUserId;
+        // P-372 E-076 / E-077 — the confirmed person is told they can upload:
+        // content for a content developer, training material for everyone else.
+        var request = db.AssignmentRequests.Local.FirstOrDefault(r => r.RequestId == slot.RequestId)
+            ?? await db.AssignmentRequests.SingleAsync(r => r.RequestId == slot.RequestId, ct);
+        await dispatcher.RaiseAsync(
+            string.Equals(request.ServiceType, "content-developer", StringComparison.Ordinal)
+                ? "EV-0516"
+                : "EV-0515",
+            new NotificationEventContext(
+                SourceEntityId: engagement.EngagementId,
+                RecordSubjectUserId: trainerUserId,
+                ActingStaffUserId: request.CreatedBy),
+            new Dictionary<string, string> { ["referenceNumber"] = request.Reference },
+            ct);
         return engagement;
     }
 
@@ -541,9 +553,11 @@ public static partial class OfferService
     /// <param name="trainerId">The offered trainer (`TRAINER_PROFILE`), when
     /// the event is about them — they become the record's subject, so an
     /// audience of «صاحب السجل» reaches them.</param>
+    /// <param name="extra">Further placeholder values (`P-372`).</param>
     public static async Task RaiseAsync(
         NotificationDispatcher dispatcher, ExpertHubDbContext db, string eventCode,
-        AssignmentSlot slot, CancellationToken ct, Guid? trainerId = null)
+        AssignmentSlot slot, CancellationToken ct, Guid? trainerId = null,
+        IReadOnlyDictionary<string, string>? extra = null)
     {
         var request = db.AssignmentRequests.Local.FirstOrDefault(r => r.RequestId == slot.RequestId)
             ?? await db.AssignmentRequests.SingleAsync(r => r.RequestId == slot.RequestId, ct);
@@ -557,7 +571,7 @@ public static partial class OfferService
                 SourceEntityId: slot.SlotId,
                 RecordSubjectUserId: subjectUserId,
                 ActingStaffUserId: request.CreatedBy),
-            new Dictionary<string, string>
+            new Dictionary<string, string>(extra ?? new Dictionary<string, string>())
             {
                 ["referenceNumber"] = request.Reference,
                 ["slotNumber"] = slot.SlotNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),

@@ -518,15 +518,24 @@ public static class ApplicationEndpoints
             }
 
             // J-06 user flow 5 — confirmation + meeting invitation, together.
+            // P-372 E-015 — with the time and the meeting link when one was booked.
+            var confirmed = await db.InterviewSlots.AsNoTracking().FirstAsync(s => s.SlotId == slotId, ct);
+            var interviewValues = new Dictionary<string, string>
+            {
+                ["referenceNumber"] = application.Reference ?? string.Empty,
+                ["date"] = NotificationValues.Date(confirmed.StartsAt),
+                ["time"] = NotificationValues.Time(confirmed.StartsAt),
+            };
+            if (!string.IsNullOrWhiteSpace(interview.MeetingUrl))
+            {
+                interviewValues["actionUrl"] = interview.MeetingUrl;
+            }
             await dispatcher.RaiseAsync(
                 "EV-0203",
                 new NotificationEventContext(
                     SourceEntityId: application.ApplicationId,
                     RecordSubjectUserId: application.ApplicantUserId),
-                new Dictionary<string, string>
-                {
-                    ["referenceNumber"] = application.Reference ?? string.Empty,
-                },
+                interviewValues,
                 ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok(await DetailWireAsync(db, application, ct));
@@ -542,6 +551,7 @@ public static class ApplicationEndpoints
             ApplicantRescheduleInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var (application, notFound) = await FindOwnedAsync(id, http, db, ct);
@@ -560,6 +570,17 @@ public static class ApplicationEndpoints
             interview.RescheduleRequestedAt = DateTime.UtcNow;
             interview.RescheduleNote = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note;
             application.UpdatedAt = DateTime.UtcNow;
+
+            // P-372 E-016 — whoever did not initiate it: here, the decision-maker.
+            await dispatcher.RaiseAsync(
+                "EV-0208",
+                new NotificationEventContext(
+                    SourceEntityId: application.ApplicationId,
+                    RecordSubjectUserId: application.ApplicantUserId,
+                    ActingStaffUserId: await Interviews.InterviewEndpoints.ScreeningDeciderAsync(
+                        db, application.ApplicationId, ct)),
+                new Dictionary<string, string> { ["referenceNumber"] = application.Reference ?? string.Empty },
+                ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok(await DetailWireAsync(db, application, ct));
         }).WithName("RequestInterviewReschedule");
@@ -669,6 +690,24 @@ public static class ApplicationEndpoints
                     db, application.ApplicantUserId, ct))
             {
                 await ServiceRequests.ServiceRequestEndpoints.AutoRejectAsync(dispatcher, request, now, ct);
+            }
+            else
+            {
+                // P-372 E-006 — a request awaiting review tells the reviewers.
+                var trainer = await db.Users.AsNoTracking()
+                    .FirstAsync(u => u.UserId == application.ApplicantUserId, ct);
+                await dispatcher.RaiseAsync(
+                    "EV-0105",
+                    new NotificationEventContext(
+                        SourceEntityId: request.ServiceRequestId,
+                        RecordSubjectUserId: application.ApplicantUserId),
+                    new Dictionary<string, string>
+                    {
+                        ["trainerName"] = trainer.FullNameAr,
+                        ["serviceName"] = ApplicationServices.NameAr(request.RequestedService),
+                        ["referenceNumber"] = request.Reference,
+                    },
+                    ct);
             }
             await db.SaveChangesAsync(ct);
             return Results.Ok(new AddServiceRequestWire(

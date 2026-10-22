@@ -293,7 +293,8 @@ public static class AgreementLifecycleEndpoints
                             ActingStaffUserId: actor.UserId),
                         new Dictionary<string, string>
                         {
-                            ["agreementDuration"] = "3",
+                            ["agreementDuration"] = "3 سنوات",
+                            ["agreementDuration@en"] = "3 years",
                             ["agreementEndDate"] = row.EndsAt.Value
                                 .ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
                         },
@@ -304,6 +305,7 @@ public static class AgreementLifecycleEndpoints
                     row.Status = AgreementStatuses.Suspended;
                     AgreementEndpoints.LogEvent(
                         db, row.AgreementId, "suspended", actor.UserId, now, input.Note);
+                    await RaiseLifecycleAsync(dispatcher, "EV-0311", row, actor.UserId, ct); // P-372 E-036
                     break;
                 case "reactivate":
                     row.Status = AgreementStatuses.Active;
@@ -314,6 +316,7 @@ public static class AgreementLifecycleEndpoints
                     row.Status = AgreementStatuses.Ended;
                     AgreementEndpoints.LogEvent(
                         db, row.AgreementId, "ended", actor.UserId, now, input.Note);
+                    await RaiseLifecycleAsync(dispatcher, "EV-0312", row, actor.UserId, ct); // P-372 E-037
                     break;
             }
             await db.SaveChangesAsync(ct);
@@ -508,4 +511,16 @@ public static class AgreementLifecycleEndpoints
             ApplicationEndpoints.Iso(template.UpdatedAt),
             updater?.FullNameAr ?? "النظام");
     }
+
+    private static Task<DispatchOutcome> RaiseLifecycleAsync(
+        NotificationDispatcher dispatcher, string eventCode, Agreement row, Guid actorUserId,
+        CancellationToken ct) =>
+        dispatcher.RaiseAsync(
+            eventCode,
+            new NotificationEventContext(
+                SourceEntityId: row.AgreementId,
+                RecordSubjectUserId: row.TrainerUserId,
+                ActingStaffUserId: actorUserId),
+            new Dictionary<string, string> { ["referenceNumber"] = row.Reference ?? string.Empty },
+            ct);
 }

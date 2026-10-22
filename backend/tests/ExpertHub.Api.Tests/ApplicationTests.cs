@@ -1304,6 +1304,8 @@ public sealed class ApplicationTests
             UpdatedBy = author.UserId,
         };
         db.NotificationTemplates.Add(template);
+        // P-372 — the seeded routing gives way to the test's own.
+        await db.NotificationMatrixRows.Where(r => r.EventCode == eventCode).ExecuteDeleteAsync();
         db.NotificationMatrixRows.Add(new NotificationMatrixRow
         {
             RowId = Guid.NewGuid(),

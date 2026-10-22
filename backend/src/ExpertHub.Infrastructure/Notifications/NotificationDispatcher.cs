@@ -4,6 +4,7 @@ using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Integration;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ExpertHub.Infrastructure.Notifications;
 
@@ -45,11 +46,18 @@ public sealed partial class NotificationDispatcher
 {
     private readonly ExpertHubDbContext _db;
     private readonly IntegrationHub _hub;
+    private readonly string _portalUrl;
 
-    public NotificationDispatcher(ExpertHubDbContext db, IntegrationHub hub)
+    /// <summary>The suffix marking a placeholder value's English wording.</summary>
+    public const string EnglishSuffix = "@en";
+
+    public NotificationDispatcher(ExpertHubDbContext db, IntegrationHub hub, IConfiguration? configuration = null)
     {
         _db = db;
         _hub = hub;
+        // P-372 — where `{{actionUrl}}` points when the raise names no page of
+        // its own: the portal, so an email never ends in an empty link.
+        _portalUrl = configuration?["Notifications:PortalUrl"] ?? string.Empty;
     }
 
     public Task<DispatchOutcome> RaiseAsync(
@@ -141,6 +149,18 @@ public sealed partial class NotificationDispatcher
                 // The one placeholder the dispatcher owns: who is being addressed.
                 ["recipientName"] = language == "en" ? recipient.FullNameEn : recipient.FullNameAr,
             };
+            values.TryAdd("actionUrl", _portalUrl);
+            if (language == "en")
+            {
+                // A value that reads differently in English travels as `name@en`.
+                foreach (var (key, value) in placeholderValues)
+                {
+                    if (key.EndsWith(EnglishSuffix, StringComparison.Ordinal))
+                    {
+                        values[key[..^EnglishSuffix.Length]] = value;
+                    }
+                }
+            }
             var subject = Render(language == "en" ? template.SubjectEn : template.SubjectAr, values);
             var body = Render(language == "en" ? template.BodyEn : template.BodyAr, values);
 

@@ -89,17 +89,51 @@ public sealed partial class NotificationsGatewayEmail : IEmailGateway
         }
     }
 
-    /// <summary>The template is plain text; HTML only to escape it and set the
-    /// direction, so an Arabic email reads right-to-left in every client.</summary>
+    /// <summary>The template is plain text, escaped and set inside the Academy's
+    /// unified email layout (header and footer images on cdn.fa.gov.sa), in
+    /// the recipient's direction so an Arabic email reads right-to-left.</summary>
     internal static string Html(EmailMessage message)
     {
         var dir = message.Language == "en" ? "ltr" : "rtl";
         var body = WebUtility.HtmlEncode(message.Body)
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace("\n", "<br>", StringComparison.Ordinal);
-        return $"<!doctype html><html lang=\"{message.Language}\" dir=\"{dir}\"><body "
-            + $"style=\"font-family:Tahoma,Arial,sans-serif;direction:{dir}\">{body}</body></html>";
+        return $"<!doctype html><html lang=\"{message.Language}\" dir=\"{dir}\"><body style=\"margin:0\">"
+            + UnifiedLayout.Replace("{dir}", dir, StringComparison.Ordinal)
+                .Replace("{Body}", body, StringComparison.Ordinal)
+            + "</body></html>";
     }
+
+    /// <summary>The Academy's unified email template (v1), as supplied by the
+    /// owner 2026-10-22; the Arabic and English copies differ only in direction.</summary>
+    private const string UnifiedLayout = """
+        <div style="margin:0 auto; padding:0; font-family: 'Sakkal Majalla','Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; direction: {dir}; width: 100%;min-height: 100%; background-color: #DDD;">
+        <style>
+                html, body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: 'Sakkal Majalla','Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+                    direction: {dir};
+                    color: #000;
+                }
+
+                h1, h2, h3, h4, h5, h6 {
+                    font-size: 18px;
+                }
+
+                body, div, p {
+                    font-size: 14px;
+                }
+        </style>
+            <div style="margin: 0 auto; max-width: 1220px; background-color: #FFF;">
+                <img src="https://cdn.fa.gov.sa/facdn-container/Emails/Templates/Unified/v1/EmailHeader.jpg" alt="Header" style="display:block; width: 100%;" />
+                <div style="padding: 40px 60px; margin: 0 auto;  min-height:200px;">
+                    {Body}
+                </div>
+                <img src="https://cdn.fa.gov.sa/facdn-container/Emails/Templates/Unified/v1/EmailFooter.jpg" alt="Footer" style="display:block; width: 100%;" />
+            </div>
+        </div>
+        """;
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Notifications Gateway refused an email ({Status})")]
     private static partial void LogRefused(ILogger logger, int status);

@@ -63,9 +63,8 @@ public sealed class NotificationFoundationTests
         Assert.Equal("EV-0302", occurrences.Single(o => o.SourceEntityId == inTwenty).EventCode);
         Assert.Equal("EV-0303", occurrences.Single(o => o.SourceEntityId == inFour).EventCode);
         Assert.DoesNotContain(occurrences, o => o.SourceEntityId == farAway);
-        // Routing is not approved (DM-GAP-08): recorded, delivered to nobody guessed.
-        Assert.All(occurrences, o => Assert.Equal(NotificationRoutingStatuses.Unrouted, o.RoutingStatus));
-        Assert.False(await db.NotificationLog.AnyAsync());
+        // P-372 — the email matrix routes them (E-033, E-034): recorded and sent.
+        Assert.All(occurrences, o => Assert.Equal(NotificationRoutingStatuses.Routed, o.RoutingStatus));
 
         // When the 20-day agreement reaches its 5-day threshold, that alert follows once.
         Assert.Equal(1, await RunRemindersAsync(now.AddDays(16)));

@@ -104,6 +104,9 @@ services:
       Email__GatewayUrl: ${EXPERT_HUB_EMAIL_GATEWAY_URL:-}
       Email__Username: ${EXPERT_HUB_EMAIL_USERNAME:-}
       Email__Password: ${EXPERT_HUB_EMAIL_PASSWORD:-}
+      # P-372 — where an email's link points when the event names no page of
+      # its own. The public site address, not a secret.
+      Notifications__PortalUrl: ${EXPERT_HUB_PORTAL_URL:-https://experts.fa.gov.sa/expert-hub}
       # INT-05 — the Academy's own API. Empty = off: every call fails closed
       # with a reason and the product behaves exactly as it did before. Set it
       # and each sign-in reads that person's profile (`P-227`).

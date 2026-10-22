@@ -13,6 +13,19 @@ The history before this repository existed is in
 
 ### Added
 
+- **The email matrix from Notion is live (`P-372`).** All 71 emails in the
+  owner's Notion «Email Notification Matrix» are seeded as bilingual templates in
+  Notion's own words (migration M51), and 44 of them are routed and sent: the
+  application, screening, interview, committee, bank-data, agreement signing and
+  lifecycle, candidate pool, material review, withdrawal, engagement and role
+  changes now each email the person Notion names, in their language, with the
+  in-platform copy alongside. 29 notification points were added to the
+  catalogue. Routing is only seeded where a server has none of its own. The
+  scheduled reminders and the rows with no trigger yet (speakers, delegation,
+  payments, security) are listed in `P-372`. New setting
+  `EXPERT_HUB_PORTAL_URL` (default `https://experts.fa.gov.sa/expert-hub`) is the
+  link an email carries when it names no page. Every email now arrives in the
+  Academy's unified layout (header and footer images, right-to-left for Arabic).
 - **The FAST Training API is connected (INT-05, `P-356`–`P-361`).** FAST published
   a Training API for Expert Hub (27 operations; contract in
   `tools/fast-api/training-swagger-v1.json`, register in

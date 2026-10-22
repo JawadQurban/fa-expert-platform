@@ -3,6 +3,7 @@ using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
 using ExpertHub.Api.ServiceRequests;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Notifications;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -109,6 +110,7 @@ public static class CommitteeEndpoints
             FormationInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var application = await FindAsync(id, db, ct);
@@ -207,6 +209,8 @@ public static class CommitteeEndpoints
                     CreatedAt = now,
                 });
             }
+            // P-372 E-020 — the first member's turn.
+            await RaiseAsync(dispatcher, "EV-0211", application, memberIds[0], ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok(await BuildDetailAsync(db, application, actor.UserId, ct));
         }).WithName("FormCommittee");
@@ -216,6 +220,7 @@ public static class CommitteeEndpoints
             CommitteeDecisionInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var application = await FindAsync(id, db, ct);
@@ -247,7 +252,7 @@ public static class CommitteeEndpoints
                 current.Decision = "approve";
                 current.Note = input.Note;
                 current.ActedAt = now;
-                await AdvanceOrConcludeAsync(db, application, sequence, steps, actor.UserId, now, ct);
+                await AdvanceOrConcludeAsync(db, dispatcher, application, sequence, steps, actor.UserId, now, ct);
             }
             else if (string.Equals(input.Kind, "reject", StringComparison.Ordinal))
             {
@@ -281,11 +286,14 @@ public static class CommitteeEndpoints
                         row.DecidedAt = now;
                     }
                     application.UpdatedAt = now;
+                    // P-372 E-022 — the final rejection reaches the applicant.
+                    await RaiseAsync(dispatcher, "EV-0213", application, null, ct,
+                        ("reasonText", application.RejectionReason ?? string.Empty));
                 }
                 else
                 {
                     // F4/AC-4's other half — logged, with NO effect on the walk.
-                    await AdvanceOrConcludeAsync(db, application, sequence, steps, actor.UserId, now, ct);
+                    await AdvanceOrConcludeAsync(db, dispatcher, application, sequence, steps, actor.UserId, now, ct);
                 }
             }
             else if (string.Equals(input.Kind, "request-modification", StringComparison.Ordinal))
@@ -299,6 +307,8 @@ public static class CommitteeEndpoints
                 current.Note = input.Note;
                 current.ActedAt = now;
                 sequence.Status = CommitteeSequenceStatuses.ModificationRequested;
+                // P-372 E-023 — whoever formed the sequence acts on the note.
+                await RaiseAsync(dispatcher, "EV-0214", application, sequence.CreatedBy, ct);
             }
             else
             {
@@ -310,7 +320,8 @@ public static class CommitteeEndpoints
         }).WithName("CommitteeDecision");
 
         committee.MapPost("/resubmit", async (
-            string id, HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
+            string id, HttpContext http, ExpertHubDbContext db, NotificationDispatcher dispatcher,
+            CancellationToken ct) =>
         {
             var application = await FindAsync(id, db, ct);
             if (application is null)
@@ -338,6 +349,8 @@ public static class CommitteeEndpoints
             requesting.ActedAt = null;
             sequence.CurrentStepIndex = requesting.OrderIndex;
             sequence.Status = CommitteeSequenceStatuses.InProgress;
+            // P-372 E-020 — back to the member who asked.
+            await RaiseAsync(dispatcher, "EV-0211", application, requesting.MemberUserId, ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok(await BuildDetailAsync(db, application, actor.UserId, ct));
         }).WithName("CommitteeResubmit");
@@ -347,8 +360,32 @@ public static class CommitteeEndpoints
 
     /* ── the walk ──────────────────────────────────────────────────────────── */
 
+    /// <summary>One email-matrix raise about this application (`P-372`).</summary>
+    private static Task<DispatchOutcome> RaiseAsync(
+        NotificationDispatcher dispatcher, string eventCode, Application application,
+        Guid? staffUserId, CancellationToken ct, params (string Key, string Value)[] extra)
+    {
+        var values = new Dictionary<string, string>
+        {
+            ["referenceNumber"] = application.Reference ?? string.Empty,
+        };
+        foreach (var (key, value) in extra)
+        {
+            values[key] = value;
+        }
+        return dispatcher.RaiseAsync(
+            eventCode,
+            new NotificationEventContext(
+                SourceEntityId: application.ApplicationId,
+                RecordSubjectUserId: application.ApplicantUserId,
+                ActingStaffUserId: staffUserId),
+            values,
+            ct);
+    }
+
     private static async Task AdvanceOrConcludeAsync(
         ExpertHubDbContext db,
+        NotificationDispatcher dispatcher,
         Application application,
         CommitteeSequence sequence,
         IReadOnlyList<CommitteeStep> steps,
@@ -360,6 +397,8 @@ public static class CommitteeEndpoints
         if (next is not null)
         {
             sequence.CurrentStepIndex = next.OrderIndex;
+            // P-372 E-020 — the next member's turn.
+            await RaiseAsync(dispatcher, "EV-0211", application, next.MemberUserId, ct);
             return;
         }
         // The walk is over, and no mandatory rejection halted it — "finally
@@ -383,6 +422,17 @@ public static class CommitteeEndpoints
         else
         {
             bank.RequestedAt ??= now;
+        }
+
+        // P-372 E-021 — preliminary approval, bank data asked for. E-025 when
+        // the bank data was already on file: both conditions met at once.
+        await RaiseAsync(dispatcher, "EV-0212", application, null, ct);
+        if (bank?.CompletedAt is not null)
+        {
+            var applicant = await db.Users.AsNoTracking()
+                .FirstAsync(u => u.UserId == application.ApplicantUserId, ct);
+            await RaiseAsync(dispatcher, "EV-0305", application, sequence.CreatedBy, ct,
+                ("trainerName", applicant.FullNameAr));
         }
 
         var serviceRows = await db.ApplicationServices

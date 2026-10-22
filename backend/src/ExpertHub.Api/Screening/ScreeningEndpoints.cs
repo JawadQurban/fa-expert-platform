@@ -201,6 +201,15 @@ public static class ScreeningEndpoints
                     ? input.ReasonOther
                     : reason.LabelAr;
                 application.UpdatedAt = now;
+                // P-372 E-013 — the applicant hears the outcome (no reason in the wording).
+                await dispatcher.RaiseAsync(
+                    "EV-0207",
+                    new NotificationEventContext(
+                        SourceEntityId: application.ApplicationId,
+                        RecordSubjectUserId: application.ApplicantUserId,
+                        ActingStaffUserId: actor.UserId),
+                    new Dictionary<string, string> { ["referenceNumber"] = application.Reference ?? string.Empty },
+                    ct);
                 await db.SaveChangesAsync(ct);
                 return Results.Ok(new ScreeningDecisionResultWire(
                     application.ApplicationId.ToString(), application.Status,
@@ -332,6 +341,21 @@ public static class ScreeningEndpoints
                 application.Status = ApplicationStatuses.ApprovalInProgress;
             }
             application.UpdatedAt = now;
+
+            // P-372 E-011 / E-012 — accepted in full, or only in part.
+            await dispatcher.RaiseAsync(
+                autoRejected.Count > 0 ? "EV-0206" : "EV-0205",
+                new NotificationEventContext(
+                    SourceEntityId: application.ApplicationId,
+                    RecordSubjectUserId: application.ApplicantUserId,
+                    ActingStaffUserId: actor.UserId),
+                new Dictionary<string, string>
+                {
+                    ["referenceNumber"] = application.Reference ?? string.Empty,
+                    ["serviceList"] = string.Join("، ",
+                        accepted.Concat(exempted).Distinct().Select(ApplicationServices.NameAr)),
+                },
+                ct);
             await db.SaveChangesAsync(ct);
 
             return Results.Ok(new ScreeningDecisionResultWire(

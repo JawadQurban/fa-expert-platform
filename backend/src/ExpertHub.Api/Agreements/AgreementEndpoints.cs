@@ -259,6 +259,7 @@ public static class AgreementEndpoints
             SigningFormationInputWire input,
             HttpContext http,
             ExpertHubDbContext db,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var application = await FindAsync(id, db, ct);
@@ -362,6 +363,8 @@ public static class AgreementEndpoints
                 });
             }
             row.Status = AgreementStatuses.InProgress;
+            // P-372 E-026 — the first signer's turn.
+            await RaiseSigningAsync(dispatcher, "EV-0306", application, row, memberIds[0], ct);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return Results.Ok(await BuildDetailAsync(db, application, actor.UserId, ct));
@@ -453,6 +456,8 @@ public static class AgreementEndpoints
                 current.ActedAt = now;
                 sequence.Status = "modification-requested";
                 row.Status = AgreementStatuses.ModificationRequested;
+                // P-372 E-027 — whoever formed the chain acts on the note.
+                await RaiseSigningAsync(dispatcher, "EV-0307", application, row, sequence.CreatedBy, ct);
                 await db.SaveChangesAsync(ct);
                 return Results.Ok(await BuildDetailAsync(db, application, actor.UserId, ct));
             }
@@ -465,6 +470,8 @@ public static class AgreementEndpoints
             if (next is not null)
             {
                 sequence.CurrentStepIndex = next.OrderIndex;
+                // P-372 E-026 — the next signer's turn.
+                await RaiseSigningAsync(dispatcher, "EV-0306", application, row, next.UserId, ct);
             }
             else
             {
@@ -507,7 +514,8 @@ public static class AgreementEndpoints
         }).WithName("SigningDecision");
 
         agreement.MapPost("/resubmit", async (
-            string id, HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
+            string id, HttpContext http, ExpertHubDbContext db, NotificationDispatcher dispatcher,
+            CancellationToken ct) =>
         {
             var application = await FindAsync(id, db, ct);
             if (application is null)
@@ -536,6 +544,8 @@ public static class AgreementEndpoints
             sequence.CurrentStepIndex = requesting.OrderIndex;
             sequence.Status = "in-progress";
             row.Status = AgreementStatuses.InProgress;
+            // P-372 E-026 — back to the signer who asked.
+            await RaiseSigningAsync(dispatcher, "EV-0306", application, row, requesting.UserId, ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok(await BuildDetailAsync(db, application, actor.UserId, ct));
         }).WithName("AgreementResubmit");
@@ -849,4 +859,20 @@ public static class AgreementEndpoints
 
     private sealed record SigningTemplateMemberJson(
         string ApproverId, string Obligation, bool IsSigner);
+
+    /// <summary>One signing-chain raise about this agreement (`P-372`).</summary>
+    private static Task<DispatchOutcome> RaiseSigningAsync(
+        NotificationDispatcher dispatcher, string eventCode, Application application, Agreement row,
+        Guid staffUserId, CancellationToken ct) =>
+        dispatcher.RaiseAsync(
+            eventCode,
+            new NotificationEventContext(
+                SourceEntityId: row.AgreementId,
+                RecordSubjectUserId: application.ApplicantUserId,
+                ActingStaffUserId: staffUserId),
+            new Dictionary<string, string>
+            {
+                ["referenceNumber"] = application.Reference ?? string.Empty,
+            },
+            ct);
 }

@@ -74,21 +74,35 @@ public sealed class NotificationTests
     /* ── the catalogue and the gaps, served as such ────────────────────────── */
 
     [Fact]
-    public async Task The_matrix_serves_twenty_cited_events_with_no_routing_and_no_template()
+    public async Task The_matrix_serves_the_owners_email_matrix_seeded_and_routed()
     {
         await SignInAdministratorAsync();
         var matrix = await GetJsonAsync("/api/v1/internal/notifications/matrix");
 
         var events = matrix.GetProperty("events").EnumerateArray().ToArray();
-        Assert.Equal(20, events.Length);
+        Assert.Equal(49, events.Length);
         Assert.All(events, e =>
             Assert.False(string.IsNullOrWhiteSpace(e.GetProperty("source").GetString())));
 
-        // DM-GAP-08 and Q33, served rather than filled.
-        Assert.Empty(matrix.GetProperty("rows").EnumerateArray());
-        Assert.Empty(matrix.GetProperty("templates").EnumerateArray());
+        // P-372 — every Notion row is a template; every event the platform can
+        // raise and Notion addresses is routed to an approved one.
+        var templates = matrix.GetProperty("templates").EnumerateArray().ToArray();
+        Assert.Equal(71, templates.Length);
+        var rows = matrix.GetProperty("rows").EnumerateArray().ToArray();
+        Assert.Equal(44, rows.Length);
+        var known = matrix.GetProperty("knownPlaceholders").EnumerateArray()
+            .Select(p => p.GetString()).ToHashSet();
+        Assert.Equal(16, known.Count);
+        foreach (var row in rows)
+        {
+            var template = templates.Single(t =>
+                t.GetProperty("templateId").GetString() == row.GetProperty("templateId").GetString());
+            Assert.Equal("approved", template.GetProperty("status").GetString());
+            // A routed template only uses words the dispatcher can fill.
+            Assert.All(template.GetProperty("placeholders").EnumerateArray(),
+                p => Assert.Contains(p.GetString(), known));
+        }
         Assert.Equal("unapproved", matrix.GetProperty("modelStatus").GetString());
-        Assert.Equal(12, matrix.GetProperty("knownPlaceholders").GetArrayLength());
         Assert.True(matrix.GetProperty("canManageTemplates").GetBoolean());
     }
 
@@ -108,7 +122,8 @@ public sealed class NotificationTests
             bodyAr = "مرحبًا {{recipientName}}، لديك عرض إسناد.",
             bodyEn = "",
         });
-        var template = draft.GetProperty("templates").EnumerateArray().Single();
+        var template = draft.GetProperty("templates").EnumerateArray()
+            .Single(t => t.GetProperty("code").GetString() == "TPL-TEST-OFFER");
         var templateId = template.GetProperty("templateId").GetString()!;
         Assert.Equal("draft", template.GetProperty("status").GetString());
         Assert.Equal(1, template.GetProperty("version").GetInt32());
@@ -119,7 +134,7 @@ public sealed class NotificationTests
 
         // A draft cannot be routed (BR-0701).
         var draftRoute = await _client.PostAsJsonAsync(
-            "/api/v1/internal/notifications/matrix/EV-0501/routing",
+            "/api/v1/internal/notifications/matrix/EV-0502/routing",
             new { templateId, audience = new[] { "record_subject" } });
         Assert.Equal(HttpStatusCode.BadRequest, draftRoute.StatusCode);
 
@@ -136,15 +151,16 @@ public sealed class NotificationTests
             $"/api/v1/internal/notifications/templates/{templateId}/approve", null);
         Assert.Equal(
             "approved",
-            approved.GetProperty("templates").EnumerateArray().Single()
+            approved.GetProperty("templates").EnumerateArray()
+                .Single(t => t.GetProperty("templateId").GetString() == templateId)
                 .GetProperty("status").GetString());
 
         var routed = await PostJsonAsync(
-            "/api/v1/internal/notifications/matrix/EV-0501/routing",
+            "/api/v1/internal/notifications/matrix/EV-0502/routing",
             new { templateId, audience = new[] { "record_subject", "staff" } });
-        var row = routed.GetProperty("rows").EnumerateArray().Single();
+        var row = routed.GetProperty("rows").EnumerateArray()
+            .Single(r => r.GetProperty("eventCode").GetString() == "EV-0502");
         Assert.Equal("routed", row.GetProperty("status").GetString());
-        Assert.Equal("EV-0501", row.GetProperty("eventCode").GetString());
         Assert.True(row.GetProperty("isActive").GetBoolean());
 
         // Editing the approved wording returns it to draft AND unroutes the
@@ -157,10 +173,12 @@ public sealed class NotificationTests
             bodyAr = "نص جديد.",
             bodyEn = "New wording.",
         });
-        var reverted = edited.GetProperty("templates").EnumerateArray().Single();
+        var reverted = edited.GetProperty("templates").EnumerateArray()
+            .Single(t => t.GetProperty("templateId").GetString() == templateId);
         Assert.Equal("draft", reverted.GetProperty("status").GetString());
         Assert.Equal(3, reverted.GetProperty("version").GetInt32());
-        Assert.Empty(edited.GetProperty("rows").EnumerateArray());
+        Assert.DoesNotContain(edited.GetProperty("rows").EnumerateArray(),
+            r => r.GetProperty("eventCode").GetString() == "EV-0502");
     }
 
     [Fact]
@@ -180,7 +198,7 @@ public sealed class NotificationTests
 
         // An unrouted row has nothing to pause.
         var pause = await _client.PostAsJsonAsync(
-            "/api/v1/internal/notifications/matrix/EV-0101/active", new { isActive = false });
+            "/api/v1/internal/notifications/matrix/EV-0502/active", new { isActive = false });
         Assert.Equal(HttpStatusCode.Conflict, pause.StatusCode);
     }
 
@@ -340,6 +358,36 @@ public sealed class NotificationTests
     }
 
     [Fact]
+    public async Task A_seeded_matrix_email_reaches_its_recipient_in_notions_words()
+    {
+        // P-372 — no test routing: the seeded row and template do the work.
+        var (trainer, staff) = await SeedRecipientsAsync();
+        await using var db = _database.CreateContext();
+        var dispatcher = new NotificationDispatcher(db, new IntegrationHub(db));
+
+        // E-019 — the applicant (Arabic) hears the post-interview rejection.
+        var outcome = await dispatcher.RaiseAsync(
+            "EV-0210",
+            new NotificationEventContext(SourceEntityId: Guid.NewGuid(), RecordSubjectUserId: trainer),
+            new Dictionary<string, string> { ["reasonText"] = "سبب" });
+        // E-046 — the English reader gets the `@en` wording of the reason.
+        await dispatcher.RaiseAsync(
+            "EV-0507",
+            new NotificationEventContext(SourceEntityId: Guid.NewGuid(), RecordSubjectUserId: staff),
+            new Dictionary<string, string> { ["reasonText"] = "قرار إداري", ["reasonText@en"] = "Administrative decision" });
+        await db.SaveChangesAsync();
+
+        Assert.True(outcome.Routed);
+        var arabic = await db.NotificationLog.SingleAsync(l => l.EventCode == "EV-0210" && l.Channel == "in-platform");
+        Assert.Equal(trainer, arabic.RecipientUserId);
+        Assert.Equal("E-019", arabic.TemplateCode);
+        Assert.Equal("نتيجة ما بعد المقابلة", arabic.Subject);
+        var english = await db.NotificationLog.SingleAsync(l => l.EventCode == "EV-0507" && l.Channel == "in-platform");
+        Assert.Equal("Engagement De-linked", english.Subject);
+        Assert.Contains("Reason: Administrative decision.", english.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task An_unrouted_event_notifies_nobody_and_loses_nothing()
     {
         await using var db = _database.CreateContext();
@@ -348,7 +396,7 @@ public sealed class NotificationTests
         // DM-GAP-08's reality: every event starts unrouted, so a raise is a
         // no-op — never an exception a business transaction trips over.
         var outcome = await dispatcher.RaiseAsync(
-            "EV-0508",
+            "EV-0502",
             new NotificationEventContext(RecordSubjectUserId: Guid.NewGuid()),
             new Dictionary<string, string>());
         await db.SaveChangesAsync();
@@ -518,6 +566,8 @@ public sealed class NotificationTests
     private async Task SeedRoutingAsync(string eventCode, Guid templateId, string audienceJson)
     {
         await using var db = _database.CreateContext();
+        // P-372 — the seeded routing gives way to the test's own.
+        await db.NotificationMatrixRows.Where(r => r.EventCode == eventCode).ExecuteDeleteAsync();
         db.NotificationMatrixRows.Add(new NotificationMatrixRow
         {
             RowId = Guid.NewGuid(),

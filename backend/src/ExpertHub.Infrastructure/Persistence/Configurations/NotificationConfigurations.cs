@@ -8,7 +8,8 @@ namespace ExpertHub.Infrastructure.Persistence.Configurations;
  * CAP-07 — `10` §3.9, migration 04. Same naming discipline as everywhere:
  * UPPER_SNAKE tables, snake_case columns. What each table does NOT have is as
  * deliberate as what it has: no channel on the matrix row (P-147), no
- * duration on a `DM-GAP-10` row, no seeded template and no seeded routing.
+ * duration on a `DM-GAP-10` row. Templates and routing are seeded from the
+ * owner's email matrix (`P-372`).
  */
 
 /// <summary>`NOTIFICATION_EVENT` — the catalogue, seeded (`P-146`).</summary>
@@ -28,6 +29,7 @@ public sealed class NotificationEventConfiguration : IEntityTypeConfiguration<No
         builder.Property(e => e.JourneyAudienceEn).HasColumnName("journey_audience_en").HasMaxLength(500);
 
         builder.HasData(NotificationSeedData.Events);
+        builder.HasData(EmailMatrixSeedData.Events);
     }
 }
 
@@ -55,6 +57,9 @@ public sealed class NotificationTemplateConfiguration : IEntityTypeConfiguration
             .WithMany()
             .HasForeignKey(t => t.UpdatedBy)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // P-372 — the owner's email matrix, seeded rather than retyped.
+        builder.HasData(EmailMatrixSeedData.Templates);
     }
 }
 
@@ -83,6 +88,9 @@ public sealed class NotificationMatrixRowConfiguration : IEntityTypeConfiguratio
             .WithMany()
             .HasForeignKey(r => r.TemplateId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // P-372 — routed as the owner's email matrix names each recipient.
+        builder.HasData(EmailMatrixSeedData.Rows);
     }
 }
 

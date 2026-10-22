@@ -577,8 +577,9 @@ public static class AssignmentEndpoints
             .RequireFeature("F-0503");
 
         requests.MapPost("/{requestId}/pool", (
-            string requestId, SendPoolInputWire input, ExpertHubDbContext db, CancellationToken ct) =>
-            SendPoolAsync(requestId, slotNumber: null, input, db, ct))
+            string requestId, SendPoolInputWire input, ExpertHubDbContext db,
+            NotificationDispatcher dispatcher, CancellationToken ct) =>
+            SendPoolAsync(requestId, slotNumber: null, input, db, dispatcher, ct))
             .WithName("SendPool")
             .RequireFeature("F-0503");
 
@@ -680,8 +681,8 @@ public static class AssignmentEndpoints
 
         requests.MapPost("/{requestId}/slots/{slotNumber:int}/pool", (
             string requestId, int slotNumber, SendPoolInputWire input, ExpertHubDbContext db,
-            CancellationToken ct) =>
-            SendPoolAsync(requestId, slotNumber, input, db, ct))
+            NotificationDispatcher dispatcher, CancellationToken ct) =>
+            SendPoolAsync(requestId, slotNumber, input, db, dispatcher, ct))
             .WithName("SendSlotPool")
             .RequireFeature("F-0503");
 
@@ -817,7 +818,7 @@ public static class AssignmentEndpoints
 
     private static async Task<IResult> SendPoolAsync(
         string requestId, int? slotNumber, SendPoolInputWire input, ExpertHubDbContext db,
-        CancellationToken ct)
+        NotificationDispatcher dispatcher, CancellationToken ct)
     {
         var request = await FindAsync(requestId, db, ct);
         if (request is null)
@@ -955,6 +956,14 @@ public static class AssignmentEndpoints
         }
 
         request.Status = AssignmentRequestStatuses.Nominated;
+        // P-372 E-039 — the requesting coordinator has candidates to approve.
+        await dispatcher.RaiseAsync(
+            "EV-0509",
+            new NotificationEventContext(
+                SourceEntityId: request.RequestId,
+                ActingStaffUserId: request.CreatedBy),
+            new Dictionary<string, string> { ["referenceNumber"] = request.Reference ?? string.Empty },
+            ct);
         await db.SaveChangesAsync(ct);
         return Results.Ok(await PoolWireAsync(db, request, slotId, ct));
     }

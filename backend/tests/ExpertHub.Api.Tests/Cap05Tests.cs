@@ -350,6 +350,8 @@ public sealed partial class Cap05Tests
                 UpdatedBy = author.UserId,
             };
             db.NotificationTemplates.Add(template);
+            // P-372 — the seeded routing gives way to the test's own.
+            await db.NotificationMatrixRows.Where(r => r.EventCode == "EV-0501").ExecuteDeleteAsync();
             db.NotificationMatrixRows.Add(new NotificationMatrixRow
             {
                 RowId = Guid.NewGuid(),

@@ -287,6 +287,7 @@ public static class EngagementEndpoints
             ExpertHubDbContext db,
             Infrastructure.Documents.IDocumentStore store,
             Infrastructure.Documents.IUploadScanner scanner,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var trainer = await TrainerOfAsync(http, db, ct);
@@ -336,6 +337,8 @@ public static class EngagementEndpoints
                 UploadedAt = DateTime.UtcNow,
             });
             submission.Status = SubmissionStatuses.PendingApproval;
+            // P-372 E-041 — the coordinator has an upload to review.
+            await RaiseSubmissionAsync(db, dispatcher, "EV-0510", submission.EngagementId, ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok((await SubmissionWiresAsync(
                 db, [submission.EngagementId], internalView: false, ct))[0]);
@@ -487,6 +490,7 @@ public static class EngagementEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             IntegrationHub hub,
+            NotificationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             if (!Guid.TryParse(submissionId, out var id))
@@ -549,6 +553,11 @@ public static class EngagementEndpoints
             }
             round.DecidedBy = actor.UserId;
             round.DecidedAt = now;
+            // P-372 E-043 / E-042 — the uploader hears the decision.
+            await RaiseSubmissionAsync(
+                db, dispatcher,
+                submission.Status == SubmissionStatuses.Approved ? "EV-0512" : "EV-0511",
+                submission.EngagementId, ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok((await SubmissionWiresAsync(
                 db, [submission.EngagementId], internalView: true, ct))[0]);
@@ -670,7 +679,21 @@ public static class EngagementEndpoints
             await OfferService.AdvanceAsync(db, dispatcher, slot, now, ct);
         }
 
-        await OfferService.RaiseAsync(dispatcher, db, eventCode, slot, ct);
+        // P-372 — a de-link (E-046) reaches the trainer with its reason; a
+        // withdrawal still tells the coordinator (EV-0506) and now also
+        // acknowledges the trainer (E-071).
+        var (reasonAr, reasonEn) = input.Reason switch
+        {
+            "operational-need-change" => ("تغيّر الاحتياج التشغيلي", "Operational need change"),
+            "administrative-decision" => ("قرار إداري", "Administrative decision"),
+            _ => (input.Note ?? string.Empty, input.Note ?? string.Empty),
+        };
+        await OfferService.RaiseAsync(dispatcher, db, eventCode, slot, ct, engagement.TrainerId,
+            new Dictionary<string, string> { ["reasonText"] = reasonAr, ["reasonText@en"] = reasonEn });
+        if (actorKind != "staff")
+        {
+            await OfferService.RaiseAsync(dispatcher, db, "EV-0513", slot, ct, engagement.TrainerId);
+        }
         await db.SaveChangesAsync(ct);
         return Results.Ok(new
         {
@@ -898,4 +921,29 @@ public static class EngagementEndpoints
     private static DateTime? ParseDate(string? value) =>
         DateTime.TryParse(value, System.Globalization.CultureInfo.InvariantCulture,
             System.Globalization.DateTimeStyles.RoundtripKind, out var parsed) ? parsed : null;
+
+    /// <summary>
+    /// One J-20 raise (`P-372`): the trainer is the record's subject and the
+    /// request's coordinator the staff member — each event's routing picks one.
+    /// </summary>
+    private static async Task RaiseSubmissionAsync(
+        ExpertHubDbContext db, NotificationDispatcher dispatcher, string eventCode, Guid engagementId,
+        CancellationToken ct)
+    {
+        var parties = await (
+            from engagement in db.Engagements
+            join slot in db.AssignmentSlots on engagement.SlotId equals slot.SlotId
+            join request in db.AssignmentRequests on slot.RequestId equals request.RequestId
+            join profile in db.TrainerProfiles on engagement.TrainerId equals profile.TrainerId
+            where engagement.EngagementId == engagementId
+            select new { request.Reference, request.CreatedBy, profile.UserId }).FirstAsync(ct);
+        await dispatcher.RaiseAsync(
+            eventCode,
+            new NotificationEventContext(
+                SourceEntityId: engagementId,
+                RecordSubjectUserId: parties.UserId,
+                ActingStaffUserId: parties.CreatedBy),
+            new Dictionary<string, string> { ["referenceNumber"] = parties.Reference ?? string.Empty },
+            ct);
+    }
 }

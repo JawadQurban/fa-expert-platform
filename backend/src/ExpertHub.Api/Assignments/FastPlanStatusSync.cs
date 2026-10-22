@@ -95,7 +95,12 @@ internal static class FastPlanStatusSync
                 FastCancelReasonCode = Fit(cancellation?.Reason?.Code ?? cancellation?.Reason?.Id),
                 OccurredAt = cancellation?.CanceledOn ?? now,
             });
-            await OfferService.RaiseAsync(dispatcher, db, "EV-0508", slot, ct, engagement.TrainerId);
+            await OfferService.RaiseAsync(dispatcher, db, "EV-0508", slot, ct, engagement.TrainerId,
+                new Dictionary<string, string>
+                {
+                    ["reasonText"] = cancellation?.Reason?.NameAr ?? cancellation?.Reason?.NameEn ?? CancelledReason,
+                    ["reasonText@en"] = cancellation?.Reason?.NameEn ?? cancellation?.Reason?.NameAr ?? CancelledReason,
+                });
         }
         request.Status = AssignmentRequestStatuses.Closed;
     }
@@ -124,7 +129,14 @@ internal static class FastPlanStatusSync
         foreach (var (engagement, slot) in rows)
         {
             engagement.ScheduleChangedAt = now;
-            await OfferService.RaiseAsync(dispatcher, db, "EV-0505", slot, ct, engagement.TrainerId);
+            // P-372 E-044 — the new first day and its start time.
+            var first = days.OrderBy(d => d.Date).First();
+            await OfferService.RaiseAsync(dispatcher, db, "EV-0505", slot, ct, engagement.TrainerId,
+                new Dictionary<string, string>
+                {
+                    ["date"] = from == to ? from : $"{from} – {to}",
+                    ["time"] = first.StartTime.ToString(@"hh\:mm", CultureInfo.InvariantCulture),
+                });
         }
         return true;
     }
