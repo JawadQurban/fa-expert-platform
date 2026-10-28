@@ -404,7 +404,8 @@ public sealed class Cap04Tests
         var pendingState = requested.GetProperty("fieldStates").EnumerateArray()
             .Single(s => s.GetProperty("fieldId").GetString() == "firstNameAr");
         Assert.Equal("الاسم الجديد", pendingState.GetProperty("pendingValue").GetString());
-        Assert.Equal("قيمة تجريبية",
+        // An Arabic name holds Arabic letters only (dm-gap-01.2026-10-28, AC-6).
+        Assert.Equal("تجربة",
             requested.GetProperty("fieldValues").GetProperty("firstNameAr").GetString());
 
         // One at a time — a second request while one is pending is refused.
@@ -853,7 +854,7 @@ public sealed class Cap04Tests
         Assert.Equal(["Saudi Board Certification (Saudi Commission for Health Specialties)"],
             card.GetProperty("certifications").EnumerateArray().Select(e => e.GetString()));
         // The front cover carries LinkedIn only.
-        Assert.Equal(["https://example.com/profile"],
+        Assert.Equal(["https://www.linkedin.com/in/profile"],
             card.GetProperty("socialAccounts").EnumerateArray().Select(e => e.GetString()));
         // «نبذة عامة» ← «القطاع» and «نوعية الأنشطة والمشاركات».
         Assert.Equal("التمويل", card.GetProperty("sector").GetString());
@@ -1284,9 +1285,7 @@ public sealed class Cap04Tests
                 },
                 // A patterned field needs a value that satisfies ITS pattern —
                 // the identity field's rule (`D-01`) is not the social link's.
-                _ when hasPattern => id == "idNumber"
-                    ? "1012345678"
-                    : "https://example.com/profile",
+                _ when hasPattern => TestFormValues.Patterned(id),
                 _ => "قيمة تجريبية",
             };
         }

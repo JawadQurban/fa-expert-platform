@@ -280,7 +280,7 @@ public sealed class RepeatableSectionTests
                 "number" => "8",
                 "select" => field.GetProperty("options")[0].GetProperty("value").GetString(),
                 "multi-select" => new[] { field.GetProperty("options")[0].GetProperty("value").GetString() },
-                _ when patterned => id == "idNumber" ? "1012345678" : "https://example.com/a",
+                _ when patterned => TestFormValues.Patterned(id),
                 _ => "قيمة تجريبية",
             };
         }

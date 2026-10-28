@@ -6,7 +6,10 @@ import {
   entryFieldKey,
   isFieldRequired,
   isFieldVisible,
+  isOtherTextField,
+  liveFieldErrors,
   normalizeEntries,
+  otherAnswerText,
   splitEntryKey,
   validateAttachmentFile,
   validateCompleteness,
@@ -171,7 +174,7 @@ describe('applicationValidation (schema engine)', () => {
   );
 
   it('the served schema is the supplied field map, not the retired mock', () => {
-    expect(APPLICATION_FORM_SCHEMA.version).toBe('dm-gap-01.2026-10-19');
+    expect(APPLICATION_FORM_SCHEMA.version).toBe('dm-gap-01.2026-10-28');
     // The six J-01 sections, in the workbook's own order.
     expect(APPLICATION_FORM_SCHEMA.sections.map((s) => s.id)).toEqual([
       'personal',
@@ -330,7 +333,8 @@ describe('applicationValidation (schema engine)', () => {
   it('specialization, university and certificate name are dropdowns over the delivered lists', () => {
     // The predecessor's «has not reached this repository» note is closed.
     expect(fieldById('specializationDetail').type).toBe('select');
-    expect(fieldById('specializationDetail').options?.length).toBe(25);
+    // The sheet's 25 rows minus its footnote (`spec-025`), since 2026-10-28.
+    expect(fieldById('specializationDetail').options?.length).toBe(24);
     expect(fieldById('universityName').type).toBe('select');
     expect(fieldById('universityName').options?.length).toBe(517);
     expect(fieldById('certificateName').type).toBe('select');
@@ -635,5 +639,151 @@ describe('applicationValidation (schema engine)', () => {
     expect(
       named('certificateNameOther', { certificateName: 'other', certificateNameOther: 'CMA' })
     ).toBeNull();
+  });
+
+  /* ── dm-gap-01.2026-10-28 — the UAT re-test of 2026-10-28 ─────────────── */
+
+  it('BUG-006: «التخصص» offers «أخرى» once, and never the workbook footnote', () => {
+    const options = fieldById('specializationDetail').options ?? [];
+    expect(options.map((o) => o.value)).not.toContain('spec-025');
+    expect(options.find((o) => o.value === 'spec-024')).toEqual({
+      value: 'spec-024',
+      labelAr: 'أخرى',
+      labelEn: 'Others',
+    });
+    expect(options.some((o) => o.labelAr.includes('*'))).toBe(false);
+  });
+
+  it('BUG-006: a select answered «أخرى» reads as what the applicant wrote', () => {
+    const select = fieldById('specializationDetail');
+    expect(isOtherTextField(APPLICATION_FORM_SCHEMA, fieldById('specializationOther'))).toBe(true);
+    expect(isOtherTextField(APPLICATION_FORM_SCHEMA, fieldById('certificateNameOther'))).toBe(true);
+    expect(isOtherTextField(APPLICATION_FORM_SCHEMA, fieldById('domainOther'))).toBe(true);
+    expect(isOtherTextField(APPLICATION_FORM_SCHEMA, fieldById('trainedBeforeDetails'))).toBe(
+      false
+    );
+    expect(
+      otherAnswerText(APPLICATION_FORM_SCHEMA, select, {
+        specializationDetail: 'spec-024',
+        specializationOther: ' الهندسة المالية ',
+      })
+    ).toBe('الهندسة المالية');
+    // A listed value is not overridden by a stale «other» text.
+    expect(
+      otherAnswerText(APPLICATION_FORM_SCHEMA, select, {
+        specializationDetail: 'spec-001',
+        specializationOther: 'stale',
+      })
+    ).toBeNull();
+    expect(
+      otherAnswerText(APPLICATION_FORM_SCHEMA, fieldById('certificateName'), {
+        certificateName: 'other',
+        certificateNameOther: 'CMA',
+      })
+    ).toBe('CMA');
+  });
+
+  it('BUG-014: a date obtained or started cannot be in the future', () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const iso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    for (const id of [
+      'qualificationDate',
+      'certificateDate',
+      'experienceStartDate',
+      'dateOfBirth',
+    ]) {
+      expect(validateFieldValue(fieldById(id), iso, ['trainer'], 'ar', messages), id).toBe(
+        messages.dateNotFuture
+      );
+      expect(
+        validateFieldValue(fieldById(id), '2020-01-01', ['trainer'], 'ar', messages),
+        id
+      ).toBeNull();
+    }
+  });
+
+  it('BUG-014 / AC-6: the end date is flagged the moment the start moves past it', () => {
+    const values = { experienceStartDate: '2021-01-01', experienceEndDate: '2020-06-30' };
+    const judged = liveFieldErrors(
+      APPLICATION_FORM_SCHEMA,
+      'experienceStartDate',
+      values,
+      ['trainer'],
+      'ar',
+      messages
+    );
+    expect(judged).toEqual({
+      experienceStartDate: null,
+      experienceEndDate: messages.dateBeforeStart,
+    });
+    // An empty field is never flagged live — completeness is the step gate's (AC-3).
+    expect(
+      liveFieldErrors(APPLICATION_FORM_SCHEMA, 'jobTitle', {}, ['trainer'], 'ar', messages)
+    ).toEqual({ jobTitle: null });
+    // A hidden end date (currently employed) is never flagged.
+    expect(
+      liveFieldErrors(
+        APPLICATION_FORM_SCHEMA,
+        'experienceStartDate',
+        { ...values, currentlyEmployed: true },
+        ['trainer'],
+        'ar',
+        messages
+      ).experienceEndDate
+    ).toBeNull();
+  });
+
+  it('BUG-015 / AC-6: every typed field checks the kind of input it holds', () => {
+    const check = (id: string, value: string) =>
+      validateFieldValue(fieldById(id), value, ['trainer'], 'ar', messages);
+    const invalid = (id: string, value: string) =>
+      expect(check(id, value), `${id}=${value}`).not.toBeNull();
+    const valid = (id: string, value: string) =>
+      expect(check(id, value), `${id}=${value}`).toBeNull();
+
+    valid('firstNameAr', 'عبدالله');
+    valid('lastNameAr', 'آل سعود');
+    invalid('firstNameAr', 'Abdullah');
+    invalid('firstNameAr', 'عبدالله1');
+    valid('firstNameEn', 'Abdullah');
+    valid('lastNameEn', "O'Brien-Smith");
+    invalid('firstNameEn', 'عبدالله');
+    invalid('firstNameEn', 'Abd3');
+    invalid('firstNameEn', 'A'.repeat(51));
+
+    valid('idNumber', '1012345678');
+    invalid('idNumber', '3012345678');
+
+    valid('linkedin', 'https://www.linkedin.com/in/someone');
+    invalid('linkedin', 'https://example.com/someone');
+    valid('personalWebsite', 'https://example.com');
+    invalid('personalWebsite', 'https://x');
+    invalid('personalWebsite', 'example.com');
+    valid('portfolioLinks', 'http://example.com/talk?id=1');
+
+    for (const id of [
+      'generalSpecialization',
+      'jobTitle',
+      'organization',
+      'issuingInstitution',
+      'specializationOther',
+      'certificateNameOther',
+      'domainOther',
+      'responsibilities',
+      'trainedBeforeDetails',
+    ]) {
+      invalid(id, '12345');
+      invalid(id, '---');
+      valid(id, 'Finance 101');
+    }
+    invalid('jobTitle', 'م'.repeat(201));
+
+    valid('inPersonCities', 'الرياض، جدة، Dammam');
+    invalid('inPersonCities', 'الرياض 2');
+    invalid('inPersonCities', ' , ');
+
+    valid('dailyTrainingHours', '8');
+    invalid('dailyTrainingHours', '25');
   });
 });

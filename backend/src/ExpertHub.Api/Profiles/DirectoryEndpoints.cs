@@ -3,6 +3,7 @@ using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
 using ExpertHub.Api.ServiceRequests;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Applications;
 using ExpertHub.Infrastructure.Documents;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -868,11 +869,16 @@ public static class DirectoryEndpoints
         var rows = await db.ApplicationFieldValues
             .Where(v => v.ApplicationId == applicationId)
             .ToListAsync(ct);
+        // BUG-006 — «أخرى» reads as what the trainer wrote, on one row.
+        var definitions = fields.Select(f => ApplicationFormLogic.Parse(f.Definition)).ToList();
 
-        Screening.ScreeningFieldWire Field(FormField field, string stored) => new(
+        Screening.ScreeningFieldWire Field(FormField field, IReadOnlyDictionary<string, JsonElement> entryValues) => new(
             field.FieldCode,
             new ServiceRequests.LocalizedTextWire(field.LabelAr, field.LabelEn),
-            DisplayLabelled(field.Definition, JsonSerializer.Deserialize<JsonElement>(stored)),
+            (definitions.FirstOrDefault(d => d.Id == field.FieldCode) is { } definition
+                ? ApplicationFormLogic.OtherAnswerText(definition, definitions, entryValues)
+                : null)
+                ?? DisplayLabelled(field.Definition, entryValues[field.FieldCode]),
             null);
 
         List<Screening.ScreeningEntryWire> EntriesOf(IReadOnlyList<FormField> sectionFields) =>
@@ -881,12 +887,22 @@ public static class DirectoryEndpoints
                 .Where(v => sectionFields.Any(f => f.FieldCode == v.FieldCode))
                 .GroupBy(v => v.EntryIndex)
                 .OrderBy(g => g.Key)
-                .Select(g => new Screening.ScreeningEntryWire(
-                    g.Key,
-                    g.Select(v => v.EntryId).FirstOrDefault(id => id is { Length: > 0 }),
-                    [.. sectionFields
-                        .Where(f => g.Any(v => v.FieldCode == f.FieldCode))
-                        .Select(f => Field(f, g.First(v => v.FieldCode == f.FieldCode).Value))])),
+                .Select(g =>
+                {
+                    var entryValues = g
+                        .GroupBy(v => v.FieldCode, StringComparer.Ordinal)
+                        .ToDictionary(
+                            byCode => byCode.Key,
+                            byCode => JsonSerializer.Deserialize<JsonElement>(byCode.First().Value),
+                            StringComparer.Ordinal);
+                    return new Screening.ScreeningEntryWire(
+                        g.Key,
+                        g.Select(v => v.EntryId).FirstOrDefault(id => id is { Length: > 0 }),
+                        [.. sectionFields
+                            .Where(f => entryValues.ContainsKey(f.FieldCode)
+                                && !Screening.ScreeningEndpoints.IsOtherNaming(f, definitions))
+                            .Select(f => Field(f, entryValues))]);
+                }),
         ];
 
         return [.. sections

@@ -146,6 +146,53 @@ export function visibleSectionFields(
     .sort((a, b) => a.order - b.order);
 }
 
+/* ── «أخرى» named in words (BUG-006) ────────────────────────────────────── */
+
+/**
+ * Whether `field` is the text box that names a select's «أخرى» — a `text`
+ * field shown only while another field's select holds one of its options
+ * («التخصص (أخرى)», «اسم الشهادة (أخرى)», «المجال (أخرى)»). Read views fold
+ * it into its select, so the answer reads as what the applicant wrote.
+ */
+export function isOtherTextField(
+  schema: ApplicationFormSchemaDto,
+  field: ApplicationFieldSchema
+): boolean {
+  const condition = field.dependsOn;
+  if (field.type !== 'text' || condition == null || typeof condition.equals !== 'string') {
+    return false;
+  }
+  const parent = schema.fields.find((candidate) => candidate.id === condition.fieldId);
+  return (
+    parent?.type === 'select' &&
+    (parent.options ?? []).some((option) => option.value === condition.equals)
+  );
+}
+
+/**
+ * What the applicant wrote for a select answered «أخرى», or `null` — the
+ * value read views show **instead of** the word «أخرى» (BUG-006: «what is
+ * shown must be the typed text»).
+ */
+export function otherAnswerText(
+  schema: ApplicationFormSchemaDto,
+  field: ApplicationFieldSchema,
+  values: Readonly<Record<string, ApplicationFieldValue>>
+): string | null {
+  const chosen = values[field.id];
+  if (field.type !== 'select' || typeof chosen !== 'string') {
+    return null;
+  }
+  const naming = schema.fields.find(
+    (candidate) =>
+      candidate.dependsOn?.fieldId === field.id &&
+      candidate.dependsOn.equals === chosen &&
+      isOtherTextField(schema, candidate)
+  );
+  const typed = naming == null ? undefined : values[naming.id];
+  return typeof typed === 'string' && typed.trim() !== '' ? typed.trim() : null;
+}
+
 export function orderedSections(
   schema: ApplicationFormSchemaDto
 ): readonly ApplicationSectionSchema[] {
@@ -314,6 +361,65 @@ export function attachmentEntryId(
 
 /* ── field-level validation ─────────────────────────────────────────────── */
 
+/**
+ * Emptiness is per-type: a checkbox is "empty" unless ticked, a multi-select
+ * unless at least one option is chosen, everything else unless text exists.
+ */
+function isEmptyValue(field: ApplicationFieldSchema, value: ApplicationFieldValue | undefined) {
+  if (field.type === 'checkbox') {
+    return value !== true;
+  }
+  if (field.type === 'multi-select') {
+    return !Array.isArray(value) || value.length === 0;
+  }
+  return typeof value !== 'string' || value.trim() === '';
+}
+
+/**
+ * Whether a field's value is final the moment it changes — a pick from a
+ * list, a date, a tick — and so is judged on change. Typed text is judged
+ * when the applicant leaves the field, never mid-word.
+ */
+export function judgedOnChange(field: ApplicationFieldSchema): boolean {
+  return field.type !== 'text' && field.type !== 'textarea' && field.type !== 'number';
+}
+
+/**
+ * **J-01/F1 AC-6 at the field** (UAT BUG-014/BUG-015): «when the applicant
+ * enters invalid data, then the field is flagged». The step gate (AC-3) only
+ * ran on «التالي», so an end date before its start, a link without a host or
+ * a name in digits sat unflagged until then — which is how the testers read
+ * «no validation».
+ *
+ * Returns the fields to re-judge after `fieldId` changed in `values` — the
+ * field itself and every field whose `notBefore` names it, so moving a start
+ * date past its end flags the end date at once — each mapped to its message,
+ * or `null` to clear it. An EMPTY field maps to `null`: completeness stays
+ * the step gate's (AC-3), and a field is never shouted at before it is
+ * filled. A field the values hide maps to `null` too.
+ */
+export function liveFieldErrors(
+  schema: ApplicationFormSchemaDto,
+  fieldId: string,
+  values: Readonly<Record<string, ApplicationFieldValue>>,
+  services: readonly ApplicationService[],
+  locale: Locale,
+  messages: ValidationMessages
+): Readonly<Record<string, string | null>> {
+  const judged: Record<string, string | null> = {};
+  for (const field of schema.fields) {
+    if (field.id !== fieldId && field.validation?.notBefore !== fieldId) {
+      continue;
+    }
+    const value = values[field.id];
+    judged[field.id] =
+      !isFieldVisible(field, services, values) || isEmptyValue(field, value)
+        ? null
+        : validateFieldValue(field, value, services, locale, messages, values);
+  }
+  return judged;
+}
+
 export function validateFieldValue(
   field: ApplicationFieldSchema,
   value: ApplicationFieldValue | undefined,
@@ -325,14 +431,7 @@ export function validateFieldValue(
 ): string | null {
   const required = isFieldRequired(field, services, siblings);
   const text = typeof value === 'string' ? value.trim() : '';
-  // Emptiness is per-type: a checkbox is "empty" unless ticked, a multi-select
-  // unless at least one option is chosen, everything else unless text exists.
-  const empty =
-    field.type === 'checkbox'
-      ? value !== true
-      : field.type === 'multi-select'
-        ? !Array.isArray(value) || value.length === 0
-        : text === '';
+  const empty = isEmptyValue(field, value);
 
   if (required && empty) {
     return messages.required;

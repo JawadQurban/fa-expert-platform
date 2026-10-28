@@ -158,7 +158,7 @@ public sealed class ApplicationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var schema = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal("dm-gap-01.2026-10-19", schema.GetProperty("version").GetString());
+        Assert.Equal("dm-gap-01.2026-10-28", schema.GetProperty("version").GetString());
         Assert.Equal(6, schema.GetProperty("sections").GetArrayLength());
         // 59: «القطاع» and «المجال (أخرى)» joined on 2026-10-07 (`P-342`),
         // «التخصص (أخرى)» and «اسم الشهادة (أخرى)» on 2026-10-19 (UAT).
@@ -253,7 +253,7 @@ public sealed class ApplicationTests
     }
 
     [Fact]
-    public async Task A_draft_keeps_the_version_it_started_on_and_new_drafts_take_the_current_one()
+    public async Task A_draft_resumed_on_an_older_version_is_carried_to_the_current_one()
     {
         await SignInApplicantAsync();
         var started = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
@@ -269,23 +269,152 @@ public sealed class ApplicationTests
             await db.SaveChangesAsync();
         }
 
-        var resumed = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
-        Assert.Equal(FormSchemaVersions.Initial,
-            resumed.GetProperty("draft").GetProperty("schemaVersion").GetString());
-
-        // Its own version's fields save; a field only the newer version has is refused.
+        // Answered on the old form — `hybrid` is an option only that form offers.
         var saved = await PostJsonAsync("/api/v1/me/applications/draft", new
         {
             services = new[] { "trainer" },
-            values = new Dictionary<string, object> { ["preferredDeliveryMode"] = "hybrid" },
+            values = new Dictionary<string, object>
+            {
+                ["firstNameAr"] = "خالد",
+                ["preferredDeliveryMode"] = "hybrid",
+            },
         });
         Assert.Equal("hybrid", saved.GetProperty("values").GetProperty("preferredDeliveryMode").GetString());
+
+        // P-381 (UAT BUG-006/007/014/015 re-test): resuming carries the draft to
+        // the published form, so its applicant sees what the fix published. Its
+        // answers are kept by field code and re-judged by the new form.
+        var resumed = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        Assert.True(resumed.GetProperty("resumed").GetBoolean());
+        Assert.Equal(FormSchemaVersions.Current,
+            resumed.GetProperty("draft").GetProperty("schemaVersion").GetString());
+        Assert.Equal("خالد",
+            resumed.GetProperty("draft").GetProperty("values").GetProperty("firstNameAr").GetString());
+        await using (var db = _database.CreateContext())
+        {
+            Assert.Equal(FormSchemaVersions.Current,
+                (await db.Applications.SingleAsync(a => a.ApplicationId == draftId)).SchemaVersion);
+        }
+
+        // The current form's own fields now save on it.
         var newerField = await _client.PostAsJsonAsync("/api/v1/me/applications/draft", new
         {
             services = new[] { "trainer" },
             values = new Dictionary<string, object> { ["trainingLanguages"] = "ar" },
         });
-        Assert.Equal(HttpStatusCode.BadRequest, newerField.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, newerField.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_draft_carried_forward_drops_the_answers_its_new_form_cannot_hold()
+    {
+        await SignInApplicantAsync();
+        var started = await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        var draftId = Guid.Parse(started.GetProperty("draft").GetProperty("id").GetString()!);
+        await using (var db = _database.CreateContext())
+        {
+            var draft = await db.Applications.SingleAsync(a => a.ApplicationId == draftId);
+            draft.SchemaVersion = FormSchemaVersions.Initial;
+            db.ApplicationFieldValues.Add(new ApplicationFieldValue
+            {
+                ValueId = Guid.NewGuid(),
+                ApplicationId = draftId,
+                FieldCode = "a-field-no-current-form-has",
+                Value = "\"x\"",
+            });
+            await db.SaveChangesAsync();
+        }
+
+        await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+
+        await using var check = _database.CreateContext();
+        Assert.DoesNotContain(
+            await check.ApplicationFieldValues
+                .Where(v => v.ApplicationId == draftId)
+                .Select(v => v.FieldCode)
+                .ToListAsync(),
+            code => code == "a-field-no-current-form-has");
+    }
+
+    [Fact]
+    public async Task The_api_judges_the_kind_of_input_every_typed_field_holds()
+    {
+        // J-01/F1 AC-6, UAT BUG-014/BUG-015 — the API refuses what the form flags.
+        var schema = await GetJsonAsync("/api/v1/applications/schema");
+        var definitions = schema.GetProperty("fields").EnumerateArray()
+            .Select(f => ApplicationFormLogic.Parse(f.GetRawText()))
+            .ToList();
+        string[] services = ["trainer"];
+        bool Fails(string field, string value) =>
+            ApplicationFormLogic.MissingOrInvalidFields(
+                definitions, services,
+                new Dictionary<string, JsonElement> { [field] = JsonSerializer.SerializeToElement(value) })
+                .Contains(field);
+
+        Assert.True(Fails("firstNameAr", "Khalid"));
+        Assert.True(Fails("firstNameAr", "خالد1"));
+        Assert.False(Fails("firstNameAr", "خالد"));
+        Assert.True(Fails("lastNameEn", "العتيبي"));
+        Assert.False(Fails("lastNameEn", "Al-Otaibi"));
+        Assert.True(Fails("firstNameEn", new string('A', 51)));
+        Assert.True(Fails("linkedin", "https://example.com/me"));
+        Assert.False(Fails("linkedin", "https://www.linkedin.com/in/me"));
+        Assert.True(Fails("personalWebsite", "https://x"));
+        Assert.False(Fails("personalWebsite", "https://example.com"));
+        Assert.True(Fails("jobTitle", "12345"));
+        Assert.False(Fails("jobTitle", "مستشار مالي"));
+        Assert.True(Fails("responsibilities", "---"));
+        Assert.True(Fails("inPersonCities", "الرياض 2"));
+        Assert.False(Fails("inPersonCities", "الرياض، جدة، Dammam"));
+
+        // A date obtained or started is never in the future.
+        var future = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2))
+            .ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        foreach (var date in new[] { "qualificationDate", "certificateDate", "experienceStartDate" })
+        {
+            Assert.True(Fails(date, future), date);
+            Assert.False(Fails(date, "2020-01-01"), date);
+        }
+    }
+
+    [Fact]
+    public async Task The_specialization_list_offers_other_once_and_never_its_footnote()
+    {
+        // BUG-006 re-test — the workbook's footnote row was a selectable value.
+        var schema = await GetJsonAsync("/api/v1/applications/schema");
+        var options = schema.GetProperty("fields").EnumerateArray()
+            .Single(f => f.GetProperty("id").GetString() == "specializationDetail")
+            .GetProperty("options").EnumerateArray()
+            .ToDictionary(o => o.GetProperty("value").GetString()!, o => o.GetProperty("labelAr").GetString()!);
+        Assert.Equal(24, options.Count);
+        Assert.DoesNotContain("spec-025", options.Keys);
+        Assert.Equal("أخرى", options["spec-024"]);
+
+        // …and the version that offered it still serves it, unchanged.
+        var previous = await GetJsonAsync("/api/v1/applications/schema?version=dm-gap-01.2026-10-19");
+        Assert.Contains(previous.GetProperty("fields").EnumerateArray()
+            .Single(f => f.GetProperty("id").GetString() == "specializationDetail")
+            .GetProperty("options").EnumerateArray(),
+            o => o.GetProperty("value").GetString() == "spec-025");
+    }
+
+    [Fact]
+    public void A_select_answered_other_reads_as_what_the_applicant_wrote()
+    {
+        static FieldDefinition Field(string json) => ApplicationFormLogic.Parse(json);
+        var select = Field("""{"id":"specializationDetail","type":"select","sectionId":"education","requiredFor":[],"options":[{"value":"spec-001"},{"value":"spec-024"}]}""");
+        var naming = Field("""{"id":"specializationOther","type":"text","sectionId":"education","requiredFor":[],"dependsOn":{"fieldId":"specializationDetail","equals":"spec-024"}}""");
+        var unrelated = Field("""{"id":"jobTitle","type":"text","sectionId":"experience","requiredFor":[]}""");
+        FieldDefinition[] fields = [select, naming, unrelated];
+        static Dictionary<string, JsonElement> With(string json) =>
+            JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)!;
+
+        Assert.True(ApplicationFormLogic.IsOtherNaming(naming, fields));
+        Assert.False(ApplicationFormLogic.IsOtherNaming(unrelated, fields));
+        Assert.Equal("الهندسة المالية", ApplicationFormLogic.OtherAnswerText(select, fields,
+            With("""{"specializationDetail":"spec-024","specializationOther":" الهندسة المالية "}""")));
+        Assert.Null(ApplicationFormLogic.OtherAnswerText(select, fields,
+            With("""{"specializationDetail":"spec-001","specializationOther":"stale"}""")));
     }
 
     [Fact]
@@ -1163,9 +1292,7 @@ public sealed class ApplicationTests
                 },
                 // A patterned field needs a value that satisfies ITS pattern —
                 // the identity field's rule (`D-01`) is not the social link's.
-                _ when hasPattern => id == "idNumber"
-                    ? "1012345678"
-                    : "https://example.com/profile",
+                _ when hasPattern => TestFormValues.Patterned(id),
                 _ => "قيمة تجريبية",
             };
         }

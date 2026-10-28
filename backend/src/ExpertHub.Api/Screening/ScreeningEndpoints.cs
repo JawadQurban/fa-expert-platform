@@ -651,6 +651,8 @@ public static class ScreeningEndpoints
         var rules = await db.AttachmentRules
             .Where(r => r.SchemaVersion == application.SchemaVersion)
             .ToListAsync(ct);
+        // BUG-006 — «أخرى» reads as what the applicant wrote.
+        var definitions = fields.Select(f => ApplicationFormLogic.Parse(f.Definition)).ToList();
 
         var pool = await BuildPoolAsync(db, "F-0204", ct);
 
@@ -721,15 +723,16 @@ public static class ScreeningEndpoints
                 new ServiceRequests.LocalizedTextWire(section.TitleAr, section.TitleEn),
                 [.. fields
                     .Where(f => f.SectionCode == section.SectionCode
-                        && values.ContainsKey(f.FieldCode))
+                        && values.ContainsKey(f.FieldCode)
+                        && !IsOtherNaming(f, definitions))
                     .Select(f => new ScreeningFieldWire(
                         f.FieldCode,
                         new ServiceRequests.LocalizedTextWire(f.LabelAr, f.LabelEn),
-                        DisplayValue(values[f.FieldCode]),
+                        Shown(f, definitions, values),
                         // The AI scope: free-text answers (BR-0202 —
                         // qualitative questions only, never attachments).
                         f.InputType == "textarea" ? true : null))],
-                EntriesOf(section, fields, valueRows)))],
+                EntriesOf(section, fields, definitions, valueRows)))],
             [.. attachments.Select(a =>
             {
                 var rule = rules.FirstOrDefault(r => r.RuleCode == a.RuleCode);
@@ -809,6 +812,7 @@ public static class ScreeningEndpoints
     private static IReadOnlyList<ScreeningEntryWire>? EntriesOf(
         FormSection section,
         IReadOnlyList<FormField> fields,
+        IReadOnlyList<FieldDefinition> definitions,
         IReadOnlyList<ApplicationFieldValue> rows)
     {
         if (section.Repeatable is not { Length: > 0 })
@@ -826,19 +830,28 @@ public static class ScreeningEndpoints
                 .Where(v => codes.Contains(v.FieldCode))
                 .GroupBy(v => v.EntryIndex)
                 .OrderBy(g => g.Key)
-                .Select(g => new ScreeningEntryWire(
-                    g.Key,
-                    g.Select(v => v.EntryId).FirstOrDefault(id => id is { Length: > 0 }),
-                    [
-                        .. sectionFields
-                            .Where(f => g.Any(v => v.FieldCode == f.FieldCode))
-                            .Select(f => new ScreeningFieldWire(
-                                f.FieldCode,
-                                new ServiceRequests.LocalizedTextWire(f.LabelAr, f.LabelEn),
-                                DisplayValue(JsonSerializer.Deserialize<JsonElement>(
-                                    g.First(v => v.FieldCode == f.FieldCode).Value)),
-                                f.InputType == "textarea" ? true : null)),
-                    ])),
+                .Select(g =>
+                {
+                    var entryValues = g
+                        .GroupBy(v => v.FieldCode, StringComparer.Ordinal)
+                        .ToDictionary(
+                            byCode => byCode.Key,
+                            byCode => JsonSerializer.Deserialize<JsonElement>(byCode.First().Value),
+                            StringComparer.Ordinal);
+                    return new ScreeningEntryWire(
+                        g.Key,
+                        g.Select(v => v.EntryId).FirstOrDefault(id => id is { Length: > 0 }),
+                        [
+                            .. sectionFields
+                                .Where(f => entryValues.ContainsKey(f.FieldCode)
+                                    && !IsOtherNaming(f, definitions))
+                                .Select(f => new ScreeningFieldWire(
+                                    f.FieldCode,
+                                    new ServiceRequests.LocalizedTextWire(f.LabelAr, f.LabelEn),
+                                    Shown(f, definitions, entryValues),
+                                    f.InputType == "textarea" ? true : null)),
+                        ]);
+                }),
         ];
     }
 
@@ -877,6 +890,22 @@ public static class ScreeningEndpoints
                     title?.NameAr ?? "موظف", title?.NameEn ?? "Staff"));
         })];
     }
+
+    /// <summary>BUG-006 — the text box naming a «أخرى» is folded into its select.</summary>
+    internal static bool IsOtherNaming(FormField field, IReadOnlyList<FieldDefinition> definitions) =>
+        definitions.FirstOrDefault(d => d.Id == field.FieldCode) is { } definition
+        && ApplicationFormLogic.IsOtherNaming(definition, definitions);
+
+    /// <summary>A stored answer as the screener reads it: a select answered
+    /// «أخرى» shows what the applicant wrote (BUG-006), anything else as stored.</summary>
+    private static string Shown(
+        FormField field,
+        IReadOnlyList<FieldDefinition> definitions,
+        Dictionary<string, JsonElement> values) =>
+        (definitions.FirstOrDefault(d => d.Id == field.FieldCode) is { } definition
+            ? ApplicationFormLogic.OtherAnswerText(definition, definitions, values)
+            : null)
+        ?? DisplayValue(values[field.FieldCode]);
 
     internal static string DisplayValue(JsonElement value) => value.ValueKind switch
     {

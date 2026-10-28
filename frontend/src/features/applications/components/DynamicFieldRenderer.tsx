@@ -46,6 +46,7 @@ export function DynamicFieldRenderer({
   locale,
   content,
   onChange,
+  onBlur,
   values,
 }: {
   readonly field: ApplicationFieldSchema;
@@ -61,6 +62,11 @@ export function DynamicFieldRenderer({
   readonly locale: Locale;
   readonly content: NewApplicationContent;
   readonly onChange: (fieldId: string, value: ApplicationFieldValue) => void;
+  /**
+   * Typed text is judged when the applicant leaves it (J-01/F1 AC-6) — a
+   * pick, a date or a tick is judged on change by the page instead.
+   */
+  readonly onBlur?: (fieldId: string) => void;
   /** The values this field sits among (its entry's, or the form's) — for `requiredWhen`. */
   readonly values?: Readonly<Record<string, ApplicationFieldValue>>;
 }) {
@@ -90,6 +96,7 @@ export function DynamicFieldRenderer({
             label={label}
             value={textValue}
             onChange={(event) => onChange(field.id, event.target.value)}
+            onBlur={() => onBlur?.(field.id)}
             requiredField={required}
             helperText={helperText}
             errorText={error}
@@ -133,6 +140,7 @@ export function DynamicFieldRenderer({
               textValue === '' || Number.isNaN(Number(textValue)) ? undefined : Number(textValue)
             }
             onValueChange={(next) => onChange(field.id, next == null ? '' : String(next))}
+            onBlur={() => onBlur?.(field.id)}
             min={field.validation?.min}
             max={field.validation?.max}
             requiredField={required}
@@ -216,6 +224,7 @@ export function DynamicFieldRenderer({
             label={label}
             value={textValue}
             onChange={(event) => onChange(field.id, event.target.value)}
+            onBlur={() => onBlur?.(field.id)}
             requiredField={required}
             helperText={helperText}
             errorText={error}

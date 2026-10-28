@@ -30,6 +30,7 @@ export function ApplicationFormSection({
   locale,
   content,
   onChange,
+  onBlur,
 }: {
   readonly schema: ApplicationFormSchemaDto;
   readonly section: ApplicationSectionSchema;
@@ -39,6 +40,8 @@ export function ApplicationFormSection({
   readonly locale: Locale;
   readonly content: NewApplicationContent;
   readonly onChange: (fieldId: string, value: ApplicationFieldValue) => void;
+  /** A typed field was left — judge it (J-01/F1 AC-6). */
+  readonly onBlur?: (fieldId: string) => void;
 }) {
   const fields = visibleSectionFields(schema, section.id, services, values);
   if (fields.length === 0) {
@@ -59,6 +62,7 @@ export function ApplicationFormSection({
             locale={locale}
             content={content}
             onChange={onChange}
+            onBlur={onBlur}
           />
         ))}
       </div>

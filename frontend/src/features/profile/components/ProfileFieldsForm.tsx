@@ -11,6 +11,8 @@ import {
   fieldLabel,
   orderedSections,
   sectionTitle,
+  judgedOnChange,
+  liveFieldErrors,
   validateFieldValue,
   visibleSectionFields,
   isFieldVisible,
@@ -99,6 +101,38 @@ export function ProfileFieldsForm({
   );
 
   const dirty = editableFields.some((field) => values[field.id] !== profile.fieldValues[field.id]);
+
+  /**
+   * J-01/F1 AC-6 — the same field-level flagging the application form has: a
+   * pick is judged on change, typed text when it is left.
+   */
+  const judgeLive = (
+    fieldId: string,
+    current: Readonly<Record<string, ApplicationFieldValue>>,
+    judge: boolean
+  ) => {
+    const judged: Readonly<Record<string, string | null>> = judge
+      ? liveFieldErrors(
+          profile.formSchema,
+          fieldId,
+          current,
+          services,
+          locale,
+          formContent.validation
+        )
+      : { [fieldId]: null };
+    setErrors((prev) => {
+      const next = { ...prev };
+      for (const [id, message] of Object.entries(judged)) {
+        if (message == null) {
+          delete next[id];
+        } else {
+          next[id] = message;
+        }
+      }
+      return next;
+    });
+  };
 
   const save = () => {
     const nextErrors: Record<string, string> = {};
@@ -215,9 +249,12 @@ export function ProfileFieldsForm({
                   services={services}
                   locale={locale}
                   content={formContent}
-                  onChange={(fieldId, value) =>
-                    setValues((current) => ({ ...current, [fieldId]: value }))
-                  }
+                  onChange={(fieldId, value) => {
+                    const next = { ...values, [fieldId]: value };
+                    setValues(next);
+                    judgeLive(fieldId, next, judgedOnChange(field));
+                  }}
+                  onBlur={(fieldId) => judgeLive(fieldId, values, true)}
                 />
               );
             })}

@@ -11,7 +11,7 @@ import type {
 import type { ApplicationService } from './application.types';
 
 /**
- * THE APPLICATION FIELD MAP — version `dm-gap-01.2026-09-29`: the Notion
+ * THE APPLICATION FIELD MAP — version `dm-gap-01.2026-10-28`: the Notion
  * «Application Form Matrix» (Matrices) applied on top of `DM-GAP-01`, the
  * workbook delivered 2026-08-30 as
  * `docs/inputs/trainer-application-form.xlsx`, plus the
@@ -32,7 +32,7 @@ import type { ApplicationService } from './application.types';
  * hours per day (a number, 1–24), «التخصص العام» as free text, and the
  * «المؤهل / Qualification» label.
  *
- * `dm-gap-01.2026-09-21` (this version) closes the two biggest open items the
+ * `dm-gap-01.2026-09-21` closes the two biggest open items the
  * predecessors recorded — the missing reference lists, and repeatable entries:
  *
  * - **Repeatable groups.** `education`, `certifications` and `experience` are
@@ -74,7 +74,7 @@ import type { ApplicationService } from './application.types';
  * they never see is a schema that cannot be read literally. Nothing else
  * changed: same fields, same options, same labels, same attachment rules.
  *
- * `dm-gap-01.2026-10-07` (this version) follows the Notion review of
+ * `dm-gap-01.2026-10-07` follows the Notion review of
  * 2026-10-07 (`P-342`):
  * - «المجال» offers «أخرى», with «المجال (أخرى)» to name it. The Evaluation
  *   Matrix comment of 2026-09-29: «ذات صلة المعتمدة في اللستة، ليست ذو صلة اي
@@ -89,7 +89,7 @@ import type { ApplicationService } from './application.types';
  * Fields by Service» is still «?», so every existing flag is kept as it was
  * and every field this version adds is optional — REQUIRES REVIEW.
  *
- * `dm-gap-01.2026-10-19` (this version) answers the UAT round of 2026-10:
+ * `dm-gap-01.2026-10-19` answers the UAT round of 2026-10:
  * - «الخبرة العملية»: with «أعمل حاليًا» off, «تاريخ الانتهاء» is mandatory and
  *   may not precede «تاريخ البدء» (`validation.notBefore`) — RUN-019,
  *   BUG-014/BUG-015. «عدد سنوات الخبرة» is mandatory under the same
@@ -101,6 +101,21 @@ import type { ApplicationService } from './application.types';
  *   (BUG-007). ⚠️ Criteria #7/#8 have no weight for it, so it scores as
  *   unresolved until the business decides — REQUIRES REVIEW.
  * Nothing else changed; every earlier version keeps exactly what it published.
+ *
+ * `dm-gap-01.2026-10-28` (this version) answers the UAT re-test of 2026-10-28,
+ * which still marked BUG-006/007/014/015 open:
+ * - «التخصص» no longer offers the workbook's footnote row as a value
+ *   (`spec-025`, «*عند اختيار اخرى تتيح للخبير أو المدرب كتابة التخصص» — the
+ *   requirement itself, extracted as an option), and «أخرى*» loses its
+ *   footnote asterisk. Both stay in the master list and in every earlier
+ *   version, so nothing already answered becomes unreadable (BUG-006).
+ * - J-01/F1 AC-6 («fields with a defined format … the field is flagged»):
+ *   names are Arabic or English letters as their label says, free text must
+ *   contain letters, links must be real web addresses (LinkedIn a LinkedIn
+ *   one), cities are a list of names, every text has a length ceiling, and a
+ *   date obtained or started cannot be in the future (BUG-014/BUG-015).
+ *   ⚠️ The length ceilings are technical, not approved — REQUIRES REVIEW.
+ * Same fields, same sections, same attachment rules, same requiredness.
  *
  * `TEMPORARY_TRANSLATION_REQUIRES_BUSINESS_REVIEW` marks option labels the
  * matrix gives in one language only; the other language is a working
@@ -156,12 +171,75 @@ const ALL_SERVICES: readonly ApplicationService[] = [
   'question-writer',
 ];
 
-/** Shared URL shape for the workbook's `Text (URL)` fields. */
-const URL_VALIDATION: ApplicationFieldSchema['validation'] = {
-  pattern: '^https?://\\S+$',
-  patternMessageAr: 'أدخل رابطًا صحيحًا يبدأ بـ http:// أو https://',
-  patternMessageEn: 'Enter a valid link starting with http:// or https://',
+/*
+ * ── Input-type rules (`dm-gap-01.2026-10-28`, J-01/F1 AC-6, BUG-015) ──────
+ * Every pattern is run by BOTH engines — the browser's `RegExp` and the API's
+ * .NET `Regex` — so it uses `\uXXXX` escapes and plain classes only: no
+ * `\p{…}`, no flags, no look-behind.
+ *
+ * ⚠️ The `maxLength` ceilings are technical (a name, a title, a link, a
+ * paragraph); no approved length exists for any of them. REQUIRES REVIEW.
+ */
+
+/** Arabic letters with their diacritics and tatweel, plus the extended letters (پ چ گ ی). */
+const ARABIC_LETTERS = '\\u0621-\\u0652\\u0640\\u0671-\\u06D3';
+/** Any letter a name or a title is written with, in either language. */
+const ANY_LETTER = `[A-Za-z${ARABIC_LETTERS}]`;
+
+/** «الاسم … (بالعربية)» — Arabic letters, words joined by a space or a hyphen. */
+const ARABIC_NAME_VALIDATION: ApplicationFieldSchema['validation'] = {
+  maxLength: 50,
+  pattern: `^[${ARABIC_LETTERS}]+(?:[ -]+[${ARABIC_LETTERS}]+)*$`,
+  patternMessageAr: 'اكتب الاسم بحروف عربية فقط، دون أرقام أو رموز.',
+  patternMessageEn: 'Write the name in Arabic letters only, without digits or symbols.',
 };
+
+/** «الاسم … (بالإنجليزية)» — Latin letters; words joined by spaces, hyphens, apostrophes or dots. */
+const ENGLISH_NAME_VALIDATION: ApplicationFieldSchema['validation'] = {
+  maxLength: 50,
+  pattern: "^[A-Za-z]+(?:[ '.-]+[A-Za-z]+)*\\.?$",
+  patternMessageAr: 'اكتب الاسم بحروف إنجليزية فقط، دون أرقام أو رموز.',
+  patternMessageEn: 'Write the name in English letters only, without digits or symbols.',
+};
+
+/** Free text that names something: at least one letter, never digits or symbols alone. */
+const textValidation = (maxLength: number): ApplicationFieldSchema['validation'] => ({
+  maxLength,
+  pattern: ANY_LETTER,
+  patternMessageAr: 'يجب أن يحتوي النص على حروف، لا أرقام أو رموز فقط.',
+  patternMessageEn: 'The text must contain letters, not only digits or symbols.',
+});
+
+/**
+ * Shared URL shape for the workbook's `Text (URL)` fields: a scheme, then a
+ * host with at least one dot — `https://x` passed until 2026-10-28.
+ */
+const URL_VALIDATION: ApplicationFieldSchema['validation'] = {
+  maxLength: 500,
+  pattern: '^https?://[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+(?::[0-9]{1,5})?(?:[/?#]\\S*)?$',
+  patternMessageAr: 'أدخل رابطًا صحيحًا يبدأ بـ http:// أو https://، مثل https://example.com',
+  patternMessageEn:
+    'Enter a valid link starting with http:// or https://, e.g. https://example.com',
+};
+
+/** «حساب LinkedIn» — a LinkedIn address, not any link. */
+const LINKEDIN_VALIDATION: ApplicationFieldSchema['validation'] = {
+  maxLength: 500,
+  pattern: '^https?://(?:[A-Za-z0-9-]+\\.)?[Ll][Ii][Nn][Kk][Ee][Dd][Ii][Nn]\\.[Cc][Oo][Mm]/\\S+$',
+  patternMessageAr: 'أدخل رابط حسابك في LinkedIn، مثل https://www.linkedin.com/in/name',
+  patternMessageEn: 'Enter your LinkedIn profile link, e.g. https://www.linkedin.com/in/name',
+};
+
+/** «المدن …» — city names, separated by commas. */
+const CITIES_VALIDATION: ApplicationFieldSchema['validation'] = {
+  maxLength: 300,
+  pattern: `^(?=.*${ANY_LETTER})[A-Za-z${ARABIC_LETTERS} ,،-]+$`,
+  patternMessageAr: 'اكتب أسماء المدن بالحروف، وافصل بينها بفاصلة.',
+  patternMessageEn: 'Write the city names in letters, separated by commas.',
+};
+
+/** A date that has already happened — obtained, or started (AC-6, BUG-014). */
+const PAST_DATE_VALIDATION: ApplicationFieldSchema['validation'] = { maxDate: 'today' };
 
 /**
  * The reference lists carry scoring columns (`relevant` on specializations and
@@ -196,6 +274,26 @@ export const OTHER_DOMAIN_OPTION: ApplicationFieldOption = {
 /** «أخرى» in «التخصص» — the owner's own list already carries it as `spec-024`. */
 export const OTHER_SPECIALIZATION_VALUE = 'spec-024';
 
+/**
+ * The «جميع التخصصات» sheet's footnote — «*عند اختيار اخرى تتيح للخبير أو
+ * المدرب كتابة التخصص» — which the extraction read as a 25th specialization.
+ * It is the requirement BUG-006 asks for, not a value anyone can hold.
+ */
+const SPECIALIZATION_FOOTNOTE_VALUE = 'spec-025';
+
+/**
+ * «التخصص»'s options since `dm-gap-01.2026-10-28`: the master list without its
+ * footnote row, and without the footnote's asterisk on «أخرى*». The master
+ * list keeps both, verbatim, as every earlier schema version does.
+ */
+const SPECIALIZATION_OPTIONS: readonly ApplicationFieldOption[] = asOptions(
+  ACADEMIC_SPECIALIZATION_OPTIONS.filter((option) => option.value !== SPECIALIZATION_FOOTNOTE_VALUE)
+).map((option) => ({
+  value: option.value,
+  labelAr: option.labelAr.replace(/\*+$/, '').trim(),
+  labelEn: option.labelEn.replace(/\*+$/, '').trim(),
+}));
+
 /** «أخرى» in «اسم الشهادة» — not one of the master list's `cert-###` codes. */
 export const OTHER_CERTIFICATE_OPTION: ApplicationFieldOption = {
   value: 'other',
@@ -209,7 +307,7 @@ const YES_NO_OPTIONS: readonly ApplicationFieldOption[] = [
 ];
 
 export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
-  version: 'dm-gap-01.2026-10-19',
+  version: 'dm-gap-01.2026-10-28',
   // Speaker intentionally absent (`BR-0113`) — and the workbook's own `*`
   // legend confirms the form is for the four contractual services. The
   // workbook's «الخدمة | Service Type» row IS the service-selection step the
@@ -289,6 +387,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الاسم الأول (بالعربية)',
       labelEn: 'First name (Arabic)',
       requiredFor: ALL_SERVICES,
+      validation: ARABIC_NAME_VALIDATION,
       ownership: 'sso-profile',
       order: 1,
     },
@@ -299,6 +398,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الاسم الثاني (بالعربية)',
       labelEn: 'Middle name (Arabic)',
       requiredFor: ALL_SERVICES,
+      validation: ARABIC_NAME_VALIDATION,
       ownership: 'sso-profile',
       order: 2,
     },
@@ -309,6 +409,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الاسم الثالث (بالعربية)',
       labelEn: 'Third name (Arabic)',
       requiredFor: ALL_SERVICES,
+      validation: ARABIC_NAME_VALIDATION,
       ownership: 'sso-profile',
       order: 3,
     },
@@ -319,6 +420,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الاسم الأخير (بالعربية)',
       labelEn: 'Last name (Arabic)',
       requiredFor: ALL_SERVICES,
+      validation: ARABIC_NAME_VALIDATION,
       ownership: 'sso-profile',
       order: 4,
     },
@@ -329,6 +431,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الاسم الأول (بالإنجليزية)',
       labelEn: 'First name (English)',
       requiredFor: ALL_SERVICES,
+      validation: ENGLISH_NAME_VALIDATION,
       ownership: 'sso-profile',
       order: 5,
     },
@@ -339,6 +442,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الاسم الثاني (بالإنجليزية)',
       labelEn: 'Middle name (English)',
       requiredFor: ALL_SERVICES,
+      validation: ENGLISH_NAME_VALIDATION,
       ownership: 'sso-profile',
       order: 6,
     },
@@ -349,6 +453,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الاسم الثالث (بالإنجليزية)',
       labelEn: 'Third name (English)',
       requiredFor: ALL_SERVICES,
+      validation: ENGLISH_NAME_VALIDATION,
       ownership: 'sso-profile',
       order: 7,
     },
@@ -359,6 +464,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الاسم الأخير (بالإنجليزية)',
       labelEn: 'Last name (English)',
       requiredFor: ALL_SERVICES,
+      validation: ENGLISH_NAME_VALIDATION,
       ownership: 'sso-profile',
       order: 8,
     },
@@ -484,6 +590,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       helpEn: 'Name your field if it is not in the list.',
       requiredFor: ALL_SERVICES,
       dependsOn: { fieldId: 'domain', equals: OTHER_DOMAIN_OPTION.value },
+      validation: textValidation(200),
       ownership: 'expert-hub',
       order: 13.1,
     },
@@ -494,7 +601,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'حساب LinkedIn',
       labelEn: 'LinkedIn profile',
       requiredFor: [],
-      validation: URL_VALIDATION,
+      validation: LINKEDIN_VALIDATION,
       ownership: 'expert-hub',
       order: 14,
     },
@@ -539,6 +646,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'التخصص العام',
       labelEn: 'General specialization',
       requiredFor: ALL_SERVICES,
+      validation: textValidation(200),
       ownership: 'expert-hub',
       order: 2,
     },
@@ -553,7 +661,8 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'التخصص',
       labelEn: 'Specialization',
       requiredFor: ALL_SERVICES,
-      options: asOptions(ACADEMIC_SPECIALIZATION_OPTIONS),
+      // BUG-006 re-test: without the footnote row and «أخرى*»'s asterisk.
+      options: SPECIALIZATION_OPTIONS,
       ownership: 'expert-hub',
       order: 3,
     },
@@ -568,7 +677,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       helpEn: 'Name your specialization if it is not in the list.',
       requiredFor: ALL_SERVICES,
       dependsOn: { fieldId: 'specializationDetail', equals: OTHER_SPECIALIZATION_VALUE },
-      validation: { maxLength: 200 },
+      validation: textValidation(200),
       ownership: 'expert-hub',
       order: 3.1,
     },
@@ -593,6 +702,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'تاريخ الحصول على المؤهل',
       labelEn: 'Date obtained',
       requiredFor: ALL_SERVICES,
+      validation: PAST_DATE_VALIDATION,
       ownership: 'expert-hub',
       order: 5,
     },
@@ -627,7 +737,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelEn: 'Certificate name (other)',
       requiredFor: ALL_SERVICES,
       dependsOn: { fieldId: 'certificateName', equals: OTHER_CERTIFICATE_OPTION.value },
-      validation: { maxLength: 200 },
+      validation: textValidation(200),
       ownership: 'expert-hub',
       order: 1.1,
     },
@@ -638,6 +748,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'الجهة المانحة',
       labelEn: 'Issuing institution',
       requiredFor: [],
+      validation: textValidation(200),
       ownership: 'expert-hub',
       order: 2,
     },
@@ -648,6 +759,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'تاريخ الحصول',
       labelEn: 'Date obtained',
       requiredFor: [],
+      validation: PAST_DATE_VALIDATION,
       ownership: 'expert-hub',
       order: 3,
     },
@@ -658,6 +770,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'اسم المرفق',
       labelEn: 'Attachment name',
       requiredFor: [],
+      validation: textValidation(200),
       ownership: 'expert-hub',
       order: 4,
     },
@@ -670,6 +783,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'المسمى الوظيفي',
       labelEn: 'Job title',
       requiredFor: ALL_SERVICES,
+      validation: textValidation(200),
       ownership: 'expert-hub',
       order: 1,
     },
@@ -680,6 +794,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'جهة العمل',
       labelEn: 'Organization name',
       requiredFor: ALL_SERVICES,
+      validation: textValidation(200),
       ownership: 'expert-hub',
       order: 2,
     },
@@ -710,6 +825,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       labelAr: 'تاريخ البدء',
       labelEn: 'Start date',
       requiredFor: ALL_SERVICES,
+      validation: PAST_DATE_VALIDATION,
       ownership: 'expert-hub',
       order: 5,
     },
@@ -722,6 +838,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       helpAr: 'أدخل كل مسؤولية في سطر مستقل.',
       helpEn: 'Enter each item on a new line.',
       requiredFor: ALL_SERVICES,
+      validation: textValidation(2000),
       ownership: 'expert-hub',
       order: 6,
     },
@@ -890,6 +1007,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       helpEn: 'Enter each item on a new line.',
       requiredFor: [],
       dependsOn: { fieldId: 'hasTrainedBefore', equals: 'yes' },
+      validation: textValidation(2000),
       ownership: 'expert-hub',
       order: 5,
     },
@@ -1132,6 +1250,7 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       helpAr: 'مثال: الرياض، جدة، الدمام، أبوظبي.',
       helpEn: 'Example: Riyadh, Jeddah, Dammam, Abu Dhabi.',
       requiredFor: ALL_SERVICES,
+      validation: CITIES_VALIDATION,
       ownership: 'expert-hub',
       order: 3,
     },

@@ -34,6 +34,8 @@ import {
   ruleLabel,
   sectionTitle,
   validateAttachmentFile,
+  judgedOnChange,
+  liveFieldErrors,
   validateCompleteness,
   validateFieldValue,
   visibleAttachmentRules,
@@ -631,10 +633,52 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
       return next;
     });
 
+  /**
+   * J-01/F1 AC-6 — flag a field the moment its value is final, not only when
+   * the step is left: each judged field's message is set, or cleared.
+   */
+  const applyLiveErrors = (
+    judged: Readonly<Record<string, string | null>>,
+    keyOf: (fieldId: string) => string
+  ) =>
+    setFieldErrors((current) => {
+      const next = { ...current };
+      for (const [fieldId, message] of Object.entries(judged)) {
+        if (message == null) {
+          delete next[keyOf(fieldId)];
+        } else {
+          next[keyOf(fieldId)] = message;
+        }
+      }
+      return next;
+    });
+
+  const isJudgedOnChange = (fieldId: string) => {
+    const field = schema?.fields.find((candidate) => candidate.id === fieldId);
+    return field != null && judgedOnChange(field);
+  };
+
   const handleFieldChange = (fieldId: string, value: ApplicationFieldValue) => {
-    setValues((current) => ({ ...current, [fieldId]: value }));
-    clearError(fieldId);
+    const next = { ...values, [fieldId]: value };
+    setValues(next);
+    if (schema != null && isJudgedOnChange(fieldId)) {
+      applyLiveErrors(
+        liveFieldErrors(schema, fieldId, next, services, locale, messages),
+        (id) => id
+      );
+    } else {
+      clearError(fieldId);
+    }
     markDirty();
+  };
+
+  const handleFieldBlur = (fieldId: string) => {
+    if (schema != null) {
+      applyLiveErrors(
+        liveFieldErrors(schema, fieldId, values, services, locale, messages),
+        (id) => id
+      );
+    }
   };
 
   /* ── repeatable entries ────────────────────────────────────────────────── */
@@ -653,8 +697,33 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
           : entry
       ),
     }));
-    clearError(entryFieldKey(entryId, fieldId));
+    const entry = (entries[sectionId] ?? []).find((candidate) => candidate.entryId === entryId);
+    if (schema != null && entry != null && isJudgedOnChange(fieldId)) {
+      applyLiveErrors(
+        liveFieldErrors(
+          schema,
+          fieldId,
+          { ...entry.values, [fieldId]: value },
+          services,
+          locale,
+          messages
+        ),
+        (id) => entryFieldKey(entryId, id)
+      );
+    } else {
+      clearError(entryFieldKey(entryId, fieldId));
+    }
     markDirty();
+  };
+
+  const handleEntryFieldBlur = (sectionId: string, entryId: string, fieldId: string) => {
+    const entry = (entries[sectionId] ?? []).find((candidate) => candidate.entryId === entryId);
+    if (schema != null && entry != null) {
+      applyLiveErrors(
+        liveFieldErrors(schema, fieldId, entry.values, services, locale, messages),
+        (id) => entryFieldKey(entryId, id)
+      );
+    }
   };
 
   const handleAddEntry = (section: ApplicationSectionSchema) => {
@@ -1128,6 +1197,9 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
                   onChange={(entryId, fieldId, value) =>
                     handleEntryFieldChange(currentSection.id, entryId, fieldId, value)
                   }
+                  onBlur={(entryId, fieldId) =>
+                    handleEntryFieldBlur(currentSection.id, entryId, fieldId)
+                  }
                   onAdd={() => handleAddEntry(currentSection)}
                   onRemove={(entryId) => handleRemoveEntry(currentSection, entryId)}
                   onSelectFiles={(rule, entryId, selected) =>
@@ -1147,6 +1219,7 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
                   locale={locale}
                   content={content}
                   onChange={handleFieldChange}
+                  onBlur={handleFieldBlur}
                 />
               )}
             </div>

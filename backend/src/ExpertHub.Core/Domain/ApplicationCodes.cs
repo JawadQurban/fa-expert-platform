@@ -40,8 +40,9 @@ public static class ApplicationStatuses
 }
 
 /// <summary>The form-schema versions — the delivery date of the approved map
-/// is the identity (`P-172`). A draft or application keeps the version it was
-/// started on; only new drafts take <see cref="Current"/>.</summary>
+/// is the identity (`P-172`). A submitted application keeps the version it
+/// was answered against; a DRAFT is carried to <see cref="Current"/> when it is
+/// resumed (`P-381`), and new drafts start on it.</summary>
 public static class FormSchemaVersions
 {
     /// <summary>The owner's `DM-GAP-01` workbook, 2026-08-30 — superseded.</summary>
@@ -96,11 +97,21 @@ public static class FormSchemaVersions
     public const string NotionReview = "dm-gap-01.2026-10-07";
 
     /// <summary>
-    /// The UAT round of 2026-10 — published. «تاريخ الانتهاء» is mandatory
+    /// The UAT round of 2026-10 — superseded. «تاريخ الانتهاء» is mandatory
     /// when «أعمل حاليًا» is off and never before «تاريخ البدء»; «عدد سنوات
     /// الخبرة» is mandatory; «التخصص» and «اسم الشهادة» name their «أخرى».
     /// </summary>
-    public const string Current = "dm-gap-01.2026-10-19";
+    public const string UatRound = "dm-gap-01.2026-10-19";
+
+    /// <summary>
+    /// The UAT re-test of 2026-10-28 — published. «التخصص» stops offering the
+    /// workbook's footnote row (`spec-025`) and «أخرى*» its asterisk
+    /// (BUG-006); every typed field checks the kind of input it holds and a
+    /// date obtained or started cannot be in the future (J-01/F1 AC-6,
+    /// BUG-014/BUG-015). Same fields, sections, attachment rules and
+    /// requiredness.
+    /// </summary>
+    public const string Current = "dm-gap-01.2026-10-28";
 }
 
 /// <summary>`FORM_SCHEMA.status` — exactly one version is published at a time.</summary>

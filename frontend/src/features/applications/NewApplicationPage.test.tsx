@@ -331,6 +331,46 @@ describe('EH-TP-05 — New Application', () => {
     expect(screen.queryByRole('button', { name: /تاريخ الانتهاء/ })).not.toBeInTheDocument();
   }, 30000);
 
+  it('BUG-006: «أخرى» in «التخصص» opens a box to write it, and the footnote is no option', async () => {
+    const { user, container } = await renderFresh();
+    await selectService(user, 'مدرب');
+    await next(user);
+    await walkTo(user, container, 'المؤهلات العلمية');
+    const entry = (id: string) => container.querySelector(`[id="eh-field-education-1::${id}"]`);
+    expect(entry('specializationOther')).toBeNull();
+    await user.click(entry('specializationDetail')!.querySelector('button')!);
+    expect(screen.queryByRole('option', { name: /عند اختيار اخرى/ })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('option', { name: 'أخرى' }));
+    const box = entry('specializationOther')!.querySelector('input')!;
+    fireEvent.change(box, { target: { value: 'الهندسة المالية' } });
+    expect(box).toHaveValue('الهندسة المالية');
+  }, 30000);
+
+  it('J-01/F1 AC-6: a wrongly typed field is flagged when it is left, before «التالي»', async () => {
+    const { user } = await renderFresh();
+    await selectService(user, 'مدرب');
+    await next(user);
+    await stepHeading('المعلومات الأساسية');
+    const firstName = screen.getByLabelText(/الاسم الأول \(بالعربية\)/);
+    fireEvent.change(firstName, { target: { value: 'Khalid1' } });
+    fireEvent.blur(firstName);
+    expect(
+      await screen.findByText('اكتب الاسم بحروف عربية فقط، دون أرقام أو رموز.')
+    ).toBeInTheDocument();
+    // Corrected → the flag clears as the applicant types.
+    fireEvent.change(firstName, { target: { value: 'خالد' } });
+    expect(
+      screen.queryByText('اكتب الاسم بحروف عربية فقط، دون أرقام أو رموز.')
+    ).not.toBeInTheDocument();
+    // An empty field left alone is not shouted at — completeness is the step gate's.
+    const website = screen.getByLabelText(/الموقع الشخصي/);
+    fireEvent.blur(website);
+    expect(screen.queryByText(content.validation.required)).not.toBeInTheDocument();
+    fireEvent.change(website, { target: { value: 'https://x' } });
+    fireEvent.blur(website);
+    expect(await screen.findByText(/أدخل رابطًا صحيحًا/)).toBeInTheDocument();
+  }, 30000);
+
   it('hours per day is a 1–24 number, and «نعم» opens the training details', async () => {
     const { user, container } = await renderFresh();
     await selectService(user, 'مدرب');

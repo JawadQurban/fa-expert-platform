@@ -122,7 +122,11 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
         // The UAT round of 2026-10-19: the experience end date is mandatory
         // and never before the start; «أخرى» is named for specialization and
         // certificate.
-        Assert.Equal("published", schemas["dm-gap-01.2026-10-19"]);
+        Assert.Equal("superseded", schemas["dm-gap-01.2026-10-19"]);
+        // The UAT re-test of 2026-10-28 (M55): the specialization footnote leaves
+        // the option list, and every typed field checks the input it holds.
+        Assert.Equal("published", schemas["dm-gap-01.2026-10-28"]);
+        Assert.Equal(59, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-10-28"));
         Assert.Equal(57, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-10-07"));
         Assert.Equal(47, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-14"));
         Assert.Equal(51, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-16"));
@@ -132,7 +136,7 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
         Assert.Equal(
             ["education", "certifications", "experience"],
             await db.FormSections.AsNoTracking()
-                .Where(s => s.SchemaVersion == "dm-gap-01.2026-10-19" && s.Repeatable != null)
+                .Where(s => s.SchemaVersion == "dm-gap-01.2026-10-28" && s.Repeatable != null)
                 .OrderBy(s => s.OrderIndex)
                 .Select(s => s.SectionCode)
                 .ToListAsync());
@@ -143,6 +147,7 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
                 && s.SchemaVersion != "dm-gap-01.2026-09-29"
                 && s.SchemaVersion != "dm-gap-01.2026-10-07"
                 && s.SchemaVersion != "dm-gap-01.2026-10-19"
+                && s.SchemaVersion != "dm-gap-01.2026-10-28"
                 && s.Repeatable != null));
     }
 

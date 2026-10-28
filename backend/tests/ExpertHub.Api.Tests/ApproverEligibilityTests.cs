@@ -219,9 +219,7 @@ public sealed class ApproverEligibilityTests
                 {
                     field.GetProperty("options")[0].GetProperty("value").GetString(),
                 },
-                _ when hasPattern => id == "idNumber"
-                    ? "1012345678"
-                    : "https://example.com/profile",
+                _ when hasPattern => TestFormValues.Patterned(id),
                 _ => "قيمة تجريبية",
             };
         }

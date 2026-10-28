@@ -19,12 +19,12 @@ namespace ExpertHub.Infrastructure.Persistence;
 /// </remarks>
 internal static class ApplicationSchemadmgap0120261019
 {
-    internal const string Version = FormSchemaVersions.Current;
+    internal const string Version = FormSchemaVersions.UatRound;
 
     internal static readonly object Schema = new
     {
         SchemaVersion = Version,
-        Status = FormSchemaStatuses.Published,
+        Status = FormSchemaStatuses.Superseded,
         SelectableServices = "[\"trainer\",\"consultant\",\"content-developer\",\"question-writer\"]",
         PublishedAt = (DateTime?)new DateTime(2026, 10, 19, 0, 0, 0, DateTimeKind.Utc),
     };

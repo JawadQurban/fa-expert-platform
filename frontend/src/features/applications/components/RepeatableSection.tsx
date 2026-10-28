@@ -55,6 +55,7 @@ export function RepeatableSection({
   locale,
   content,
   onChange,
+  onBlur,
   onAdd,
   onRemove,
   onSelectFiles,
@@ -71,6 +72,8 @@ export function RepeatableSection({
   readonly locale: Locale;
   readonly content: NewApplicationContent;
   readonly onChange: (entryId: string, fieldId: string, value: ApplicationFieldValue) => void;
+  /** A typed field of an entry was left — judge it (J-01/F1 AC-6). */
+  readonly onBlur?: (entryId: string, fieldId: string) => void;
   readonly onAdd: () => void;
   readonly onRemove: (entryId: string) => void;
   readonly onSelectFiles: (
@@ -135,6 +138,7 @@ export function RepeatableSection({
                   locale={locale}
                   content={content}
                   onChange={(fieldId, value) => onChange(entry.entryId, fieldId, value)}
+                  onBlur={(fieldId) => onBlur?.(entry.entryId, fieldId)}
                 />
               ))}
 

@@ -10,6 +10,8 @@ import type {
 import {
   entryTitle,
   fieldLabel,
+  isOtherTextField,
+  otherAnswerText,
   visibleSectionFields,
 } from '../../applications/applicationValidation';
 import { displayValue } from './fieldDisplay';
@@ -72,18 +74,24 @@ export function ReadOnlyEntries({
               {entryTitle(section, locale, index)}
             </Typography>
             <dl className={styles.rows}>
-              {visibleSectionFields(schema, section.id, services, entry.values).map((field) => (
-                <div key={field.id} className={styles.row}>
-                  <dt className={styles.term}>
-                    <Typography as="span" variant="text-sm" color="muted">
-                      {fieldLabel(field, locale)}
-                    </Typography>
-                  </dt>
-                  <dd className={styles.value}>
-                    <bdi>{displayValue(field, entry.values[field.id], locale) || '—'}</bdi>
-                  </dd>
-                </div>
-              ))}
+              {visibleSectionFields(schema, section.id, services, entry.values)
+                // BUG-006 — the text box naming a «أخرى» is folded into its select.
+                .filter((field) => !isOtherTextField(schema, field))
+                .map((field) => (
+                  <div key={field.id} className={styles.row}>
+                    <dt className={styles.term}>
+                      <Typography as="span" variant="text-sm" color="muted">
+                        {fieldLabel(field, locale)}
+                      </Typography>
+                    </dt>
+                    <dd className={styles.value}>
+                      <bdi>
+                        {otherAnswerText(schema, field, entry.values) ??
+                          (displayValue(field, entry.values[field.id], locale) || '—')}
+                      </bdi>
+                    </dd>
+                  </div>
+                ))}
             </dl>
           </Card>
         );

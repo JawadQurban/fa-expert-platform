@@ -16,6 +16,8 @@ import { getAddServiceContent } from './addService.content';
 import { getNewApplicationContent } from './newApplication.content';
 import {
   isRuleRequired,
+  judgedOnChange,
+  liveFieldErrors,
   ruleLabel,
   validateAttachmentFile,
   validateFieldValue,
@@ -175,6 +177,34 @@ export default function AddServicePage() {
     }
     setFiles((prev) => ({ ...prev, [ruleId]: [...kept, ...acceptedNow].slice(0, maxCount) }));
     setUploads((prev) => ({ ...prev, [ruleId]: display }));
+  };
+
+  /**
+   * J-01/F1 AC-6 at the field — a pick is judged on change, typed text when
+   * it is left; anything else only clears its stale message.
+   */
+  const judgeLive = (
+    fieldId: string,
+    current: Readonly<Record<string, ApplicationFieldValue>>,
+    judge: boolean
+  ) => {
+    if (schema == null || selectedService === '') {
+      return;
+    }
+    const judged: Readonly<Record<string, string | null>> = judge
+      ? liveFieldErrors(schema, fieldId, current, [selectedService], locale, messages)
+      : { [fieldId]: null };
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      for (const [id, message] of Object.entries(judged)) {
+        if (message == null) {
+          delete next[id];
+        } else {
+          next[id] = message;
+        }
+      }
+      return next;
+    });
   };
 
   const validate = (): boolean => {
@@ -486,7 +516,12 @@ export default function AddServicePage() {
                       services={[selectedService]}
                       locale={locale}
                       content={formContent}
-                      onChange={(id, value) => setValues((prev) => ({ ...prev, [id]: value }))}
+                      onChange={(id, value) => {
+                        const next = { ...values, [id]: value };
+                        setValues(next);
+                        judgeLive(id, next, judgedOnChange(field));
+                      }}
+                      onBlur={(id) => judgeLive(id, values, true)}
                     />
                   ))}
                   {deltaAttachments.map((rule) => {

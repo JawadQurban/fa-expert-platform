@@ -14,7 +14,9 @@ import {
   entryAttachments,
   entryTitle,
   fieldLabel,
+  isOtherTextField,
   orderedSections,
+  otherAnswerText,
   ruleLabel,
   sectionTitle,
   splitEntryKey,
@@ -87,6 +89,24 @@ export function ApplicationReview({
   /** Jumps back to a wizard step by its id (`services`, `section:<id>`, ...). */
   readonly onEditStep: (stepId: string) => void;
 }) {
+  /**
+   * The rows a section reads as. The text box that names a «أخرى» is folded
+   * into its select (BUG-006): «التخصص» reads as what the applicant wrote,
+   * not as «أخرى» with the words on a second row.
+   */
+  const readFields = (
+    sectionId: string,
+    shown: Readonly<Record<string, ApplicationFieldValue>>
+  ): readonly ApplicationFieldSchema[] =>
+    visibleSectionFields(schema, sectionId, services, shown).filter(
+      (field) => !isOtherTextField(schema, field)
+    );
+  const answer = (
+    field: ApplicationFieldSchema,
+    shown: Readonly<Record<string, ApplicationFieldValue>>
+  ): string =>
+    otherAnswerText(schema, field, shown) ?? displayValue(field, shown[field.id], locale, content);
+
   // A repeatable entry keys its errors `entryId::fieldId`. The label shown
   // names the entry too: a required field on the third qualification is not
   // the same missing item as the one on the first.
@@ -196,14 +216,12 @@ export function ApplicationReview({
                       {entryTitle(section, locale, index)}
                     </Typography>
                     <dl className={styles.rows}>
-                      {visibleSectionFields(schema, section.id, services, entry.values).map(
-                        (field) => (
-                          <div key={field.id} className={styles.row}>
-                            <dt>{fieldLabel(field, locale)}</dt>
-                            <dd>{displayValue(field, entry.values[field.id], locale, content)}</dd>
-                          </div>
-                        )
-                      )}
+                      {readFields(section.id, entry.values).map((field) => (
+                        <div key={field.id} className={styles.row}>
+                          <dt>{fieldLabel(field, locale)}</dt>
+                          <dd>{answer(field, entry.values)}</dd>
+                        </div>
+                      ))}
                       {rules.map((rule) => {
                         const ruleFiles = entryAttachments(
                           attachments,
@@ -238,7 +256,7 @@ export function ApplicationReview({
           );
         }
 
-        const fields = visibleSectionFields(schema, section.id, services, values);
+        const fields = readFields(section.id, values);
         if (fields.length === 0) {
           return null;
         }
@@ -249,7 +267,7 @@ export function ApplicationReview({
               {fields.map((field) => (
                 <div key={field.id} className={styles.row}>
                   <dt>{fieldLabel(field, locale)}</dt>
-                  <dd>{displayValue(field, values[field.id], locale, content)}</dd>
+                  <dd>{answer(field, values)}</dd>
                 </div>
               ))}
             </dl>

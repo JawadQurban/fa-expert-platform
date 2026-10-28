@@ -802,6 +802,7 @@ public static class ApplicationEndpoints
         var draft = mine.FirstOrDefault(a => a.Status == ApplicationStatuses.Draft && a.Origin == origin);
         if (draft is not null)
         {
+            await CarryDraftToCurrentAsync(db, draft, ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok(new StartOrResumeDraftWire(
                 await DraftWireAsync(db, draft, ct), Resumed: true, null, null));
@@ -833,6 +834,40 @@ public static class ApplicationEndpoints
         await db.SaveChangesAsync(ct);
         return Results.Ok(new StartOrResumeDraftWire(
             await DraftWireAsync(db, created, ct), Resumed: false, null, null));
+    }
+
+    /// <summary>
+    /// `P-381` — an unsubmitted draft is answered on the PUBLISHED form. A
+    /// draft resumed on an older version is carried to
+    /// <see cref="FormSchemaVersions.Current"/>: its answers are kept by field
+    /// code, and an answer to a field the current form no longer has is
+    /// dropped, because the form could neither show nor submit it.
+    /// </summary>
+    /// <remarks>
+    /// UAT BUG-006/007/014/015 were re-tested on drafts started before the
+    /// fix: a draft kept the version it was started on, so its applicant never
+    /// saw «التخصص (أخرى)», the certificate «أخرى», or a single date rule the
+    /// fix published. A submitted application is history and is never moved —
+    /// only a draft, which nobody has judged yet.
+    /// </remarks>
+    internal static async Task CarryDraftToCurrentAsync(
+        ExpertHubDbContext db, Application draft, CancellationToken ct)
+    {
+        if (draft.Status != ApplicationStatuses.Draft
+            || draft.SchemaVersion == FormSchemaVersions.Current)
+        {
+            return;
+        }
+        var currentCodes = await db.FormFields
+            .Where(f => f.SchemaVersion == FormSchemaVersions.Current)
+            .Select(f => f.FieldCode)
+            .ToListAsync(ct);
+        var retired = await db.ApplicationFieldValues
+            .Where(v => v.ApplicationId == draft.ApplicationId && !currentCodes.Contains(v.FieldCode))
+            .ToListAsync(ct);
+        db.ApplicationFieldValues.RemoveRange(retired);
+        draft.SchemaVersion = FormSchemaVersions.Current;
+        draft.UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>Explicit draft save — never issues a reference (`BR-0107`).</summary>

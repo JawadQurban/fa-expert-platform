@@ -1490,9 +1490,7 @@ public sealed class Cap02Tests
                 },
                 // A patterned field needs a value that satisfies ITS pattern —
                 // the identity field's rule (`D-01`) is not the social link's.
-                _ when hasPattern => id == "idNumber"
-                    ? "1012345678"
-                    : "https://example.com/profile",
+                _ when hasPattern => TestFormValues.Patterned(id),
                 _ => "قيمة تجريبية",
             };
         }

@@ -104,6 +104,60 @@ public static partial class ApplicationFormLogic
             || !JsonValueEquals(actual, dependency.NotEqualsValue);
     }
 
+    /// <summary>
+    /// BUG-006 — whether <paramref name="field"/> is the text box that names a
+    /// select's «أخرى»: a `text` field shown only while another field's select
+    /// holds one of its own options («التخصص (أخرى)», «اسم الشهادة (أخرى)»,
+    /// «المجال (أخرى)»). A reader sees it folded into its select, so the
+    /// answer reads as what the applicant wrote. Mirrors `isOtherTextField`.
+    /// </summary>
+    public static bool IsOtherNaming(FieldDefinition field, IReadOnlyList<FieldDefinition> fields)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        ArgumentNullException.ThrowIfNull(fields);
+        if (field.Type != "text"
+            || field.DependsOn is not { } dependency
+            || dependency.EqualsValue.ValueKind is not JsonValueKind.String)
+        {
+            return false;
+        }
+        var option = dependency.EqualsValue.GetString();
+        return fields.FirstOrDefault(f => f.Id == dependency.FieldId) is { Type: "select", Options: { } options }
+            && options.Any(o => o.Value == option);
+    }
+
+    /// <summary>
+    /// BUG-006 — what the applicant wrote for a select answered «أخرى», or
+    /// null when the select holds a listed value or nothing was written.
+    /// Mirrors `otherAnswerText`.
+    /// </summary>
+    public static string? OtherAnswerText(
+        FieldDefinition select,
+        IReadOnlyList<FieldDefinition> fields,
+        IReadOnlyDictionary<string, JsonElement> values)
+    {
+        ArgumentNullException.ThrowIfNull(select);
+        ArgumentNullException.ThrowIfNull(fields);
+        ArgumentNullException.ThrowIfNull(values);
+        if (select.Type != "select"
+            || !values.TryGetValue(select.Id, out var chosen)
+            || chosen.ValueKind is not JsonValueKind.String)
+        {
+            return null;
+        }
+        var naming = fields.FirstOrDefault(f =>
+            f.DependsOn is { } dependency
+            && dependency.FieldId == select.Id
+            && JsonValueEquals(chosen, dependency.EqualsValue)
+            && IsOtherNaming(f, fields));
+        return naming is not null
+            && values.TryGetValue(naming.Id, out var typed)
+            && typed.ValueKind is JsonValueKind.String
+            && !string.IsNullOrWhiteSpace(typed.GetString())
+                ? typed.GetString()!.Trim()
+                : null;
+    }
+
     /// <summary>`BR-0104`: required when required by ≥1 selected service — and,
     /// with `requiredWhen`, only while that condition holds (RUN-019).</summary>
     public static bool IsRequired(
