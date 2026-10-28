@@ -126,7 +126,8 @@ public sealed class MatrixVersioningMigrationTests : IAsyncLifetime
         // The UAT re-test of 2026-10-28 (M55): the specialization footnote leaves
         // the option list, and every typed field checks the input it holds.
         Assert.Equal("published", schemas["dm-gap-01.2026-10-28"]);
-        Assert.Equal(59, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-10-28"));
+        // M57 corrects it in place (BUG-004/BUG-005): one field more.
+        Assert.Equal(60, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-10-28"));
         Assert.Equal(57, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-10-07"));
         Assert.Equal(47, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-14"));
         Assert.Equal(51, await db.FormFields.CountAsync(f => f.SchemaVersion == "dm-gap-01.2026-09-16"));

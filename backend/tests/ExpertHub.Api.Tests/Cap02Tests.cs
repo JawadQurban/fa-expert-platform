@@ -1637,7 +1637,9 @@ public sealed class Cap02Tests
         var entries = education.GetProperty("entries").EnumerateArray().ToArray();
         Assert.Equal(2, entries.Length);
         Assert.Equal(
-            ["bachelor", "doctorate"],
+            // Read as the option labels, never the codes (BUG-004/BUG-005 made
+            // every staff read view label its options).
+            ["بكالوريوس", "دكتوراه"],
             entries.Select(e => e.GetProperty("fields").EnumerateArray()
                 .Single(f => f.GetProperty("id").GetString() == "qualificationType")
                 .GetProperty("value").GetString()));

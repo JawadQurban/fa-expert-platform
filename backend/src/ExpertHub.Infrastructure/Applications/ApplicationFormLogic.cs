@@ -20,7 +20,8 @@ public sealed record FieldDefinition(
     FieldValidation? Validation,
     IReadOnlyList<FieldOption>? Options,
     bool? ReadOnly,
-    FieldDependency? RequiredWhen = null);
+    FieldDependency? RequiredWhen = null,
+    string? OptionsSource = null);
 
 /// <summary>`dependsOn` — `equals` / `notEquals` are `string | boolean` on the
 /// wire, each optional (an absent one is <see cref="JsonValueKind.Undefined"/>);
@@ -42,7 +43,9 @@ public sealed record FieldValidation(
     string? MaxDate = null,
     string? NotBefore = null);
 
-public sealed record FieldOption(string Value);
+/// <summary>One option. The labels travel too, so a reader can show the name
+/// a stored code stands for (BUG-004/BUG-005).</summary>
+public sealed record FieldOption(string Value, string? LabelAr = null, string? LabelEn = null);
 
 /// <summary>One entry of a repeatable section, as submitted —
 /// `ApplicationEntryDto`. A missing id is filled the way the form fills it.</summary>
@@ -67,6 +70,56 @@ public static partial class ApplicationFormLogic
     public const string EntryKeySeparator = "::";
 
     public static readonly JsonSerializerOptions WireJson = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// A multi-select's choice of an option fetched at runtime
+    /// (<c>optionsSource</c>) carries its own names — <c>&lt;source&gt;:&lt;id&gt;|&lt;Arabic&gt;|&lt;English&gt;</c>
+    /// — so the answer reads the same after the source changes (BUG-004,
+    /// `P-386`). The form's `RUNTIME_CHOICE_PATTERN`, verbatim.
+    /// </summary>
+    public const string RuntimeChoicePattern = @"^[a-z]+:[A-Za-z0-9-]{1,64}\|[^|]{1,300}\|[^|]{1,300}$";
+
+    private const char ChoiceSeparator = '|';
+
+    /// <summary>The option value a stored choice stands for: a snapshot's head,
+    /// or the stored text itself.</summary>
+    public static string ChoiceValue(string stored)
+    {
+        ArgumentNullException.ThrowIfNull(stored);
+        var cut = stored.IndexOf(ChoiceSeparator, StringComparison.Ordinal);
+        return cut < 0 ? stored : stored[..cut];
+    }
+
+    /// <summary>
+    /// A stored answer as a person reads it, in Arabic: an option's label (a
+    /// FAST programme by the name stored with it), «نعم»/«لا» for a tick, and
+    /// anything else as stored. A code is never shown where a name exists.
+    /// </summary>
+    public static string DisplayText(FieldDefinition field, JsonElement value)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        string Label(string stored)
+        {
+            var code = ChoiceValue(stored);
+            if (field.Options?.FirstOrDefault(o => o.Value == code) is { LabelAr: { Length: > 0 } label })
+            {
+                return label;
+            }
+            var parts = stored.Split(ChoiceSeparator);
+            return parts.Length == 3 && parts[1].Length > 0 ? parts[1] : stored;
+        }
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => Label(value.GetString() ?? string.Empty),
+            JsonValueKind.True => "نعم",
+            JsonValueKind.False => "لا",
+            JsonValueKind.Array => string.Join("، ", value.EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => Label(item.GetString()!))),
+            JsonValueKind.Undefined or JsonValueKind.Null => string.Empty,
+            _ => value.GetRawText(),
+        };
+    }
 
     public static FieldDefinition Parse(string definitionJson) =>
         JsonSerializer.Deserialize<FieldDefinition>(definitionJson, WireJson)
@@ -96,13 +149,25 @@ public static partial class ApplicationFormLogic
         // `equals` condition and meets a `notEquals` one.
         values.TryGetValue(dependency.FieldId, out var actual);
         if (dependency.EqualsValue.ValueKind is not JsonValueKind.Undefined
-            && !JsonValueEquals(actual, dependency.EqualsValue))
+            && !ConditionMatches(actual, dependency.EqualsValue))
         {
             return false;
         }
         return dependency.NotEqualsValue.ValueKind is JsonValueKind.Undefined
-            || !JsonValueEquals(actual, dependency.NotEqualsValue);
+            || !ConditionMatches(actual, dependency.NotEqualsValue);
     }
+
+    /// <summary>
+    /// One value against a condition's operand. A multi-select «equals» an
+    /// option when it INCLUDES it — «أخرى» among the chosen programmes
+    /// (BUG-004). Mirrors `conditionMatches`.
+    /// </summary>
+    private static bool ConditionMatches(JsonElement actual, JsonElement expected) =>
+        actual.ValueKind is JsonValueKind.Array
+            ? expected.ValueKind is JsonValueKind.String
+                && actual.EnumerateArray().Any(item => item.ValueKind is JsonValueKind.String
+                    && ChoiceValue(item.GetString()!) == expected.GetString())
+            : JsonValueEquals(actual, expected);
 
     /// <summary>
     /// BUG-006 — whether <paramref name="field"/> is the text box that names a
@@ -122,7 +187,7 @@ public static partial class ApplicationFormLogic
             return false;
         }
         var option = dependency.EqualsValue.GetString();
-        return fields.FirstOrDefault(f => f.Id == dependency.FieldId) is { Type: "select", Options: { } options }
+        return fields.FirstOrDefault(f => f.Id == dependency.FieldId) is { Type: "select" or "multi-select", Options: { } options }
             && options.Any(o => o.Value == option);
     }
 
@@ -139,23 +204,45 @@ public static partial class ApplicationFormLogic
         ArgumentNullException.ThrowIfNull(select);
         ArgumentNullException.ThrowIfNull(fields);
         ArgumentNullException.ThrowIfNull(values);
-        if (select.Type != "select"
-            || !values.TryGetValue(select.Id, out var chosen)
-            || chosen.ValueKind is not JsonValueKind.String)
+        if (!values.TryGetValue(select.Id, out var chosen))
         {
             return null;
         }
-        var naming = fields.FirstOrDefault(f =>
-            f.DependsOn is { } dependency
-            && dependency.FieldId == select.Id
-            && JsonValueEquals(chosen, dependency.EqualsValue)
-            && IsOtherNaming(f, fields));
-        return naming is not null
-            && values.TryGetValue(naming.Id, out var typed)
-            && typed.ValueKind is JsonValueKind.String
-            && !string.IsNullOrWhiteSpace(typed.GetString())
-                ? typed.GetString()!.Trim()
-                : null;
+        string? TypedFor(string option)
+        {
+            var naming = fields.FirstOrDefault(f =>
+                f.DependsOn is { EqualsValue.ValueKind: JsonValueKind.String } dependency
+                && dependency.FieldId == select.Id
+                && dependency.EqualsValue.GetString() == option
+                && IsOtherNaming(f, fields));
+            return naming is not null
+                && values.TryGetValue(naming.Id, out var typed)
+                && typed.ValueKind is JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(typed.GetString())
+                    ? typed.GetString()!.Trim()
+                    : null;
+        }
+        if (select.Type == "select" && chosen.ValueKind is JsonValueKind.String)
+        {
+            return TypedFor(chosen.GetString()!);
+        }
+        if (select.Type != "multi-select" || chosen.ValueKind is not JsonValueKind.Array)
+        {
+            return null;
+        }
+        // BUG-004 — «أخرى» among the chosen programmes reads as what was
+        // written, in its place in the list. Mirrors `otherAnswerText`.
+        var items = chosen.EnumerateArray()
+            .Where(item => item.ValueKind is JsonValueKind.String)
+            .Select(item => item.GetString()!)
+            .ToList();
+        if (!items.Any(item => TypedFor(ChoiceValue(item)) is not null))
+        {
+            return null;
+        }
+        return string.Join("، ", items.Select(item =>
+            TypedFor(ChoiceValue(item))
+                ?? DisplayText(select, JsonSerializer.SerializeToElement(item))));
     }
 
     /// <summary>`BR-0104`: required when required by ≥1 selected service — and,
@@ -372,6 +459,24 @@ public static partial class ApplicationFormLogic
                 || string.IsNullOrWhiteSpace(value.GetString()),
         };
 
+    /// <summary>
+    /// One answer's own shape — options, snapshots, dates, length, pattern,
+    /// bounds — as the submit gate judges it; an empty answer is valid here
+    /// (requiredness is the gate's). For a write that is not a submission:
+    /// the trainer's own profile edit (J-14).
+    /// </summary>
+    public static bool IsShapeValid(FieldDefinition field, JsonElement value)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        if (IsEmpty(field, value))
+        {
+            // A multi-select stored as anything but a list is a malformed answer, not an empty one.
+            return field.Type != "multi-select" || value.ValueKind is JsonValueKind.Array
+                or JsonValueKind.Null or JsonValueKind.Undefined;
+        }
+        return ShapeIsValid(field, value);
+    }
+
     private static bool ShapeIsValid(FieldDefinition field, JsonElement value)
     {
         if (field.Type is "select" && field.Options is { Count: > 0 })
@@ -381,9 +486,12 @@ public static partial class ApplicationFormLogic
         }
         if (field.Type is "multi-select" && field.Options is { Count: > 0 })
         {
+            // A static option — or, for a list fetched at runtime, a
+            // well-formed snapshot of one (BUG-004).
             return value.EnumerateArray().All(item =>
                 item.ValueKind is JsonValueKind.String
-                && field.Options.Any(option => option.Value == item.GetString()));
+                && (field.Options.Any(option => option.Value == item.GetString())
+                    || (field.OptionsSource is not null && Matches(item.GetString()!, RuntimeChoicePattern))));
         }
         if (field.Type is "date")
         {

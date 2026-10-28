@@ -783,7 +783,8 @@ public static class DirectoryEndpoints
             // The form carries no phone field; the one identity (INT-01) gave
             // the account is the only source, and empty when it gave none.
             Phone: user.Phone ?? string.Empty,
-            Value("inPersonCities"),
+            // BUG-005 — FAST city codes read as the cities' names (`P-385`).
+            InPersonCities.Display(values.TryGetValue(InPersonCities.FieldCode, out var cities) ? cities : (JsonElement?)null),
             AvatarUrl: photoUrl,
             [.. services.Select(s => s.Service)],
             TrainerProfileService.Specialties(Value("domain")),
@@ -875,10 +876,7 @@ public static class DirectoryEndpoints
         Screening.ScreeningFieldWire Field(FormField field, IReadOnlyDictionary<string, JsonElement> entryValues) => new(
             field.FieldCode,
             new ServiceRequests.LocalizedTextWire(field.LabelAr, field.LabelEn),
-            (definitions.FirstOrDefault(d => d.Id == field.FieldCode) is { } definition
-                ? ApplicationFormLogic.OtherAnswerText(definition, definitions, entryValues)
-                : null)
-                ?? DisplayLabelled(field.Definition, entryValues[field.FieldCode]),
+            Screening.ScreeningEndpoints.Shown(field, definitions, entryValues),
             null);
 
         List<Screening.ScreeningEntryWire> EntriesOf(IReadOnlyList<FormField> sectionFields) =>
@@ -918,17 +916,6 @@ public static class DirectoryEndpoints
             })
             .Where(section => section.Fields.Count > 0)];
     }
-
-    /// <summary>A stored answer as text, select codes replaced by their labels.</summary>
-    private static string DisplayLabelled(string definition, JsonElement value) => value.ValueKind switch
-    {
-        JsonValueKind.String => SelectOptionLabelAr(definition, value.GetString() ?? string.Empty)
-            ?? value.GetString() ?? string.Empty,
-        JsonValueKind.Array => string.Join("، ", value.EnumerateArray()
-            .Where(item => item.ValueKind == JsonValueKind.String)
-            .Select(item => SelectOptionLabelAr(definition, item.GetString()!) ?? item.GetString()!)),
-        _ => Screening.ScreeningEndpoints.DisplayValue(value),
-    };
 
     /// <summary>Every file on the approved application, with its rule's label
     /// and the staff download route.</summary>

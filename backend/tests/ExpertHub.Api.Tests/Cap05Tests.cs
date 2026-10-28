@@ -606,6 +606,45 @@ public sealed partial class Cap05Tests
         Assert.Equal("nominated", created.GetProperty("status").GetString());
     }
 
+    /// <summary>
+    /// BUG-005 (`P-385`) — a trainer who picked FAST's cities is matched by
+    /// them (the request says «الرياض»), on the engine and the manual search
+    /// alike, and staff read the cities' names on the trainer's file.
+    /// </summary>
+    [Fact]
+    public async Task Cities_picked_from_FASTs_list_are_matched_and_read_by_name()
+    {
+        using var staff = await SignInAsync("cap05-staff-cities", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync(
+            "cap05-centre-cities", "منسق المركز", RoleCode.CentreCoordinator);
+        var subject = $"cap05-trainer-cities-{Guid.NewGuid():N}";
+        using var trainer = await SignInAsync(subject, "سارة بنت خالد القحطاني", null);
+        var trainerId = await SeedTrainerProfileAsync(subject, suspended: false);
+        await using (var db = _database.CreateContext())
+        {
+            var city = await db.TrainerFieldValues.SingleAsync(
+                v => v.TrainerId == trainerId && v.FieldCode == "inPersonCities");
+            city.Value = JsonSerializer.Serialize(new[] { "city-2", "city-1" });
+            await db.SaveChangesAsync();
+        }
+        var requestId = await CreateRequestAsync(centre);
+
+        var run = await PostAsync(staff,
+            $"/api/v1/internal/assignment-requests/{requestId}/matching/run", null);
+        decimal Location(JsonElement candidates) => candidates.GetProperty("ranked").EnumerateArray()
+            .Single(r => r.GetProperty("trainerId").GetString() == trainerId.ToString())
+            .GetProperty("scores").EnumerateArray()
+            .Single(s => s.GetProperty("criterion").GetString() == "location")
+            .GetProperty("rawScore").GetDecimal();
+        Assert.Equal(1m, Location(run));
+        var found = await GetAsync(staff,
+            $"/api/v1/internal/assignment-requests/{requestId}/matching/candidates?q={Uri.EscapeDataString("سارة القحطاني")}");
+        Assert.Equal(1m, Location(found));
+
+        var file = await GetAsync(staff, $"/api/v1/internal/trainers/{trainerId}");
+        Assert.Equal("جدة، الرياض", file.GetProperty("city").GetString());
+    }
+
     /* ── J-19 — re-routing is SLOT-scoped, and counted, never capped ───────── */
 
     [Fact]

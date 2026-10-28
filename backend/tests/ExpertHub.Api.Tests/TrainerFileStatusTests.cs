@@ -104,7 +104,7 @@ public sealed class TrainerFileStatusTests
             ApplicationServices.Trainer, null, null, null, null, null, null);
         MatchingCandidateInput Candidate(string fileStatus) => new(
             Guid.NewGuid(), fileStatus, fileStatus, [ApplicationServices.Trainer],
-            null, null, [], [], null, []);
+            null, [], [], [], null, []);
         var idle = Candidate(TrainerFileStatuses.Idle);
         var active = Candidate(TrainerFileStatuses.Active);
         var suspended = Candidate(TrainerFileStatuses.Suspended);

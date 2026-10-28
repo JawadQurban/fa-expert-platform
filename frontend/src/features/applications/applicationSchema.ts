@@ -1,6 +1,7 @@
 import { ACADEMIC_SPECIALIZATION_OPTIONS } from '../../shared/content/academicSpecializations';
 import { PROFESSIONAL_CERTIFICATION_OPTIONS } from '../../shared/content/professionalCertifications';
 import { activeDomains } from '../../shared/content/domainCatalogueStatus';
+import { FAST_CITIES, SAUDI_ARABIA_COUNTRY_ID } from '../../shared/content/fastCountriesAndCities';
 import { SPECIALIZATION_DOMAIN_OPTIONS } from '../../shared/content/specializationDomains';
 import { UNIVERSITY_OPTIONS } from '../../shared/content/universities';
 import type {
@@ -115,7 +116,22 @@ import type { ApplicationService } from './application.types';
  *   one), cities are a list of names, every text has a length ceiling, and a
  *   date obtained or started cannot be in the future (BUG-014/BUG-015).
  *   ⚠️ The length ceilings are technical, not approved — REQUIRES REVIEW.
- * Same fields, same sections, same attachment rules, same requiredness.
+ * Same sections, same attachment rules, same requiredness.
+ *
+ * Corrected IN PLACE before it was ever deployed (the `M46` precedent; the
+ * delta ships as migration `M57`), for the same UAT re-test:
+ * - «المدن المتاح فيها الحضور الشخصي» is a multi-select dropdown of the
+ *   Kingdom's cities (BUG-005, `P-385`) — FAST's own city table, delivered
+ *   2026-10-28 (`shared/content/fastCountriesAndCities.ts`), stored as
+ *   `city-<FAST id>`. Every earlier version keeps its free text.
+ * - «… أبرز البرامج التدريبية أو الورش أو الفعاليات …» is a multi-select
+ *   dropdown of the Academy's PUBLISHED programmes, fetched from FAST when the
+ *   form renders (`optionsSource: 'fast-programmes'`), plus «أخرى» with
+ *   «البرامج أو الفعاليات (أخرى)» to name anything else — events included,
+ *   until an events list exists (BUG-004, owner ruling 2026-10-28, `P-386`).
+ *   A chosen programme is stored with its names (`fieldChoices.ts`), so the
+ *   answer stays readable if FAST changes. With FAST unreachable, «أخرى» and
+ *   its text still work — submission never waits on FAST.
  *
  * `TEMPORARY_TRANSLATION_REQUIRES_BUSINESS_REVIEW` marks option labels the
  * matrix gives in one language only; the other language is a working
@@ -126,9 +142,10 @@ import type { ApplicationService } from './application.types';
  * - **ID routing**: one form field, several DB columns (national ID / iqama /
  *   passport / gulf ID) — «needs a routing mechanism based on the selected ID
  *   type».
- * - **Sector → Field/Domain cascade, nationality, cities**: FAST exposes no
- *   list Expert Hub can call for a form (see
+ * - **Sector → Field/Domain cascade, nationality**: FAST exposes no list
+ *   Expert Hub can call for a form (see
  *   `docs/specification/20_FAST_API_STUDY.md`) — the existing controls stay.
+ *   ✅ Cities RESOLVED 2026-10-28: FAST's own city table (BUG-005).
  *   ✅ RESOLVED 2026-09-21 for specialization, university and certificate name:
  *   the owner's own lists arrived and now back those three dropdowns. Their
  *   codes (`spec-NNN` / `uni-NNN` / `cert-NNN`) are the list modules' own,
@@ -230,12 +247,19 @@ const LINKEDIN_VALIDATION: ApplicationFieldSchema['validation'] = {
   patternMessageEn: 'Enter your LinkedIn profile link, e.g. https://www.linkedin.com/in/name',
 };
 
-/** «المدن …» — city names, separated by commas. */
-const CITIES_VALIDATION: ApplicationFieldSchema['validation'] = {
-  maxLength: 300,
-  pattern: `^(?=.*${ANY_LETTER})[A-Za-z${ARABIC_LETTERS} ,،-]+$`,
-  patternMessageAr: 'اكتب أسماء المدن بالحروف، وافصل بينها بفاصلة.',
-  patternMessageEn: 'Write the city names in letters, separated by commas.',
+/**
+ * «المدن المتاح فيها الحضور الشخصي» — the Kingdom's cities from FAST's own
+ * table (BUG-005), in FAST's order. Value `city-<FAST city id>`.
+ */
+const SAUDI_CITY_OPTIONS: readonly ApplicationFieldOption[] = FAST_CITIES.filter(
+  (city) => city.countryId === SAUDI_ARABIA_COUNTRY_ID
+).map(({ value, labelAr, labelEn }) => ({ value, labelAr, labelEn }));
+
+/** «أخرى» among the Academy's programmes — events and anything else (BUG-004). */
+export const OTHER_PROGRAMME_OPTION: ApplicationFieldOption = {
+  value: 'other',
+  labelAr: 'أخرى',
+  labelEn: 'Other',
 };
 
 /** A date that has already happened — obtained, or started (AC-6, BUG-014). */
@@ -1149,22 +1173,27 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       order: 10,
     },
     {
-      // A CATEGORY preference (business decision, 2026-09-16): the kind of
-      // engagement the expert prefers — Academy programmes or events. NOT the
-      // FAST programme catalogue and never a FAST programme id; a «specific
-      // preferred programmes» list would be a separate field. Option labels:
-      // «الأكاديمية المالية» is the Academy's own name.
+      // BUG-004 (owner ruling 2026-10-28, `P-386`): «FAST programmes + Other».
+      // The Academy's PUBLISHED programmes, fetched when the form renders —
+      // never the staff picker's list, which includes unpublished ones
+      // (`P-373`). A pick is stored as `fast:<id>|<Arabic>|<English>`, so it
+      // reads the same after FAST renames or withdraws it. «أخرى» carries
+      // events and anything else until an events list exists. Until
+      // 2026-10-28 this was a two-value category select («برامج الأكاديمية
+      // المالية» / «الفعاليات»), which every earlier version keeps.
       id: 'preferredPrograms',
-      type: 'select',
+      type: 'multi-select',
+      display: 'dropdown',
+      optionsSource: 'fast-programmes',
       sectionId: 'training-content',
       labelAr:
         'بناءً على اطلاعكم على موقع الأكاديمية المالية، ما هي أبرز البرامج التدريبية أو الورش أو الفعاليات التي ترغبون في تقديمها؟',
       labelEn: 'Preferred programs/workshops to deliver',
+      helpAr: 'اختر من برامج الأكاديمية، أو «أخرى» لفعالية أو برنامج غير مدرج.',
+      helpEn:
+        'Choose from the Academy’s programmes, or “Other” for an event or anything not listed.',
       requiredFor: [],
-      options: [
-        { value: 'fa-programs', labelAr: 'برامج الأكاديمية المالية', labelEn: 'FA Programs' },
-        { value: 'events', labelAr: 'الفعاليات', labelEn: 'Events' },
-      ],
+      options: [OTHER_PROGRAMME_OPTION],
       ownership: 'expert-hub',
       order: 11,
     },
@@ -1240,17 +1269,20 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       order: 2,
     },
     {
-      // The workbook recommends a multi-select over a cities table later;
-      // today it is the form's Text field, exactly as supplied.
+      // BUG-005 (`P-385`): «يجب أن يكون قائمة منسدلة بمدن المملكة» — the
+      // multi-select over a cities table the workbook recommended, now that
+      // FAST's own table arrived. Every earlier version keeps its free text,
+      // and matching reads both (`MatchText.AnyCityEqual`).
       id: 'inPersonCities',
-      type: 'text',
+      type: 'multi-select',
+      display: 'dropdown',
       sectionId: 'availability',
       labelAr: 'المدن المتاح فيها الحضور الشخصي',
       labelEn: 'Cities available for in-person attendance',
-      helpAr: 'مثال: الرياض، جدة، الدمام، أبوظبي.',
-      helpEn: 'Example: Riyadh, Jeddah, Dammam, Abu Dhabi.',
+      helpAr: 'اختر مدينة أو أكثر من مدن المملكة.',
+      helpEn: 'Choose one or more cities in the Kingdom.',
       requiredFor: ALL_SERVICES,
-      validation: CITIES_VALIDATION,
+      options: SAUDI_CITY_OPTIONS,
       ownership: 'expert-hub',
       order: 3,
     },
@@ -1359,6 +1391,27 @@ export const APPLICATION_FORM_SCHEMA: ApplicationFormSchemaDto = {
       ],
       ownership: 'expert-hub',
       order: 7,
+    },
+    {
+      // BUG-004 — «أخرى» named. Shown, and then mandatory, only while «أخرى»
+      // is among the choices; read views fold it into the list in its place.
+      // It renders after «أبرز البرامج …» (`order: 11.1`, section
+      // `training-content`); it sits LAST in this array only so that the
+      // in-place correction of this version adds one seed row instead of
+      // renumbering nine (`FORM_FIELD.order_index` is the array rank, and
+      // nothing orders by it that shows this field).
+      id: 'preferredProgramsOther',
+      type: 'text',
+      sectionId: 'training-content',
+      labelAr: 'البرامج أو الفعاليات (أخرى)',
+      labelEn: 'Programmes or events (other)',
+      helpAr: 'اكتب البرامج أو الورش أو الفعاليات التي ترغب في تقديمها.',
+      helpEn: 'Name the programmes, workshops or events you would like to deliver.',
+      requiredFor: ALL_SERVICES,
+      dependsOn: { fieldId: 'preferredPrograms', equals: OTHER_PROGRAMME_OPTION.value },
+      validation: textValidation(300),
+      ownership: 'expert-hub',
+      order: 11.1,
     },
   ],
   // The workbook's file fields, as attachment rules. ⚠️ It marks formats and

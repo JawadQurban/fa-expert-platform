@@ -3,6 +3,7 @@ import type {
   ApplicationFieldSchema,
   ApplicationFieldValue,
 } from '../../applications/applicationForm.types';
+import { choiceLabel } from '../../applications/fieldChoices';
 
 /**
  * A stored value rendered for reading: an option's **label**, a multi-select's
@@ -26,10 +27,8 @@ export function displayValue(
   if (typeof value === 'boolean') {
     return value ? '✓' : '—';
   }
-  const label = (code: string): string => {
-    const option = field.options?.find((candidate) => candidate.value === code);
-    return option == null ? code : locale === 'ar' ? option.labelAr : option.labelEn;
-  };
+  // An option's label; a fetched option (a FAST programme) by its stored name.
+  const label = (code: string): string => choiceLabel(field, code, locale);
   return typeof value === 'string'
     ? label(value)
     : value.map(label).join(locale === 'ar' ? '، ' : ', ');

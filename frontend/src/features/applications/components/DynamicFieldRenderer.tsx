@@ -10,6 +10,7 @@ import {
   requiringServices,
 } from '../applicationValidation';
 import type { NewApplicationContent } from '../newApplication.content';
+import { MultiSelectDropdown } from './MultiSelectDropdown';
 import styles from './DynamicFieldRenderer.module.css';
 
 /** `date` fields store `YYYY-MM-DD`; the DatePicker works in `Date` objects. */
@@ -180,6 +181,23 @@ export function DynamicFieldRenderer({
         // the ServiceSelection group pattern. The stored value is the array
         // of selected option values.
         const selected: readonly string[] = Array.isArray(value) ? value : [];
+        if (field.display === 'dropdown') {
+          // A list too long for checkboxes — the Kingdom's cities, the
+          // Academy's programmes (BUG-004/BUG-005).
+          return (
+            <MultiSelectDropdown
+              field={field}
+              label={label}
+              selected={selected}
+              required={required}
+              helperText={helperText}
+              error={error}
+              locale={locale}
+              content={content}
+              onChange={(next) => onChange(field.id, next)}
+            />
+          );
+        }
         const toggle = (optionValue: string) =>
           onChange(
             field.id,

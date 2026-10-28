@@ -10,6 +10,7 @@ import type {
   ApplicationSectionSchema,
   DraftAttachmentDto,
 } from './applicationForm.types';
+import { choiceLabel, choiceList, choiceValue, isRuntimeChoice } from './fieldChoices';
 
 /**
  * Pure validation + schema-reading engine for the EH-TP-05 dynamic form.
@@ -104,10 +105,23 @@ function conditionHolds(
     return true;
   }
   const actual = values[condition.fieldId];
-  if (condition.equals !== undefined && actual !== condition.equals) {
+  if (condition.equals !== undefined && !conditionMatches(actual, condition.equals)) {
     return false;
   }
-  return condition.notEquals === undefined || actual !== condition.notEquals;
+  return condition.notEquals === undefined || !conditionMatches(actual, condition.notEquals);
+}
+
+/**
+ * One value against a condition's operand. A multi-select «equals» an option
+ * when it INCLUDES it — «أخرى» among the chosen programmes (BUG-004) — which
+ * the API's `ApplicationFormLogic.Holds` reads the same way.
+ */
+function conditionMatches(actual: ApplicationFieldValue | undefined, expected: string | boolean) {
+  const list = choiceList(actual);
+  if (list != null) {
+    return typeof expected === 'string' && list.some((item) => choiceValue(item) === expected);
+  }
+  return actual === expected;
 }
 
 /**
@@ -164,7 +178,7 @@ export function isOtherTextField(
   }
   const parent = schema.fields.find((candidate) => candidate.id === condition.fieldId);
   return (
-    parent?.type === 'select' &&
+    (parent?.type === 'select' || parent?.type === 'multi-select') &&
     (parent.options ?? []).some((option) => option.value === condition.equals)
   );
 }
@@ -177,20 +191,35 @@ export function isOtherTextField(
 export function otherAnswerText(
   schema: ApplicationFormSchemaDto,
   field: ApplicationFieldSchema,
-  values: Readonly<Record<string, ApplicationFieldValue>>
+  values: Readonly<Record<string, ApplicationFieldValue>>,
+  locale: Locale = 'ar'
 ): string | null {
   const chosen = values[field.id];
-  if (field.type !== 'select' || typeof chosen !== 'string') {
-    return null;
+  const typedFor = (option: string): string | null => {
+    const naming = schema.fields.find(
+      (candidate) =>
+        candidate.dependsOn?.fieldId === field.id &&
+        candidate.dependsOn.equals === option &&
+        isOtherTextField(schema, candidate)
+    );
+    const typed = naming == null ? undefined : values[naming.id];
+    return typeof typed === 'string' && typed.trim() !== '' ? typed.trim() : null;
+  };
+  if (field.type === 'select' && typeof chosen === 'string') {
+    return typedFor(chosen);
   }
-  const naming = schema.fields.find(
-    (candidate) =>
-      candidate.dependsOn?.fieldId === field.id &&
-      candidate.dependsOn.equals === chosen &&
-      isOtherTextField(schema, candidate)
-  );
-  const typed = naming == null ? undefined : values[naming.id];
-  return typeof typed === 'string' && typed.trim() !== '' ? typed.trim() : null;
+  const list = choiceList(chosen);
+  if (field.type === 'multi-select' && list != null) {
+    // BUG-004 — «أخرى» among the chosen programmes reads as what was written,
+    // in its place in the list; with nothing named, the list reads as stored.
+    if (!list.some((item) => typedFor(choiceValue(item)) != null)) {
+      return null;
+    }
+    return list
+      .map((item) => typedFor(choiceValue(item)) ?? choiceLabel(field, item, locale))
+      .join(locale === 'ar' ? '، ' : ', ');
+  }
+  return null;
 }
 
 export function orderedSections(
@@ -439,8 +468,19 @@ export function validateFieldValue(
   if (empty) {
     return null;
   }
-  // Length/pattern constraints apply to textual values only — a multi-select's
-  // array carries option values already validated by construction.
+  // A multi-select holds only its own options — or, for a list fetched at
+  // runtime, a well-formed snapshot of one (BUG-004/BUG-005; the API's
+  // `ShapeIsValid` judges the same way).
+  if (field.type === 'multi-select' && Array.isArray(value)) {
+    const known = new Set((field.options ?? []).map((option) => option.value));
+    const allowed = (item: string) =>
+      known.has(item) || (field.optionsSource != null && isRuntimeChoice(item));
+    if (known.size > 0 && !value.every(allowed)) {
+      return messages.invalidValue;
+    }
+    return null;
+  }
+  // Length/pattern constraints apply to textual values only.
   if (field.validation?.maxLength != null && text.length > field.validation.maxLength) {
     return messages.maxLength(field.validation.maxLength);
   }

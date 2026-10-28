@@ -11,6 +11,10 @@ Sources (delivered 2026-09-21, attached to the Notion «Application Form Matrix�
   certification-master-list.xlsx
       sheet «Certification Master List» -> professionalCertifications.ts (228 rows)
 
+  fast-country-and-city.xlsx (FAST's own tables, delivered 2026-10-28, UAT BUG-005)
+      sheets «countrys» + «city» -> fastCountriesAndCities.ts (ONE lookup)
+                                 -> backend FastCities.cs (the matching engine's copy)
+
 The relevance / geography columns are what makes the 2026-09-21 Evaluation
 Matrix computable: criteria #2 (التخصص العام), #7 (مجال الشهادة المهنية) and
 #8 (مصدر الشهادة) are direct look-ups on them.
@@ -35,6 +39,29 @@ OUT = ROOT / "frontend" / "src" / "shared" / "content"
 
 LISTS_WORKBOOK = DOCS / "specializations-and-universities.xlsx"
 CERTS_WORKBOOK = DOCS / "certification-master-list.xlsx"
+LOCATIONS_WORKBOOK = DOCS / "fast-country-and-city.xlsx"
+
+# FAST's country id for the Kingdom — the `countrys` sheet's row «SA».
+SAUDI_ARABIA_COUNTRY_ID = 1
+
+# FAST's placeholder city («غير معرف» / «Unknown», id 0) — not a place.
+UNKNOWN_CITY_EN = "Unknown"
+
+# Obvious misspellings in FAST's ENGLISH city names, corrected on the way out
+# because the English form shows them. Arabic is never touched: it is FAST's
+# own wording, verbatim. Each key is the source string, matched exactly, so a
+# corrected source row simply stops matching and passes through.
+ENGLISH_CITY_CORRECTIONS = {
+    "Eastrn Region": "Eastern Region",
+    "Maddenah": "Madinah",
+    "Dharhan": "Dhahran",
+    "safwa": "Safwa",
+    "Sharwrah": "Sharurah",
+    "Domataljandal": "Dumat Al Jandal",
+    "Mohafdhalmhd": "Al Mahd",
+    "Traeif": "Turaif",
+    "Alliaith": "Al Lith",
+}
 
 # The exact source strings — matched verbatim, never normalised, so a change
 # in the workbook surfaces as a failure here instead of a silent mis-scoring.
@@ -397,7 +424,182 @@ internal static class EvaluationLookupTables
 '''
 
 
+def _fast_text(row: dict[str, str], column: str) -> str:
+    """A FAST export cell: the literal «NULL» is an empty cell."""
+    value = row.get(column, "").strip()
+    return "" if value == "NULL" else value
+
+
+def read_locations(sheets: dict[str, list[dict[str, str]]]):
+    """
+    FAST's `countrys` and `city` tables, keyed by FAST's own ids. A deleted
+    country (`IsDeleted` = 1) is left out, and so is every city of one; the
+    «Unknown» city is a placeholder, not a place.
+    """
+    country_rows = sheets["countrys"]
+    city_rows = sheets["city"]
+    if [country_rows[0].get(c) for c in "ABCDJ"] != ["Id", "CountryCode", "NameEn", "NameAr", "IsDeleted"]:
+        raise SystemExit(f"unexpected countrys header: {country_rows[0]!r}")
+    if [city_rows[0].get(c) for c in "ABCD"] != ["Id", "NameAr", "NameEn", "CountryId"]:
+        raise SystemExit(f"unexpected city header: {city_rows[0]!r}")
+
+    countries = []
+    for row in country_rows[1:]:
+        if _fast_text(row, "J") not in ("0", ""):
+            continue
+        countries.append(
+            {
+                "id": int(row["A"]),
+                "code": _fast_text(row, "B") or None,
+                "labelAr": _fast_text(row, "D") or _fast_text(row, "C"),
+                "labelEn": _fast_text(row, "C") or _fast_text(row, "D"),
+            }
+        )
+    live = {c["id"] for c in countries}
+
+    cities = []
+    corrected: list[tuple[str, str]] = []
+    for row in city_rows[1:]:
+        name_en = _fast_text(row, "C")
+        if name_en == UNKNOWN_CITY_EN:
+            continue
+        country_id = int(row["D"])
+        if country_id not in live:
+            continue
+        fixed = ENGLISH_CITY_CORRECTIONS.get(name_en, name_en)
+        if fixed != name_en:
+            corrected.append((name_en, fixed))
+        name_ar = _fast_text(row, "B")
+        cities.append(
+            {
+                "id": int(row["A"]),
+                "countryId": country_id,
+                "labelAr": name_ar or fixed,
+                "labelEn": fixed or name_ar,
+            }
+        )
+    for source, fixed in corrected:
+        print(f"  english city name corrected: {source!r} -> {fixed!r}")
+    return countries, cities
+
+
+def build_locations_ts(countries, cities) -> str:
+    country_lines = "\n".join(
+        f"  {{ id: {c['id']}, code: {'null' if c['code'] is None else ts_string(c['code'])}, "
+        f"labelAr: {ts_string(c['labelAr'])}, labelEn: {ts_string(c['labelEn'])} }},"
+        for c in countries
+    )
+    city_lines = "\n".join(
+        f"  {{ value: {ts_string('city-' + str(c['id']))}, fastId: {c['id']}, "
+        f"countryId: {c['countryId']}, labelAr: {ts_string(c['labelAr'])}, "
+        f"labelEn: {ts_string(c['labelEn'])} }},"
+        for c in cities
+    )
+    saudi = sum(1 for c in cities if c["countryId"] == SAUDI_ARABIA_COUNTRY_ID)
+    corrections = "\n".join(
+        f" *   - «{source}» → «{fixed}»" for source, fixed in ENGLISH_CITY_CORRECTIONS.items()
+    )
+    return f'''/**
+ * FAST's countries and cities — ONE lookup, extracted verbatim (by script —
+ * `tools/data/extract-reference-lists.py`) from FAST's own `countrys` and
+ * `city` tables, delivered by the owner on 2026-10-28 as
+ * `docs/inputs/fast-country-and-city.xlsx` (UAT BUG-005: «يجب أن يكون قائمة
+ * منسدلة بمدن المملكة»).
+ *
+ * Keyed by FAST's ids, so a value here IS a FAST reference: a city's code is
+ * `city-<FAST city id>`, and its `countryId` is FAST's country id.
+ * {len(countries)} countries and {len(cities)} cities, {saudi} of them in the Kingdom
+ * (country {SAUDI_ARABIA_COUNTRY_ID}).
+ *
+ * Left out: a country FAST marks deleted (`IsDeleted`), every city of one,
+ * and FAST's placeholder city «غير معرف» / «Unknown».
+ *
+ * Arabic names are FAST's, verbatim. ⚠️ A few ENGLISH city names are
+ * misspelled at the source and are corrected here, because the English form
+ * shows them — FAST's own table still carries the originals:
+{corrections}
+ *
+ * The backend's copy of the cities (`FastCities.cs`) is generated by the same
+ * script from the same rows, so the form and the matching engine cannot read
+ * a code differently.
+ */
+
+/** FAST's country id for the Kingdom of Saudi Arabia. */
+export const SAUDI_ARABIA_COUNTRY_ID = {SAUDI_ARABIA_COUNTRY_ID};
+
+export interface FastCountry {{
+  readonly id: number;
+  /** ISO 3166 alpha-2, where FAST carries one. */
+  readonly code: string | null;
+  readonly labelAr: string;
+  readonly labelEn: string;
+}}
+
+export interface FastCity {{
+  /** `city-<FAST city id>` — the stored answer. */
+  readonly value: string;
+  readonly fastId: number;
+  readonly countryId: number;
+  readonly labelAr: string;
+  readonly labelEn: string;
+}}
+
+export const FAST_COUNTRIES: readonly FastCountry[] = [
+{country_lines}
+];
+
+export const FAST_CITIES: readonly FastCity[] = [
+{city_lines}
+];
+'''
+
+
+def build_locations_cs(cities) -> str:
+    def cs(value: str) -> str:
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+    lines = "\n".join(
+        f'        ["city-{c["id"]}"] = new({c["countryId"]}, {cs(c["labelAr"])}, {cs(c["labelEn"])}),'
+        for c in cities
+    )
+    return f'''namespace ExpertHub.Infrastructure.Fast;
+
+/// <summary>One FAST city: its country (FAST's id) and its two names.</summary>
+public sealed record FastCity(int CountryId, string NameAr, string NameEn);
+
+/// <summary>
+/// FAST's cities, keyed by the code the application form stores
+/// (<c>city-&lt;FAST city id&gt;</c>) — UAT BUG-005.
+/// </summary>
+/// <remarks>
+/// ⚠️ GENERATED — do not edit by hand. Produced by
+/// `tools/data/extract-reference-lists.py` from FAST's own `city` table
+/// (`docs/inputs/fast-country-and-city.xlsx`), the same rows that generate the
+/// form's dropdown (`shared/content/fastCountriesAndCities.ts`), so the trainer's
+/// pick and the matching engine's reading of it cannot drift apart.
+/// </remarks>
+public static class FastCities
+{{
+    /// <summary>FAST's country id for the Kingdom of Saudi Arabia.</summary>
+    public const int SaudiArabiaCountryId = {SAUDI_ARABIA_COUNTRY_ID};
+
+    /// <summary>Every city FAST lists, by its form code.</summary>
+    public static readonly IReadOnlyDictionary<string, FastCity> ByCode = new Dictionary<string, FastCity>(StringComparer.Ordinal)
+    {{
+{lines}
+    }};
+}}
+'''
+
+
 def main() -> None:
+    countries, cities = read_locations(read_sheets(LOCATIONS_WORKBOOK))
+    write(OUT / "fastCountriesAndCities.ts", build_locations_ts(countries, cities))
+    write(
+        ROOT / "backend" / "src" / "ExpertHub.Infrastructure" / "Fast" / "FastCities.cs",
+        build_locations_cs(cities),
+    )
+
     lists = read_sheets(LISTS_WORKBOOK)
     certs = read_sheets(CERTS_WORKBOOK)
     specializations = lists["جميع التخصصات"]

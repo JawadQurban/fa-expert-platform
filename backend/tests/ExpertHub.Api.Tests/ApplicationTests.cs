@@ -160,9 +160,10 @@ public sealed class ApplicationTests
 
         Assert.Equal("dm-gap-01.2026-10-28", schema.GetProperty("version").GetString());
         Assert.Equal(6, schema.GetProperty("sections").GetArrayLength());
-        // 59: «القطاع» and «المجال (أخرى)» joined on 2026-10-07 (`P-342`),
-        // «التخصص (أخرى)» and «اسم الشهادة (أخرى)» on 2026-10-19 (UAT).
-        Assert.Equal(59, schema.GetProperty("fields").GetArrayLength());
+        // 60: «القطاع» and «المجال (أخرى)» joined on 2026-10-07 (`P-342`),
+        // «التخصص (أخرى)» and «اسم الشهادة (أخرى)» on 2026-10-19 (UAT), and
+        // «البرامج أو الفعاليات (أخرى)» on 2026-10-28 (BUG-004).
+        Assert.Equal(60, schema.GetProperty("fields").GetArrayLength());
         Assert.Equal(5, schema.GetProperty("attachments").GetArrayLength());
         // Speaker is never self-service selectable (BR-0113).
         var selectable = schema.GetProperty("selectableServices").EnumerateArray()
@@ -364,8 +365,6 @@ public sealed class ApplicationTests
         Assert.True(Fails("jobTitle", "12345"));
         Assert.False(Fails("jobTitle", "مستشار مالي"));
         Assert.True(Fails("responsibilities", "---"));
-        Assert.True(Fails("inPersonCities", "الرياض 2"));
-        Assert.False(Fails("inPersonCities", "الرياض، جدة، Dammam"));
 
         // A date obtained or started is never in the future.
         var future = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2))
@@ -1258,6 +1257,107 @@ public sealed class ApplicationTests
         Assert.NotEmpty(queued);
         Assert.All(queued, m =>
             Assert.DoesNotContain(secretReason, m.Payload, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// UAT BUG-005 (`P-385`) and BUG-004 (`P-386`) — the cities are FAST's
+    /// Saudi cities by code, the programmes FAST snapshots or «أخرى» named in
+    /// words; the API refuses anything else, and reads the answers back as
+    /// names.
+    /// </summary>
+    [Fact]
+    public async Task Cities_and_programmes_are_judged_against_their_lists_and_read_by_name()
+    {
+        var schema = await GetJsonAsync("/api/v1/applications/schema");
+        var definitions = schema.GetProperty("fields").EnumerateArray()
+            .Select(f => ApplicationFormLogic.Parse(f.GetRawText()))
+            .ToList();
+        string[] services = ["consultant"];
+        IReadOnlyList<string> Failing(params (string Field, object Value)[] answers) =>
+            ApplicationFormLogic.MissingOrInvalidFields(
+                definitions, services,
+                answers.ToDictionary(a => a.Field, a => JsonSerializer.SerializeToElement(a.Value)));
+        bool Fails(string field, object value) => Failing((field, value)).Contains(field);
+
+        // Cities: a list of the Kingdom's cities, never free text or a city abroad.
+        Assert.False(Fails("inPersonCities", new[] { "city-1", "city-2" }));
+        Assert.True(Fails("inPersonCities", "الرياض، جدة"));
+        Assert.True(Fails("inPersonCities", new[] { "city-19" }));   // London
+        Assert.True(Fails("inPersonCities", new[] { "Riyadh" }));
+        Assert.True(Fails("inPersonCities", Array.Empty<string>()));  // mandatory
+
+        // Programmes: a FAST snapshot or «أخرى»; optional.
+        const string leadership = "fast:7c1f9a2b-0000-4000-8000-0000000000b2|برنامج القيادة المالية|Financial Leadership";
+        Assert.False(Fails("preferredPrograms", new[] { leadership }));
+        Assert.False(Fails("preferredPrograms", Array.Empty<string>()));
+        Assert.True(Fails("preferredPrograms", new[] { "fa-programs" }));
+        Assert.True(Fails("preferredPrograms", new[] { "fast:7c1f9a2b-0000-4000-8000-0000000000b2" }));
+        Assert.True(Fails("preferredPrograms", new[] { "fast:x|a|b|c" }));
+        // «أخرى» among them must be named, and only then.
+        Assert.Contains("preferredProgramsOther", Failing(("preferredPrograms", new[] { leadership, "other" })));
+        Assert.DoesNotContain("preferredProgramsOther", Failing(("preferredPrograms", new[] { leadership })));
+        Assert.DoesNotContain("preferredProgramsOther", Failing(
+            ("preferredPrograms", new[] { leadership, "other" }),
+            ("preferredProgramsOther", "ملتقى التمويل السنوي")));
+
+        // Read back as names — the snapshot's, the city table's, and the words
+        // typed for «أخرى» in its place.
+        var programmes = definitions.Single(d => d.Id == "preferredPrograms");
+        var cities = definitions.Single(d => d.Id == "inPersonCities");
+        Assert.True(ApplicationFormLogic.IsOtherNaming(
+            definitions.Single(d => d.Id == "preferredProgramsOther"), definitions));
+        Assert.Equal("برنامج القيادة المالية، ملتقى التمويل السنوي", ApplicationFormLogic.OtherAnswerText(
+            programmes, definitions, new Dictionary<string, JsonElement>
+            {
+                ["preferredPrograms"] = JsonSerializer.SerializeToElement(new[] { leadership, "other" }),
+                ["preferredProgramsOther"] = JsonSerializer.SerializeToElement("ملتقى التمويل السنوي"),
+            }));
+        Assert.Equal("برنامج القيادة المالية، أخرى", ApplicationFormLogic.DisplayText(
+            programmes, JsonSerializer.SerializeToElement(new[] { leadership, "other" })));
+        Assert.Equal("الرياض، جدة", ApplicationFormLogic.DisplayText(
+            cities, JsonSerializer.SerializeToElement(new[] { "city-1", "city-2" })));
+    }
+
+    [Fact]
+    public async Task A_submission_with_typed_cities_is_refused_and_a_listed_one_is_stored_as_codes()
+    {
+        await SignInApplicantAsync();
+        await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        await SeedAllAttachmentsAsync();
+        var values = await CompleteValuesForAsync("trainer");
+        values["inPersonCities"] = "الرياض، جدة";
+
+        var refused = await _client.PostAsJsonAsync("/api/v1/me/applications/submit", new
+        {
+            services = new[] { "trainer" },
+            values,
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        var problem = await refused.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(new[] { "inPersonCities" }, problem.GetProperty("fieldErrors").EnumerateArray()
+            .Select(e => e.GetString()).ToArray());
+
+        values["inPersonCities"] = new[] { "city-1", "city-3" };
+        values["preferredPrograms"] = new[]
+        {
+            "fast:7c1f9a2b-0000-4000-8000-0000000000b2|برنامج القيادة المالية|Financial Leadership",
+        };
+        var submitted = await PostJsonAsync("/api/v1/me/applications/submit", new
+        {
+            services = new[] { "trainer" },
+            values,
+        });
+        await using var db = _database.CreateContext();
+        var application = await db.Applications.SingleAsync(
+            a => a.Reference == submitted.GetProperty("reference").GetString());
+        var stored = await db.ApplicationFieldValues
+            .Where(v => v.ApplicationId == application.ApplicationId
+                && (v.FieldCode == "inPersonCities" || v.FieldCode == "preferredPrograms"))
+            .ToDictionaryAsync(v => v.FieldCode, v => v.Value);
+        Assert.Equal("[\"city-1\",\"city-3\"]", stored["inPersonCities"]);
+        // The programme is stored WITH its names, so FAST renaming it changes nothing here.
+        Assert.Contains("برنامج القيادة المالية", JsonSerializer.Deserialize<string[]>(stored["preferredPrograms"])![0],
+            StringComparison.Ordinal);
     }
 
     /* ── helpers ───────────────────────────────────────────────────────────── */

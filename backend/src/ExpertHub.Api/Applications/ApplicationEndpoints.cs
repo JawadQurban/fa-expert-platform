@@ -21,6 +21,7 @@ namespace ExpertHub.Api.Applications;
  * `applicationsService.ts` already calls:
  *
  *   GET  v1/applications/schema                       (public — the guest fills first, J-01 §3B)
+ *   GET  v1/applications/form-options/fast-programmes (signed in — BUG-004, P-386)
  *   GET  v1/me/applications?page=&pageSize=&search=&status=&service=
  *   POST v1/me/applications/draft/start
  *   POST v1/me/applications/draft
@@ -179,6 +180,19 @@ public static class ApplicationEndpoints
             version is not null && !await db.FormSchemas.AnyAsync(s => s.SchemaVersion == version, ct)
                 ? Results.Problem(statusCode: 404, detail: "Unknown form schema version.")
                 : Results.Ok(await BuildSchemaWireAsync(db, ct, version))).WithName("ApplicationSchema");
+
+        /*
+         * BUG-004 (`P-386`) — options the form fetches when it renders: the
+         * Academy's PUBLISHED programmes. Any signed-in person may read them
+         * (an applicant, a trainer editing their profile, staff filling a
+         * nomination); a guest reading the form sees «أخرى» only. Never an
+         * error: FAST off or failing answers `available: false`.
+         */
+        v1.MapGet("/applications/form-options/fast-programmes", async (
+            FastProgrammeOptions programmes, CancellationToken ct) =>
+            Results.Ok(await programmes.GetAsync(ct)))
+            .WithName("ApplicationFormProgrammes")
+            .RequireAuthorization();
 
         var me = v1.MapGroup("/me/applications").RequireAuthorization();
 
@@ -876,6 +890,19 @@ public static class ApplicationEndpoints
             .Where(v => v.ApplicationId == draft.ApplicationId && !currentCodes.Contains(v.FieldCode))
             .ToListAsync(ct);
         db.ApplicationFieldValues.RemoveRange(retired);
+        // An answer whose field became a list (BUG-004/BUG-005: typed cities,
+        // the old programme category) cannot be shown by the list or chosen
+        // again from it — dropped, so the applicant picks afresh.
+        var lists = await db.FormFields
+            .Where(f => f.SchemaVersion == FormSchemaVersions.Current && f.InputType == "multi-select")
+            .Select(f => f.FieldCode)
+            .ToListAsync(ct);
+        var reshaped = (await db.ApplicationFieldValues
+                .Where(v => v.ApplicationId == draft.ApplicationId && lists.Contains(v.FieldCode))
+                .ToListAsync(ct))
+            .Where(v => !v.Value.TrimStart().StartsWith('['))
+            .ToList();
+        db.ApplicationFieldValues.RemoveRange(reshaped);
         draft.SchemaVersion = FormSchemaVersions.Current;
         draft.UpdatedAt = DateTime.UtcNow;
     }

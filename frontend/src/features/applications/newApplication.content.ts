@@ -185,6 +185,21 @@ export interface NewApplicationContent {
     readonly incrementLabel: string;
     readonly decrementLabel: string;
   };
+  /**
+   * A `multi-select` shown as a dropdown (`display: 'dropdown'`) — the
+   * Kingdom's cities, the Academy's programmes (BUG-004/BUG-005).
+   */
+  readonly multiSelect: {
+    readonly placeholder: string;
+    readonly noOptions: string;
+    readonly loading: string;
+    /** The accessible name of the chosen values' list. */
+    readonly chosen: (fieldLabel: string) => string;
+    /** The remove button's accessible name. */
+    readonly remove: (valueLabel: string) => string;
+    /** The list fetched at runtime could not be had — «أخرى» still works. */
+    readonly runtimeUnavailable: string;
+  };
   readonly errors: {
     readonly loadFailedTitle: string;
     readonly loadFailedBody: string;
@@ -368,6 +383,15 @@ const ar: NewApplicationContent = {
   numberInput: {
     incrementLabel: 'زيادة',
     decrementLabel: 'إنقاص',
+  },
+  multiSelect: {
+    placeholder: 'ابحث واختر',
+    noOptions: 'لا توجد نتائج مطابقة.',
+    loading: 'جارٍ تحميل القائمة…',
+    chosen: (fieldLabel) => `ما اخترته في «${fieldLabel}»`,
+    remove: (valueLabel) => `إزالة ${valueLabel}`,
+    runtimeUnavailable:
+      'تعذّر تحميل قائمة برامج الأكاديمية الآن. اختر «أخرى» واكتب ما ترغب في تقديمه.',
   },
   validation: {
     required: 'هذا الحقل مطلوب.',
@@ -557,6 +581,15 @@ const en: NewApplicationContent = {
   numberInput: {
     incrementLabel: 'Increase',
     decrementLabel: 'Decrease',
+  },
+  multiSelect: {
+    placeholder: 'Search and choose',
+    noOptions: 'No matching results.',
+    loading: 'Loading the list…',
+    chosen: (fieldLabel) => `Your choices for “${fieldLabel}”`,
+    remove: (valueLabel) => `Remove ${valueLabel}`,
+    runtimeUnavailable:
+      'The Academy’s programme list could not be loaded right now. Choose “Other” and name what you would like to deliver.',
   },
   validation: {
     required: 'This field is required.',

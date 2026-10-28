@@ -939,16 +939,18 @@ public static class ScreeningEndpoints
         definitions.FirstOrDefault(d => d.Id == field.FieldCode) is { } definition
         && ApplicationFormLogic.IsOtherNaming(definition, definitions);
 
-    /// <summary>A stored answer as the screener reads it: a select answered
-    /// «أخرى» shows what the applicant wrote (BUG-006), anything else as stored.</summary>
-    private static string Shown(
+    /// <summary>A stored answer as staff read it: a select answered «أخرى»
+    /// shows what the applicant wrote (BUG-006), an option its label — a city
+    /// its name, a FAST programme the name stored with it (BUG-004/BUG-005) —
+    /// never a code.</summary>
+    internal static string Shown(
         FormField field,
         IReadOnlyList<FieldDefinition> definitions,
-        Dictionary<string, JsonElement> values) =>
-        (definitions.FirstOrDefault(d => d.Id == field.FieldCode) is { } definition
+        IReadOnlyDictionary<string, JsonElement> values) =>
+        definitions.FirstOrDefault(d => d.Id == field.FieldCode) is { } definition
             ? ApplicationFormLogic.OtherAnswerText(definition, definitions, values)
-            : null)
-        ?? DisplayValue(values[field.FieldCode]);
+                ?? ApplicationFormLogic.DisplayText(definition, values[field.FieldCode])
+            : DisplayValue(values[field.FieldCode]);
 
     internal static string DisplayValue(JsonElement value) => value.ValueKind switch
     {

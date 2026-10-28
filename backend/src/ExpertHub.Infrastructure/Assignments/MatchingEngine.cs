@@ -20,7 +20,7 @@ public sealed record MatchingCandidateInput(
     string FileStatus,
     IReadOnlyList<string> AccreditedServices,
     string? SpecializationDomain,
-    string? City,
+    IReadOnlyList<string> Cities,
     IReadOnlyList<string> Languages,
     IReadOnlyList<string> DeliveryModes,
     decimal? EvaluationOverall,
@@ -162,7 +162,7 @@ public static class MatchingEngine
         // An online delivery has no location, so the row scores nothing for
         // anyone (J-17's «unless online»), which leaves the ranking untouched.
         var locationRaw = !IsOnline(request.DeliveryMechanism)
-            && MatchText.AnyCityEqual(request.City, candidate.City) ? 1m : 0m;
+            && MatchText.AnyCityEqual(request.City, candidate.Cities) ? 1m : 0m;
 
         var languageRaw = string.IsNullOrWhiteSpace(request.Language)
             ? 0m

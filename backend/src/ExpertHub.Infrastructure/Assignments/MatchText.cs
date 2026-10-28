@@ -71,10 +71,19 @@ public static class MatchText
     /// The city equals one of the listed cities — the same city whatever
     /// language it was written in («Riyadh» = «الرياض»).
     /// </summary>
-    public static bool AnyCityEqual(string? city, string? list)
+    public static bool AnyCityEqual(string? city, string? list) => AnyCityEqual(city, Split(list));
+
+    /// <summary>
+    /// The city equals one of <paramref name="cities"/> — each a name in
+    /// either language. A trainer's FAST city codes arrive here already
+    /// resolved to both of FAST's names (`InPersonCities.ForMatching`), so a
+    /// request typed «Riyadh» meets a trainer who picked «الرياض» (BUG-005).
+    /// </summary>
+    public static bool AnyCityEqual(string? city, IEnumerable<string> cities)
     {
+        ArgumentNullException.ThrowIfNull(cities);
         var key = CityKey(city);
-        return key.Length > 0 && Split(list).Any(item => CityKey(item) == key);
+        return key.Length > 0 && cities.Any(item => CityKey(item) == key);
     }
 
     private static string[] Split(string? list) =>
@@ -96,11 +105,12 @@ public static class MatchText
             .Where(word => word != "AL"));
 
     /*
-     * ponytail: the request's city and the trainer's cities are both still
-     * free text (UAT `BUG-005` asks for a Saudi-cities list), so a reference
-     * value cannot be compared yet. Until that list exists this maps the
-     * Kingdom's main cities, Arabic and English, to one key; a city not here
-     * still matches its own spelling in either script it was typed in.
+     * The request's city is still free text (or FAST's plan city), and a
+     * trainer's answer before BUG-005 is too. A trainer who picked from FAST's
+     * city list (`P-385`) is compared by both of FAST's names; this maps the
+     * Kingdom's main cities' other spellings, Arabic and English, to one key,
+     * so «Jeddah», «Jiddah» and «جدة» meet. A city not here still matches its
+     * own spelling in either script it was typed in.
      */
     private static readonly Dictionary<string, string> CityAliases = BuildAliases(
         ("riyadh", ["الرياض", "Riyadh", "Riyad", "Ar Riyadh"]),

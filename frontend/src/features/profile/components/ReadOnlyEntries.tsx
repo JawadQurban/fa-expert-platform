@@ -86,7 +86,7 @@ export function ReadOnlyEntries({
                     </dt>
                     <dd className={styles.value}>
                       <bdi>
-                        {otherAnswerText(schema, field, entry.values) ??
+                        {otherAnswerText(schema, field, entry.values, locale) ??
                           (displayValue(field, entry.values[field.id], locale) || '—')}
                       </bdi>
                     </dd>

@@ -2,6 +2,7 @@ using System.Text.Json;
 using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Applications;
 using ExpertHub.Infrastructure.Documents;
 using ExpertHub.Infrastructure.Integration;
 using ExpertHub.Infrastructure.Fast;
@@ -245,6 +246,17 @@ public static class ProfileEndpoints
                 .Where(s => s.Editability == "editable")
                 .Select(s => s.FieldId)
                 .ToHashSet(StringComparer.Ordinal);
+            // An edit is judged by the same shape rules as the application
+            // the profile came from — a city outside FAST's list (BUG-005),
+            // a malformed programme (BUG-004) — never stored unchecked.
+            var schemaVersion = await db.Applications
+                .Where(a => a.ApplicationId == profile.ApplicationId)
+                .Select(a => a.SchemaVersion)
+                .FirstOrDefaultAsync(ct);
+            var definitions = (await db.FormFields
+                    .Where(f => f.SchemaVersion == schemaVersion)
+                    .ToListAsync(ct))
+                .ToDictionary(f => f.FieldCode, f => ApplicationFormLogic.Parse(f.Definition), StringComparer.Ordinal);
 
             foreach (var (code, value) in input.Values ?? new Dictionary<string, JsonElement>())
             {
@@ -255,6 +267,14 @@ public static class ProfileEndpoints
                     return Results.Problem(
                         statusCode: 403,
                         detail: $"'{code}' is not editable by its owner.",
+                        extensions: new Dictionary<string, object?> { ["fieldId"] = code });
+                }
+                if (definitions.TryGetValue(code, out var definition)
+                    && !ApplicationFormLogic.IsShapeValid(definition, value))
+                {
+                    return Results.Problem(
+                        statusCode: 400,
+                        detail: $"'{code}' is not a valid answer.",
                         extensions: new Dictionary<string, object?> { ["fieldId"] = code });
                 }
                 var row = await db.TrainerFieldValues.FirstOrDefaultAsync(

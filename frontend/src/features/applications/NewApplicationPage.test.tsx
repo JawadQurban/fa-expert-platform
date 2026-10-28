@@ -12,6 +12,7 @@ import {
 import { expertHubPaths } from '../../app/router/paths';
 import type { ApplicationSummaryDto } from './application.types';
 import { setApplicationsServiceForTesting } from './applicationsService';
+import { setFormOptionsServiceForTesting } from './formOptionsService';
 import {
   createMockApplicationsProvider,
   MOCK_APPLICATIONS,
@@ -195,7 +196,9 @@ async function fillAvailability(user: UserEvent) {
   await pickOption(user, /نمط التعامل/, 'تفرغ جزئي');
   await pickOption(user, /مدى التوفر/, 'طوال العام');
   await pickOption(user, /عدد المشاركات الممكنة سنويًا/, '1–3 مشاركات');
-  setText(/المدن المتاح/, 'الرياض، جدة');
+  // BUG-005 — a dropdown of the Kingdom's cities, several picks.
+  await pickOption(user, /المدن المتاح/, 'الرياض');
+  await pickOption(user, /المدن المتاح/, 'جدة');
   await ensureChecked(user, 'ورش عمل مكثفة');
 }
 
@@ -244,6 +247,7 @@ describe('EH-TP-05 — New Application', () => {
 
   afterEach(() => {
     setApplicationsServiceForTesting(null);
+    setFormOptionsServiceForTesting(null);
   });
 
   it('offers exactly the 4 contractual services — Speaker is excluded (BR-0113) with a note', async () => {
@@ -344,6 +348,68 @@ describe('EH-TP-05 — New Application', () => {
     const box = entry('specializationOther')!.querySelector('input')!;
     fireEvent.change(box, { target: { value: 'الهندسة المالية' } });
     expect(box).toHaveValue('الهندسة المالية');
+  }, 30000);
+
+  it('BUG-004/BUG-005: programmes and cities are dropdowns, and the review shows their names', async () => {
+    const { user, container } = await renderFresh();
+    await selectService(user, 'مدرب');
+    await next(user);
+    await walkTo(user, container, 'الخبرة التدريبية والمحتوى');
+    await fillTraining(user);
+    // The Academy's published programmes (the demo list), then «أخرى».
+    const programmes = /أبرز البرامج التدريبية/;
+    expect(container.querySelector('[id="eh-field-preferredProgramsOther"]')).toBeNull();
+    await pickOption(user, programmes, 'برنامج القيادة المالية');
+    await pickOption(user, programmes, 'أخرى');
+    // A chosen value leaves the list and can be removed again.
+    await user.click(screen.getByRole('combobox', { name: programmes }));
+    expect(
+      screen.queryByRole('option', { name: 'برنامج القيادة المالية' })
+    ).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(
+      screen.getByRole('button', { name: 'إزالة برنامج القيادة المالية' })
+    ).toBeInTheDocument();
+    setText(/البرامج أو الفعاليات \(أخرى\)/, 'ملتقى التمويل السنوي');
+    await next(user);
+
+    await stepHeading('الجاهزية والإتاحة');
+    await fillAvailability(user);
+    await user.click(screen.getByRole('button', { name: 'إزالة جدة' }));
+    await pickOption(user, /المدن المتاح/, 'الدمام');
+    await expectNoA11yViolations(container);
+    await next(user);
+
+    await screen.findByText(content.attachmentsStep.intro);
+    await user.upload(fileInputFor(container, 'cv'), pdf('cv.pdf'));
+    expect(await screen.findByText('cv.pdf')).toBeInTheDocument();
+    await next(user);
+    await screen.findByText(content.review.intro);
+    // Names, never `city-1` or `fast:…`; «أخرى» reads as what was written.
+    expect(screen.getByText('الرياض، الدمام')).toBeInTheDocument();
+    expect(screen.getByText('برنامج القيادة المالية، ملتقى التمويل السنوي')).toBeInTheDocument();
+    expect(screen.queryByText(/city-\d|fast:/)).not.toBeInTheDocument();
+  }, 40000);
+
+  it('BUG-004: with the programme list unavailable, «أخرى» and its text still work', async () => {
+    setFormOptionsServiceForTesting({
+      listOptions: () => Promise.resolve({ ok: true, value: { available: false, items: [] } }),
+    });
+    const { user, container } = await renderFresh();
+    await selectService(user, 'مدرب');
+    await next(user);
+    await walkTo(user, container, 'الخبرة التدريبية والمحتوى');
+    expect(
+      await screen.findByText(content.multiSelect.runtimeUnavailable, { exact: false })
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: /أبرز البرامج التدريبية/ }));
+    expect(await screen.findAllByRole('option')).toHaveLength(1);
+    await user.click(screen.getByRole('option', { name: 'أخرى' }));
+    setText(/البرامج أو الفعاليات \(أخرى\)/, 'ملتقى التمويل السنوي');
+    await fillTraining(user);
+    await next(user);
+    // The step is not held back by the missing list.
+    await stepHeading('الجاهزية والإتاحة');
   }, 30000);
 
   it('J-01/F1 AC-6: a wrongly typed field is flagged when it is left, before «التالي»', async () => {

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Applications;
 using ExpertHub.Infrastructure.Assignments;
@@ -32,13 +33,21 @@ public sealed class MatchingEngineTests
         StartsAt: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
         EndsAt: new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc));
 
+    /// <summary>A trainer whose «المدن …» answer is stored as free text
+    /// (<paramref name="city"/>, before BUG-005) or as FAST city codes
+    /// (<paramref name="cityCodes"/>, since).</summary>
     private static MatchingCandidateInput Trainer(
         string? domain = "dom-003",
         string? city = "الرياض",
         string fileStatus = TrainerFileStatuses.Active,
         string service = ApplicationServices.Trainer,
-        (DateTime, DateTime)[]? booked = null) =>
-        new(Guid.NewGuid(), "مدرب", fileStatus, [service], domain, city, [], [], null, booked ?? []);
+        (DateTime, DateTime)[]? booked = null,
+        string[]? cityCodes = null) =>
+        new(Guid.NewGuid(), "مدرب", fileStatus, [service], domain,
+            InPersonCities.ForMatching(cityCodes is not null
+                ? JsonSerializer.SerializeToElement(cityCodes)
+                : city is null ? null : JsonSerializer.SerializeToElement(city)),
+            [], [], null, booked ?? []);
 
     [Fact]
     public void A_different_specialization_or_city_lowers_the_score_and_excludes_nobody()
@@ -113,6 +122,48 @@ public sealed class MatchingEngineTests
 
         Assert.Equal(33m, result.Ranked.Single().Scores
             .Single(s => s.Criterion == WeightedCriteria.Location).Weighted);
+    }
+
+    /// <summary>BUG-005 (`P-385`) — a trainer who picked FAST's cities is
+    /// compared by both of FAST's names, whatever the request was typed in.</summary>
+    [Theory]
+    [InlineData("الرياض")]
+    [InlineData("Riyadh")]
+    [InlineData("الرياض ")]
+    [InlineData("riyadh")]
+    public void A_city_picked_from_the_list_matches_a_request_typed_in_either_language(string requestCity)
+    {
+        var request = Request with { City = requestCity };
+
+        var picked = Trainer(cityCodes: ["city-2", "city-1"]);
+        var elsewhere = Trainer(cityCodes: ["city-2", "city-3"]);
+        var result = MatchingEngine.Match(request, [picked, elsewhere], Weights);
+
+        decimal Location(MatchingCandidateInput trainer) => result.Ranked
+            .Single(r => r.TrainerId == trainer.TrainerId).Scores
+            .Single(s => s.Criterion == WeightedCriteria.Location).Weighted;
+        Assert.Equal(33m, Location(picked));
+        Assert.Equal(0m, Location(elsewhere));
+    }
+
+    [Fact]
+    public void A_FAST_city_meets_its_other_spellings_and_an_unknown_code_is_not_a_match()
+    {
+        // FAST's own «Jezan» (city-6) is «جازان»; a request for «Jizan» meets it
+        // through the Arabic name's known spellings.
+        var result = MatchingEngine.Match(
+            Request with { City = "Jizan" },
+            [Trainer(cityCodes: ["city-6"]), Trainer(cityCodes: ["city-99999"])],
+            Weights);
+
+        Assert.Equal([33m, 0m], result.Ranked
+            .Select(r => r.Scores.Single(s => s.Criterion == WeightedCriteria.Location).Weighted));
+        Assert.Equal(["الرياض", "Riyadh", "جدة", "Jeddah"],
+            InPersonCities.ForMatching(JsonSerializer.SerializeToElement(new[] { "city-1", "city-2" })));
+        Assert.Equal("الرياض، جدة",
+            InPersonCities.Display(JsonSerializer.SerializeToElement(new[] { "city-1", "city-2" })));
+        Assert.Equal("الرياض، Dammam",
+            InPersonCities.Display(JsonSerializer.SerializeToElement("الرياض، Dammam")));
     }
 
     [Fact]

@@ -28,6 +28,9 @@ export type ApplicationFieldType =
  *  read-only here (`BR-0102` reuses the applicant's basic profile). */
 export type FieldOwnership = 'expert-hub' | 'sso-profile';
 
+/** Where a field's runtime options come from — see `optionsSource`. */
+export type ApplicationOptionsSource = 'fast-programmes';
+
 export interface ApplicationFieldOption {
   readonly value: string;
   readonly labelAr: string;
@@ -50,7 +53,8 @@ export interface ApplicationFieldSchema {
   /**
    * Conditional dependency on another field's value: renders only when it
    * `equals`, and never when it `notEquals` (an unset value is not equal, so
-   * `notEquals: true` shows the field until a checkbox is ticked).
+   * `notEquals: true` shows the field until a checkbox is ticked). Against a
+   * `multi-select`, «equals» means «includes» — «أخرى» among the choices.
    */
   readonly dependsOn?: {
     readonly fieldId: string;
@@ -91,6 +95,23 @@ export interface ApplicationFieldSchema {
     readonly max?: number;
   };
   readonly options?: readonly ApplicationFieldOption[];
+  /**
+   * `multi-select` only — options the form fetches when it renders, on top of
+   * the static `options` (which then hold only the always-available ones,
+   * e.g. «أخرى»). A chosen fetched option is stored as a SNAPSHOT —
+   * `<value>|<labelAr>|<labelEn>` (`encodeChoice`) — so the answer stays
+   * readable when the source changes (BUG-004, `P-386`).
+   *
+   * - `fast-programmes` — FAST's published programmes
+   *   (`GET /api/v1/applications/form-options/fast-programmes`).
+   */
+  readonly optionsSource?: ApplicationOptionsSource;
+  /**
+   * `multi-select` only — `dropdown` renders a searchable list with the
+   * chosen values beneath it, for lists too long for a row of checkboxes
+   * (BUG-004/BUG-005: «قائمة منسدلة»). Omitted = checkboxes.
+   */
+  readonly display?: 'dropdown';
   readonly ownership: FieldOwnership;
   readonly readOnly?: boolean;
   readonly order: number;

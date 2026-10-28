@@ -5,6 +5,7 @@ using ExpertHub.Api.Auth;
 using ExpertHub.Api.Profiles;
 using ExpertHub.Api.ServiceRequests;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Applications;
 using ExpertHub.Infrastructure.Assignments;
 using ExpertHub.Infrastructure.Fast;
 using ExpertHub.Infrastructure.Notifications;
@@ -1262,13 +1263,13 @@ public static class AssignmentEndpoints
 
         return [.. profiles.Select(row =>
         {
-            string? Value(string code) => values
+            JsonElement? Raw(string code) => values
                 .FirstOrDefault(v => v.TrainerId == row.profile.TrainerId && v.FieldCode == code)
                 ?.Value is { } raw
-                    ? JsonSerializer.Deserialize<JsonElement>(raw) is { ValueKind: JsonValueKind.String } e
-                        ? e.GetString()
-                        : null
+                    ? JsonSerializer.Deserialize<JsonElement>(raw)
                     : null;
+            string? Value(string code) =>
+                Raw(code) is { ValueKind: JsonValueKind.String } e ? e.GetString() : null;
 
             var booked = engagements
                 .Where(e => e.TrainerId == row.profile.TrainerId)
@@ -1288,7 +1289,9 @@ public static class AssignmentEndpoints
                     lastCompleted.TryGetValue(row.profile.TrainerId, out var end) ? end : null),
                 [.. services.Where(s => s.TrainerId == row.profile.TrainerId).Select(s => s.Service)],
                 Value("domain"),
-                Value("inPersonCities"),
+                // BUG-005 — FAST city codes (`P-385`) or the free text an
+                // earlier form version took, each city in both languages.
+                InPersonCities.ForMatching(Raw(InPersonCities.FieldCode)),
                 // The workbook's own fields: the languages and delivery modes
                 // the trainer declared on their application.
                 [.. Split(Value("trainingLanguages"))],

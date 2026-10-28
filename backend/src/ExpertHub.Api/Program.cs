@@ -62,6 +62,8 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 25L * 1024 * 1024);
 
 builder.Services.AddExpertHubFast();
+// BUG-004 — the application form's published-programme list, cached once for everyone.
+builder.Services.AddSingleton<ExpertHub.Api.Applications.FastProgrammeOptions>();
 builder.Services.AddExpertHubMeetings();
 builder.Services.AddExpertHubDocuments();
 builder.Services.AddExpertHubAi();

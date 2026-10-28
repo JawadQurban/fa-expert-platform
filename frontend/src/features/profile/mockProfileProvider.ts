@@ -111,7 +111,7 @@ export const MOCK_PROFILE: MyProfileDto = {
     engagementMode: 'part-time',
     annualAvailability: 'specific-periods',
     estimatedAnnualEngagements: '4-6',
-    inPersonCities: 'الرياض، جدة',
+    inPersonCities: ['city-1', 'city-2'],
     preferredEngagementTypes: ['short-training', 'intensive-workshops'],
   },
   fieldStates: buildFieldStates(),

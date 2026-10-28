@@ -108,8 +108,12 @@ public static class FormSchemaVersions
     /// workbook's footnote row (`spec-025`) and «أخرى*» its asterisk
     /// (BUG-006); every typed field checks the kind of input it holds and a
     /// date obtained or started cannot be in the future (J-01/F1 AC-6,
-    /// BUG-014/BUG-015). Same fields, sections, attachment rules and
-    /// requiredness.
+    /// BUG-014/BUG-015). Corrected in place before any deployment (M57):
+    /// «المدن المتاح فيها الحضور الشخصي» is a list of the Kingdom's cities
+    /// from FAST's table (BUG-005, `P-385`), and «أبرز البرامج …» a list of
+    /// the Academy's published programmes plus «أخرى» named in
+    /// <c>preferredProgramsOther</c> (BUG-004, `P-386`). Same sections,
+    /// attachment rules and requiredness.
     /// </summary>
     public const string Current = "dm-gap-01.2026-10-28";
 }

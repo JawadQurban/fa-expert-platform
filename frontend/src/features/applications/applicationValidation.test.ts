@@ -18,6 +18,8 @@ import {
   type ValidationMessages,
 } from './applicationValidation';
 import { APPLICATION_FORM_SCHEMA, OTHER_DOMAIN_OPTION } from './applicationSchema';
+import { choiceLabel, decodeChoice, encodeChoice } from './fieldChoices';
+import { FAST_CITIES, SAUDI_ARABIA_COUNTRY_ID } from '../../shared/content/fastCountriesAndCities';
 import { INACTIVE_DOMAIN_CODES } from '../../shared/content/domainCatalogueStatus';
 import { SPECIALIZATION_DOMAIN_OPTIONS } from '../../shared/content/specializationDomains';
 
@@ -293,7 +295,8 @@ describe('applicationValidation (schema engine)', () => {
       '21-45',
       '45+',
     ]);
-    expect(optionValues('preferredPrograms')).toEqual(['fa-programs', 'events']);
+    // BUG-004 — FAST's programmes arrive at runtime; «أخرى» is the static one.
+    expect(optionValues('preferredPrograms')).toEqual(['other']);
     expect(fieldById('jobTitle').labelAr).toBe('المسمى الوظيفي');
     expect(fieldById('qualificationType').options?.map((o) => o.labelEn)).toEqual([
       'Diploma',
@@ -683,6 +686,85 @@ describe('applicationValidation (schema engine)', () => {
     ).toBe('CMA');
   });
 
+  it('BUG-005: «المدن المتاح فيها الحضور الشخصي» is a list of the Kingdom’s cities, by FAST id', () => {
+    const cities = fieldById('inPersonCities');
+    expect(cities.type).toBe('multi-select');
+    expect(cities.display).toBe('dropdown');
+    expect(cities.requiredFor).toEqual([
+      'trainer',
+      'consultant',
+      'content-developer',
+      'question-writer',
+    ]);
+    const saudi = FAST_CITIES.filter((city) => city.countryId === SAUDI_ARABIA_COUNTRY_ID);
+    expect(saudi).toHaveLength(74);
+    expect(cities.options).toHaveLength(74);
+    expect(cities.options?.[0]).toEqual({ value: 'city-1', labelAr: 'الرياض', labelEn: 'Riyadh' });
+    // No city abroad, and FAST's «Unknown» placeholder is not a city.
+    expect(cities.options?.some((o) => o.labelEn === 'London' || o.labelEn === 'Unknown')).toBe(
+      false
+    );
+
+    const check = (value: readonly string[]) =>
+      validateFieldValue(cities, value, ['trainer'], 'ar', messages);
+    expect(check(['city-1', 'city-2'])).toBeNull();
+    expect(check([])).toBe(messages.required);
+    // A city abroad (London, city-19) or a typed name is not one of the options.
+    expect(check(['city-19'])).toBe(messages.invalidValue);
+    expect(check(['الرياض'])).toBe(messages.invalidValue);
+    expect(choiceLabel(cities, 'city-2', 'ar')).toBe('جدة');
+    expect(choiceLabel(cities, 'city-2', 'en')).toBe('Jeddah');
+  });
+
+  it('BUG-004: the programmes field takes FAST snapshots and «أخرى», and names «أخرى» in place', () => {
+    const programmes = fieldById('preferredPrograms');
+    expect(programmes.type).toBe('multi-select');
+    expect(programmes.optionsSource).toBe('fast-programmes');
+    expect(programmes.requiredFor).toEqual([]);
+
+    const leadership = encodeChoice({
+      value: 'fast:7c1f9a2b-0000-4000-8000-0000000000b2',
+      labelAr: 'برنامج القيادة | المالية',
+      labelEn: 'Financial Leadership',
+    });
+    // The separator never survives inside a name, so a snapshot always splits in three.
+    expect(leadership).toBe(
+      'fast:7c1f9a2b-0000-4000-8000-0000000000b2|برنامج القيادة / المالية|Financial Leadership'
+    );
+    expect(decodeChoice(leadership).value).toBe('fast:7c1f9a2b-0000-4000-8000-0000000000b2');
+    expect(choiceLabel(programmes, leadership, 'en')).toBe('Financial Leadership');
+    expect(choiceLabel(programmes, 'other', 'ar')).toBe('أخرى');
+
+    const check = (value: readonly string[]) =>
+      validateFieldValue(programmes, value, ['trainer'], 'ar', messages);
+    expect(check([leadership, 'other'])).toBeNull();
+    expect(check([])).toBeNull();
+    // A bare id carries no name, and a made-up value is neither option nor snapshot.
+    expect(check(['fast:7c1f9a2b-0000-4000-8000-0000000000b2'])).toBe(messages.invalidValue);
+    expect(check(['fa-programs'])).toBe(messages.invalidValue);
+
+    // «أخرى» among the choices opens its text — required then — and only then.
+    const other = fieldById('preferredProgramsOther');
+    expect(isOtherTextField(APPLICATION_FORM_SCHEMA, other)).toBe(true);
+    expect(isFieldVisible(other, ['trainer'], { preferredPrograms: [leadership] })).toBe(false);
+    expect(isFieldVisible(other, ['trainer'], { preferredPrograms: [leadership, 'other'] })).toBe(
+      true
+    );
+    expect(isFieldRequired(other, ['consultant'])).toBe(true);
+    expect(
+      otherAnswerText(
+        APPLICATION_FORM_SCHEMA,
+        programmes,
+        { preferredPrograms: [leadership, 'other'], preferredProgramsOther: ' ملتقى التمويل ' },
+        'ar'
+      )
+    ).toBe('برنامج القيادة / المالية، ملتقى التمويل');
+    // Nothing named — the list reads as stored, through the ordinary display.
+    expect(
+      otherAnswerText(APPLICATION_FORM_SCHEMA, programmes, { preferredPrograms: [leadership] })
+    ).toBeNull();
+  });
+
   it('BUG-014: a date obtained or started cannot be in the future', () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -778,10 +860,6 @@ describe('applicationValidation (schema engine)', () => {
       valid(id, 'Finance 101');
     }
     invalid('jobTitle', 'م'.repeat(201));
-
-    valid('inPersonCities', 'الرياض، جدة، Dammam');
-    invalid('inPersonCities', 'الرياض 2');
-    invalid('inPersonCities', ' , ');
 
     valid('dailyTrainingHours', '8');
     invalid('dailyTrainingHours', '25');

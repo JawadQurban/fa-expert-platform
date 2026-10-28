@@ -68,6 +68,21 @@ code change is an `IFastTokenProvider` that fetches and caches that token.
 | Registrations, payments, exams | … | TRANSACTIONAL | — | — | NOT_RELEVANT |
 | Cities, specializations, universities | **none among the 325 ops** | — | — | form fields | no source |
 
+**Update 2026-10-28 (UAT BUG-005, `P-385`).** Cities still have no FAST
+operation, but the owner exported FAST's own `countrys` and `city` tables
+(`docs/inputs/fast-country-and-city.xlsx`). `tools/data/extract-reference-lists.py`
+turns them into one lookup, `frontend/src/shared/content/fastCountriesAndCities.ts`
+(319 countries, 114 cities, keyed by FAST's ids; deleted countries and FAST's
+«Unknown» city left out), and the backend's `Infrastructure/Fast/FastCities.cs`.
+«المدن المتاح فيها الحضور الشخصي» offers the 74 cities of country 1 and stores
+`city-<FAST id>`. It is a static copy: a city FAST adds later needs the export
+re-run.
+
+**Update 2026-10-28 (UAT BUG-004, `P-386`).** The application form reads FAST's
+**published** programmes (`Program/Search`, `status = active`, every page) through
+the Training API at runtime: `GET /api/v1/applications/form-options/fast-programmes`,
+cached for an hour, `available: false` when FAST is off or failing.
+
 "Untyped" means the register records only `200 OK` and no schema. Writing a DTO for
 one of these would be guessing, so none was written.
 

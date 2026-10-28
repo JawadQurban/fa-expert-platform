@@ -24,6 +24,7 @@ import {
   visibleSectionFields,
   type CompletenessResult,
 } from '../applicationValidation';
+import { choiceLabel, choiceList } from '../fieldChoices';
 import type { NewApplicationContent } from '../newApplication.content';
 import styles from './ApplicationReview.module.css';
 
@@ -37,11 +38,10 @@ function displayValue(
     return value === true ? content.review.yes : content.review.no;
   }
   if (field.type === 'multi-select') {
-    // The chosen option labels, in the schema's own option order.
-    const selected = Array.isArray(value) ? value : [];
-    const labels = (field.options ?? [])
-      .filter((option) => selected.includes(option.value))
-      .map((option) => (locale === 'en' ? option.labelEn : option.labelAr));
+    // The chosen options' names, in the order they were chosen — a fetched
+    // option (a FAST programme) by the name stored with it.
+    const selected = choiceList(value) ?? [];
+    const labels = selected.map((stored) => choiceLabel(field, stored, locale));
     return labels.length === 0
       ? content.review.notProvided
       : labels.join(locale === 'ar' ? '، ' : ', ');
@@ -105,7 +105,8 @@ export function ApplicationReview({
     field: ApplicationFieldSchema,
     shown: Readonly<Record<string, ApplicationFieldValue>>
   ): string =>
-    otherAnswerText(schema, field, shown) ?? displayValue(field, shown[field.id], locale, content);
+    otherAnswerText(schema, field, shown, locale) ??
+    displayValue(field, shown[field.id], locale, content);
 
   // A repeatable entry keys its errors `entryId::fieldId`. The label shown
   // names the entry too: a required field on the third qualification is not
