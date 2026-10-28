@@ -11,6 +11,7 @@ import {
   validateCentreRequest,
   type CreateCentreRequestInput,
 } from './centreRequestForm.types';
+import { matchesSearch } from './matchText';
 import {
   poolSizeFor,
   validatePool,
@@ -921,14 +922,21 @@ export function createMockAssignmentProvider(
       if (request == null || plan == null) {
         return { ok: false, error: { status: 404, message: 'Request or plan not found.' } };
       }
-      const term = query.trim().toLowerCase();
-      // F2/AC-1 — the manual path searches the base directly. It deliberately
-      // does NOT pre-filter by the exclusionary criteria: staff may look at
-      // anyone. F3/AC-3 is what stops an excluded trainer being *presented*.
-      const items = MOCK_CANDIDATES.filter(
-        (candidate) => term === '' || candidate.name.toLowerCase().includes(term)
-      ).map((candidate) => toCandidate(candidate, plan));
-      return { ok: true, value: items };
+      // F2/AC-1 — the manual path searches the base directly, and answers the
+      // way the API does (`BUG-039`): a folded, word-by-word name match, split
+      // into who may be picked and who matched but the matrix rules out.
+      const found = MOCK_CANDIDATES.filter((candidate) => matchesSearch(query, candidate.name));
+      const ranked: MatchCandidateDto[] = [];
+      const excluded: ExcludedCandidateDto[] = [];
+      for (const candidate of found) {
+        const reasons = exclusionsFor(candidate, plan);
+        if (reasons.length > 0) {
+          excluded.push({ trainerId: candidate.trainerId, name: candidate.name, reasons });
+        } else {
+          ranked.push(toCandidate(candidate, plan));
+        }
+      }
+      return { ok: true, value: { ranked, excluded } };
     },
 
     async sendPool(requestId: string, input: SendPoolInput) {

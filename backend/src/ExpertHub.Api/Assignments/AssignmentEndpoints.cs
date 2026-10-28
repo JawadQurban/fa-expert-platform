@@ -78,6 +78,12 @@ internal sealed record MatchingRunWire(
     MatchingModelWire Model, IReadOnlyList<MatchCandidateWire> Ranked,
     IReadOnlyList<ExcludedCandidateWire> Excluded, int RequiredPoolSize);
 
+/// <summary>J-17/F2/AC-1 — the manual search, in the run's own two lists: who
+/// may be picked, and who matched the name but the matrix rules out, and why
+/// (`BUG-039`, `P-378`).</summary>
+internal sealed record ManualSearchWire(
+    IReadOnlyList<MatchCandidateWire> Ranked, IReadOnlyList<ExcludedCandidateWire> Excluded);
+
 internal sealed record PoolMemberWire(
     string TrainerId, string Name, CandidatePriceWire Price,
     string Decision, int? PreferenceRank);
@@ -268,7 +274,14 @@ public static class AssignmentEndpoints
                     detail: "required-field-missing",
                     extensions: new Dictionary<string, object?> { ["fields"] = AttachmentField });
             }
-            input = input with { AttachmentName = brochure.FileName };
+            // UAT `BUG-042` — the stored form names the document by ID even when
+            // it is FAST's prospectus copied in here: the offer serves the file
+            // from that id, and a form carrying only the name had nothing to show.
+            input = input with
+            {
+                AttachmentId = brochure.AttachmentId.ToString(),
+                AttachmentName = brochure.FileName,
+            };
             var headcount = input.RequiredHeadcount ?? 1;
             if (headcount < 1)
             {
@@ -780,11 +793,20 @@ public static class AssignmentEndpoints
     }
 
     /// <summary>
-    /// The MANUAL search (F3/AC-3): «the exclusions apply on either path», so
-    /// it runs through the same engine and returns only candidates the matrix
-    /// permits — a manual search that could surface an excluded trainer would
-    /// be the hole the rule exists to close.
+    /// The MANUAL search (J-17/F2/AC-1): staff look a trainer up by name and
+    /// pick that person. It runs through the same engine (F3/AC-3 — «the
+    /// exclusions apply on either path»), and answers in the run's own two
+    /// lists: <c>ranked</c> holds who may be selected, <c>excluded</c> holds
+    /// who matched the name but cannot be, WITH the reasons.
     /// </summary>
+    /// <remarks>
+    /// UAT `BUG-039`, second round — the name match itself was fixed
+    /// (<see cref="MatchText.NameMatches"/>), but the search still returned
+    /// only the trainers the matrix permits: the one specific person staff
+    /// were looking for, if excluded, simply vanished — an empty list with no
+    /// reason, which reads as a broken search. An excluded match is now SHOWN,
+    /// never offered; the send-side refusal (`excluded-candidate`) is unchanged.
+    /// </remarks>
     private static async Task<IResult> SearchCandidatesAsync(
         string requestId, int? slotNumber, string? query, ExpertHubDbContext db,
         CancellationToken ct)
@@ -809,11 +831,15 @@ public static class AssignmentEndpoints
         var prices = await PricesAsync(db, ct);
         // UAT `BUG-039` — every word of the query, in either name, whatever
         // letter forms were typed: «احمد العتيبي» finds «أحمد بن سعد العتيبي».
-        var matched = result.Ranked.Where(r => MatchText.NameMatches(
-            query,
-            names.GetValueOrDefault(r.TrainerId),
-            englishNames.GetValueOrDefault(r.TrainerId)));
-        return Results.Ok(matched.Select(r => CandidateWire(r, names, prices)));
+        bool Hit(Guid trainerId) => MatchText.NameMatches(
+            query, names.GetValueOrDefault(trainerId), englishNames.GetValueOrDefault(trainerId));
+        return Results.Ok(new ManualSearchWire(
+            [.. result.Ranked.Where(r => Hit(r.TrainerId)).Select(r => CandidateWire(r, names, prices))],
+            [.. result.Excluded.Where(e => Hit(e.TrainerId))
+                .Select(e => new ExcludedCandidateWire(
+                    e.TrainerId.ToString(),
+                    names.GetValueOrDefault(e.TrainerId, string.Empty),
+                    e.Reasons))]));
     }
 
     private static async Task<IResult> SendPoolAsync(

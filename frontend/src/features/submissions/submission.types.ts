@@ -100,6 +100,15 @@ export interface SubmissionDto {
   readonly trainerName: string;
   readonly openedAt: string;
   readonly rounds: readonly SubmissionRoundDto[];
+  /**
+   * `BUG-049` — the assignment request (and its programme) this upload is
+   * for, so a trainer with two engagements, or a reviewer with a queue, can
+   * tell the uploads apart. `programName` is single-language data, rendered as
+   * given, and `null` for a request type whose form has no programme.
+   */
+  readonly requestId: string;
+  readonly requestReference: string;
+  readonly programName: string | null;
 }
 
 /** F3/AC-1 vs F5/AC-5 — only training material is copied to FAST. */

@@ -116,6 +116,29 @@ describe('J-18 contract — offers, "My Engagements" and slot tracking against t
     expect(keyPaths(accepted.value)).toEqual(keyPaths(engagements));
   });
 
+  it('BUG-042: the served offer carries the request prospectus, to preview and to download', async () => {
+    serve({ [OFFERS]: offers, [ENGAGEMENTS]: [] });
+    await renderPortal();
+
+    const file = screen.getByRole('region', { name: content.prospectus.heading });
+    expect(within(file).getByText(offer.details.prospectus.fileName)).toBeInTheDocument();
+    const preview = within(file).getByRole('link', {
+      name: content.prospectus.previewLabel(offer.details.prospectus.fileName),
+    });
+    // The route opens a PDF inline, so preview is the plain link in a new tab…
+    expect(preview.getAttribute('href')?.endsWith(offer.details.prospectus.url)).toBe(true);
+    expect(preview).toHaveAttribute('target', '_blank');
+    // …and download asks for the file to be saved.
+    const download = within(file).getByRole('link', {
+      name: content.prospectus.downloadLabel(offer.details.prospectus.fileName),
+    });
+    expect(
+      download
+        .getAttribute('href')
+        ?.endsWith(`${offer.details.prospectus.url}?disposition=attachment`)
+    ).toBe(true);
+  });
+
   it('trainer: the served offer renders — programme, reference, SLA countdown, unset price, detail', async () => {
     serve({ [OFFERS]: offers, [ENGAGEMENTS]: [] });
     await renderPortal();

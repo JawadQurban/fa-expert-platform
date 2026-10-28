@@ -74,6 +74,15 @@ export interface EngagementsContent {
     readonly city: string;
     readonly schedule: string;
   };
+  /** `BUG-042` — the request's prospectus, previewed or downloaded. */
+  readonly prospectus: {
+    readonly heading: string;
+    readonly description: string;
+    readonly preview: string;
+    readonly download: string;
+    readonly previewLabel: (fileName: string) => string;
+    readonly downloadLabel: (fileName: string) => string;
+  };
   readonly deliveryModes: Readonly<Record<DeliveryMechanism, string>>;
   readonly languages: Readonly<Record<RequestLanguage, string>>;
 
@@ -186,6 +195,14 @@ const ar: EngagementsContent = {
     deliveryMode: 'آلية التنفيذ',
     city: 'المدينة',
     schedule: 'تاريخ البداية والنهاية',
+  },
+  prospectus: {
+    heading: 'النشرة التعريفية',
+    description: 'النشرة التعريفية المرفقة بطلب الإسناد. استعرضها قبل الرد على العرض.',
+    preview: 'استعراض',
+    download: 'تنزيل',
+    previewLabel: (fileName) => `استعراض النشرة التعريفية ${fileName} (تُفتح في نافذة جديدة)`,
+    downloadLabel: (fileName) => `تنزيل النشرة التعريفية ${fileName}`,
   },
   deliveryModes: { onsite: 'حضوري', online: 'عن بُعد', 'live-stream': 'بث مباشر' },
   languages: { ar: 'العربية', en: 'الإنجليزية' },
@@ -314,6 +331,15 @@ const en: EngagementsContent = {
     deliveryMode: 'Delivery mode',
     city: 'City',
     schedule: 'Start and end date',
+  },
+  prospectus: {
+    heading: 'Programme prospectus',
+    description:
+      'The prospectus attached to the assignment request. Review it before answering the offer.',
+    preview: 'Preview',
+    download: 'Download',
+    previewLabel: (fileName) => `Preview the prospectus ${fileName} (opens in a new window)`,
+    downloadLabel: (fileName) => `Download the prospectus ${fileName}`,
   },
   deliveryModes: { onsite: 'In person', online: 'Online', 'live-stream': 'Live stream' },
   languages: { ar: 'Arabic', en: 'English' },

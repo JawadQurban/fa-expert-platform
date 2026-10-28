@@ -203,13 +203,14 @@ internal static class AttachmentUploads
     /// sandbox CSP keep an inline file from ever running as a document.
     /// </para>
     /// </remarks>
-    internal static IResult Serve(HttpContext http, Attachment attachment, DocumentContent content)
+    internal static IResult Serve(
+        HttpContext http, Attachment attachment, DocumentContent content, bool forceDownload = false)
     {
         var extension = Path.GetExtension(attachment.FileName).TrimStart('.');
         var headers = http.Response.Headers;
         headers.XContentTypeOptions = "nosniff";
         headers.ContentSecurityPolicy = "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'";
-        if (PreviewableTypes.TryGetValue(extension, out var previewType))
+        if (!forceDownload && PreviewableTypes.TryGetValue(extension, out var previewType))
         {
             var disposition = new Microsoft.Net.Http.Headers.ContentDispositionHeaderValue("inline");
             // `filename*` too: an Arabic name survives as itself.

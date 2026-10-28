@@ -15,7 +15,11 @@
     "deliveryMechanism": "online",
     "city": "الرياض",
     "specializationDomain": "dom-003",
-    "meetingUrl": "https://teams.example/meet/1"
+    "meetingUrl": "https://teams.example/meet/1",
+    "prospectus": {
+      "fileName": "brochure.pdf",
+      "url": "/v1/attachments/5d0f3c2e-8b1a-4f6e-9c3d-2a7b1e4f6a90"
+    }
   },
   "enrolment": {
     "available": true,

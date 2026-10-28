@@ -219,7 +219,14 @@ export interface AssignmentsContent {
     readonly manualHeading: string;
     readonly manualDescription: string;
     readonly manualSearchLabel: string;
+    /** `BUG-039` — the manual results, under the search box that asked. */
+    readonly manualResultsLabel: string;
+    readonly manualNoResults: (query: string) => string;
+    readonly manualExcludedNote: string;
     readonly selectedCount: (selected: number, required: number) => string;
+    /** `BUG-039` — the selection, named, whichever path found each person. */
+    readonly selectedHeading: string;
+    readonly removeSelected: (name: string) => string;
     /** F3 — sending the pool. */
     readonly sendPool: string;
     readonly sendNote: string;
@@ -477,7 +484,12 @@ const ar: AssignmentsContent = {
     manualDescription:
       'يمكنك بناء قائمة المرشحين يدويًا بدل محرك المطابقة. تبقى المعايير الإقصائية سارية عند الإرسال.',
     manualSearchLabel: 'بحث باسم المدرب',
+    manualResultsLabel: 'نتائج البحث',
+    manualNoResults: (query) => `لا يوجد مدرب معتمد باسم «${query}».`,
+    manualExcludedNote: 'مطابقون للاسم لكن لا يمكن ترشيحهم لهذا الطلب، للأسباب المبيّنة:',
     selectedCount: (selected, required) => `اخترت ${fmtAr(selected)} من ${fmtAr(required)}`,
+    selectedHeading: 'المرشحون المختارون',
+    removeSelected: (name) => `إزالة ${name}`,
     sendPool: 'إرسال القائمة إلى الجهة الطالبة',
     sendNote: 'تُرسل القائمة دفعة واحدة، ولا يُرسل المرشحون فرادى.',
     priceLabel: 'السعر',
@@ -740,7 +752,13 @@ const en: AssignmentsContent = {
     manualDescription:
       'You can build the candidate list yourself instead of using the engine. The exclusionary criteria still apply when sending.',
     manualSearchLabel: 'Search by trainer name',
+    manualResultsLabel: 'Search results',
+    manualNoResults: (query) => `No accredited trainer named “${query}”.`,
+    manualExcludedNote:
+      'These match the name but cannot be nominated for this request, for the reasons shown:',
     selectedCount: (selected, required) => `${selected} of ${required} selected`,
+    selectedHeading: 'Selected candidates',
+    removeSelected: (name) => `Remove ${name}`,
     sendPool: 'Send the list to the requesting party',
     sendNote: 'The list is sent as one batch; candidates are never sent one at a time.',
     priceLabel: 'Price',

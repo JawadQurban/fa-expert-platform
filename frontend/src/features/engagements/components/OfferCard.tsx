@@ -7,6 +7,7 @@ import type { SlaDto } from '../../../shared/types/sla';
 import type { EngagementsContent } from '../engagements.content';
 import type { AssignmentOfferDto, OfferResponse } from '../offer.types';
 import { PlanDetailsList } from './PlanDetailsList';
+import { ProspectusFile } from './ProspectusFile';
 import styles from './OfferCard.module.css';
 import { formatNumber } from '../../../shared/formatting';
 
@@ -91,6 +92,10 @@ export function OfferCard({
         {copy.detailsHeading}
       </Typography>
       <PlanDetailsList details={offer.details} content={content} locale={locale} />
+      {/* J-18/F1/AC-3 (`BUG-042`) — the request's prospectus, before the answer. */}
+      {offer.details?.prospectus != null && (
+        <ProspectusFile prospectus={offer.details.prospectus} content={content} />
+      )}
 
       <Alert tone="warning" role="note">
         {copy.irreversibleNote}

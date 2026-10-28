@@ -322,6 +322,7 @@ public static class ApplicationEndpoints
          */
         v1.MapGet("/attachments/{id}", async (
             string id,
+            string? disposition,
             HttpContext http,
             ExpertHubDbContext db,
             IDocumentStore store,
@@ -367,7 +368,13 @@ public static class ApplicationEndpoints
                     && agreement.TrainerUserId == actor.UserId
                     && (agreement.SentToApplicantAt != null || agreement.ApplicantDecidedAt != null)
                 select version).AnyAsync(ct);
-            if (!isOwner && !isStaff && !isAgreementParty)
+            // `BUG-042` (J-18/F1/AC-3) — the trainer an assignment offer is
+            // addressed to reads that request's prospectus («النشرة التعريفية»).
+            // Only the file the request carries; only for their own offer.
+            var isOfferRecipient = !isOwner && !isStaff && !isAgreementParty
+                && await ExpertHub.Api.Assignments.EngagementEndpoints.IsOfferRecipientAsync(
+                    db, actor.UserId, attachmentId, ct);
+            if (!isOwner && !isStaff && !isAgreementParty && !isOfferRecipient)
             {
                 // Not "not found": the file exists and is simply not theirs.
                 return Results.Problem(statusCode: 403, title: "Forbidden",
@@ -382,7 +389,10 @@ public static class ApplicationEndpoints
                 return Results.Problem(statusCode: 404,
                     detail: "The stored file could not be read.");
             }
-            return Documents.AttachmentUploads.Serve(http, attachment, content);
+            // `BUG-042` — `?disposition=attachment` is the explicit «تنزيل»: a PDF
+            // otherwise opens inline, and the trainer asked to save it too.
+            return Documents.AttachmentUploads.Serve(http, attachment, content,
+                forceDownload: string.Equals(disposition, "attachment", StringComparison.OrdinalIgnoreCase));
         }).RequireAuthorization().WithName("DownloadAttachment");
 
         me.MapPost("/draft/attachments", async (

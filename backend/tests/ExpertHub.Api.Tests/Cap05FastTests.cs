@@ -96,6 +96,9 @@ public sealed partial class Cap05Tests
         Assert.Equal("prospectus-ar.pdf", stored.GetProperty("attachmentName").GetString());
         var attachment = await db.Attachments.SingleAsync(a => a.FileName == "prospectus-ar.pdf");
         Assert.Equal("application/pdf", attachment.MimeType);
+        // UAT BUG-042 — the form names the copied prospectus by ID, so the offer
+        // can serve that file to its trainer; a name alone points at nothing.
+        Assert.Equal(attachment.AttachmentId.ToString(), stored.GetProperty("attachmentId").GetString());
     }
 
     [Theory]

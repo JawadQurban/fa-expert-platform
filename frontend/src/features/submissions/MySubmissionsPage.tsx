@@ -226,6 +226,12 @@ export default function MySubmissionsPage() {
                         <Typography as="h2" variant="text-lg" weight="bold">
                           {content.kinds[submission.kind]}
                         </Typography>
+                        {/* `BUG-049` — which programme / request this upload is for. */}
+                        <Typography as="p" variant="text-md" weight="medium">
+                          <bdi>
+                            {content.belongsTo(submission.programName, submission.requestReference)}
+                          </bdi>
+                        </Typography>
                         <Typography as="p" variant="text-sm" color="muted">
                           {content.openedOn(dates.format(new Date(submission.openedAt)))}
                         </Typography>

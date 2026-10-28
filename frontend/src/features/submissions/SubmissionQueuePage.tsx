@@ -134,7 +134,13 @@ export default function SubmissionQueuePage() {
             {items.map((submission) => (
               <li key={submission.submissionId} className={styles.queueRow}>
                 <div className={styles.queueMeta}>
+                  {/* `BUG-049` — which programme / request this upload is for. */}
                   <Typography as="span" variant="text-sm" weight="bold">
+                    <bdi>
+                      {content.belongsTo(submission.programName, submission.requestReference)}
+                    </bdi>
+                  </Typography>
+                  <Typography as="span" variant="text-sm">
                     <bdi>{copy.submittedBy(submission.trainerName)}</bdi>
                   </Typography>
                   {submission.rounds.length > 0 && (

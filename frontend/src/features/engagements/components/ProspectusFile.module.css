@@ -1,0 +1,26 @@
+/* J-18 prospectus row (`BUG-042`) — layout-only, token-only (DC-04/DC-23).
+   The same icon-body-action row the screening attachments use. */
+
+.file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fads-sys-space-inline-md);
+  padding: var(--fads-ref-space-3);
+  border: var(--fads-sys-border-width-thin) solid var(--fads-sys-color-border-default);
+  border-radius: var(--fads-sys-radius-md);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-ref-space-1);
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fads-sys-space-inline-sm);
+}

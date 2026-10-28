@@ -11,7 +11,7 @@ import type {
 import type { CreateCentreRequestInput } from './centreRequestForm.types';
 import type {
   CandidatePoolDto,
-  MatchCandidateDto,
+  ManualSearchResultDto,
   MatchingRunDto,
   MatchingViewerDto,
   PoolDecisionInput,
@@ -181,14 +181,16 @@ export interface AssignmentService {
    */
   runMatching(requestId: string): Promise<Result<MatchingRunDto, ExpertHubApiError>>;
   /**
-   * **J-17/F2/AC-1** — the manual path. Searching the trainer base directly,
-   * still returning candidates in the same shape, so F3's exclusions and pool
-   * rules apply identically to whatever staff pick.
+   * **J-17/F2/AC-1** — the manual path. Searches the trainer base by name
+   * (Arabic or English, hamza / ta-marbuta / diacritics folded — `BUG-039`),
+   * and answers in the run's two lists, so F3's exclusions and pool rules apply
+   * identically to whatever staff pick — and an excluded match is shown with
+   * its reason rather than silently missing.
    */
   searchCandidates(
     requestId: string,
     query: string
-  ): Promise<Result<readonly MatchCandidateDto[], ExpertHubApiError>>;
+  ): Promise<Result<ManualSearchResultDto, ExpertHubApiError>>;
   /**
    * **J-17/F3/AC-1** — send the pool **as one batch**. There is no
    * send-one-candidate operation, by design.
@@ -278,7 +280,7 @@ export function createHttpAssignmentProvider(
     },
     searchCandidates(requestId, query) {
       const suffix = query.trim() === '' ? '' : `?q=${encodeURIComponent(query.trim())}`;
-      return client.get<readonly MatchCandidateDto[]>(
+      return client.get<ManualSearchResultDto>(
         `${base}/${encodeURIComponent(requestId)}/matching/candidates${suffix}`
       );
     },

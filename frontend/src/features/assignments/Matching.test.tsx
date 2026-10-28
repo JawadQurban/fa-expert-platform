@@ -90,6 +90,42 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
     expect(screen.getByRole('button', { name: copy.sendPool })).toBeEnabled();
   });
 
+  /* ── F2/AC-1 — UAT BUG-039: find ONE specific trainer by name, and pick them ── */
+
+  it('BUG-039: a name typed without its exact spelling is found, picked under the search box, and stays named', async () => {
+    const { user } = await renderMatching();
+    const search = screen.getByRole('searchbox', { name: copy.manualSearchLabel });
+
+    // «ساره» with a ha, no honorific — the stored name is «د. سارة العتيبي».
+    await user.type(search, 'ساره العتيبي');
+    const results = await screen.findByRole('list', { name: copy.manualResultsLabel });
+    await user.click(within(results).getByRole('checkbox', { name: 'د. سارة العتيبي' }));
+    const selection = screen.getByRole('list', { name: copy.selectedHeading });
+    expect(within(selection).getByText('د. سارة العتيبي')).toBeInTheDocument();
+    expect(screen.getByText(copy.selectedCount(1, 6))).toBeInTheDocument();
+
+    // A match the matrix rules out is SHOWN with its reason, never selectable.
+    await user.clear(search);
+    await user.type(search, 'عبير');
+    await screen.findByText(copy.manualExcludedNote);
+    expect(screen.getByText(copy.exclusionReasons['file-status'])).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'أ. عبير الشهري' })).not.toBeInTheDocument();
+    // The earlier pick is still named in the selection after the new search.
+    expect(within(selection).getByText('د. سارة العتيبي')).toBeInTheDocument();
+
+    // Nobody by that name: said, not left blank.
+    await user.clear(search);
+    await user.type(search, 'لا أحد');
+    expect(await screen.findByText(copy.manualNoResults('لا أحد'))).toBeInTheDocument();
+
+    // And the pick can be undone from the selection itself.
+    await user.click(
+      within(selection).getByRole('button', { name: copy.removeSelected('د. سارة العتيبي') })
+    );
+    expect(screen.getByText(copy.selectedCount(0, 6))).toBeInTheDocument();
+    await expectNoA11yViolations(document.body);
+  });
+
   /* ── F1 — the engine ───────────────────────────────────────────────────── */
 
   it('J-17/F1/AC-2: a candidate failing ANY exclusionary criterion is excluded entirely, with the reason shown', async () => {

@@ -587,7 +587,7 @@ public sealed partial class Cap05Tests
         // typed without the hamza.
         var found = await GetAsync(staff,
             $"/api/v1/internal/assignment-requests/{requestId}/matching/candidates?q={Uri.EscapeDataString("احمد العتيبي")}");
-        Assert.Equal(ahmedId.ToString(), found.EnumerateArray().Single().GetProperty("trainerId").GetString());
+        Assert.Equal(ahmedId.ToString(), found.GetProperty("ranked").EnumerateArray().Single().GetProperty("trainerId").GetString());
 
         // `BUG-041` — the requesting party cannot open his profile before he
         // is nominated, and can once he is.
@@ -758,6 +758,11 @@ public sealed partial class Cap05Tests
         var mine = await GetAsync(trainers.Clients[eligible[0]], "/api/v1/me/submissions");
         var submission = mine.EnumerateArray().Single();
         Assert.Equal("awaiting_upload", submission.GetProperty("status").GetString());
+        // UAT BUG-049 — the upload request names the programme and the request
+        // it belongs to, so a trainer with two engagements knows which is which.
+        Assert.Equal(requestId, submission.GetProperty("requestId").GetString());
+        Assert.Matches(@"^ASR-\d{4}-\d{4}$", submission.GetProperty("requestReference").GetString());
+        Assert.Equal("برنامج القيادة", submission.GetProperty("programName").GetString());
         var submissionId = submission.GetProperty("submissionId").GetString()!;
 
         // RUN-004 — the J-01 rule, applied to the FILE: a wrong type, an
@@ -1199,6 +1204,110 @@ public sealed partial class Cap05Tests
         var engagement = engagements.EnumerateArray()
             .First(e => e.GetProperty("requestId").GetString() == requestId);
         return (engagement.GetProperty("engagementId").GetString()!, trainer);
+    }
+
+    /* ── UAT BUG-039 — staff find ONE specific trainer by name and pick them ── */
+
+    [Fact]
+    public async Task Manual_search_finds_a_trainer_by_name_however_the_name_is_typed()
+    {
+        using var staff = await SignInAsync("cap05-search-staff", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync(
+            "cap05-search-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var wanted = Guid.Parse(trainers.Clients.Keys.First());
+        await using (var db = _database.CreateContext())
+        {
+            var profile = await db.TrainerProfiles.SingleAsync(p => p.TrainerId == wanted);
+            var user = await db.Users.SingleAsync(u => u.UserId == profile.UserId);
+            user.FullNameAr = "أحمد بن سعد العتيبي";
+            user.FullNameEn = "Ahmed Alotaibi";
+            // The application's own help text: «الرياض، جدة، الدمام» — a LIST.
+            var city = await db.TrainerFieldValues.SingleAsync(
+                v => v.TrainerId == wanted && v.FieldCode == "inPersonCities");
+            city.Value = JsonSerializer.Serialize("جدة، الرياض");
+            var suspendedProfile = await db.TrainerProfiles.SingleAsync(
+                p => p.TrainerId == trainers.Suspended);
+            var suspendedUser = await db.Users.SingleAsync(u => u.UserId == suspendedProfile.UserId);
+            suspendedUser.FullNameAr = "فاطمة الزهراني";
+            await db.SaveChangesAsync();
+        }
+        var requestId = await CreateRequestAsync(centre);
+        var search = $"/api/v1/internal/assignment-requests/{requestId}/matching/candidates";
+
+        static string[] Ids(JsonElement list) =>
+            [.. list.EnumerateArray().Select(c => c.GetProperty("trainerId").GetString()!)];
+
+        // Typed without the hamza, first and last name only.
+        var typed = await GetAsync(staff, $"{search}?q={Uri.EscapeDataString("احمد العتيبي")}");
+        Assert.Equal([wanted.ToString()], Ids(typed.GetProperty("ranked")));
+        // A partial word, and the English name.
+        Assert.Equal([wanted.ToString()],
+            Ids((await GetAsync(staff, $"{search}?q={Uri.EscapeDataString("العتيب")}")).GetProperty("ranked")));
+        Assert.Equal([wanted.ToString()],
+            Ids((await GetAsync(staff, $"{search}?q=ahmed")).GetProperty("ranked")));
+
+        // A trainer the matrix rules out is FOUND and shown with the reason —
+        // not silently missing — but is never offered as selectable.
+        var excluded = await GetAsync(staff, $"{search}?q={Uri.EscapeDataString("فاطمه")}");
+        Assert.Empty(excluded.GetProperty("ranked").EnumerateArray());
+        var row = excluded.GetProperty("excluded").EnumerateArray().Single();
+        Assert.Equal(trainers.Suspended.ToString(), row.GetProperty("trainerId").GetString());
+        Assert.Contains("file-status",
+            row.GetProperty("reasons").EnumerateArray().Select(r => r.GetString()));
+
+        // A trainer available in several cities including the request's is
+        // not excluded on location — by the engine either.
+        var run = await PostAsync(staff, $"/api/v1/internal/assignment-requests/{requestId}/matching/run", null);
+        Assert.Contains(wanted.ToString(), Ids(run.GetProperty("ranked")));
+
+        // And the one found by name goes into the pool like any other.
+        var others = Ids(run.GetProperty("ranked")).Where(id => id != wanted.ToString()).Take(2);
+        var pool = await PostAsync(staff, $"/api/v1/internal/assignment-requests/{requestId}/pool",
+            new { trainerIds = others.Prepend(wanted.ToString()).ToArray() });
+        Assert.Contains(wanted.ToString(),
+            pool.GetProperty("members").EnumerateArray().Select(m => m.GetProperty("trainerId").GetString()));
+    }
+
+    /* ── UAT BUG-042 — the offer carries the request's prospectus ──────────── */
+
+    [Fact]
+    public async Task The_offer_carries_the_prospectus_and_only_its_trainer_may_open_it()
+    {
+        using var staff = await SignInAsync("cap05-prospectus-staff", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync(
+            "cap05-prospectus-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var uploaded = await TestDocuments.UploadInternalAsync(
+            centre, "assignment-brochure", "النشرة التعريفية.pdf");
+        var body = GeneralProgramRequest();
+        body["attachmentId"] = uploaded.GetProperty("attachmentId").GetString();
+        var requestId = (await PostAsync(centre, "/api/v1/internal/assignment-requests/", body))
+            .GetProperty("requestId").GetString()!;
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+
+        var offer = (await GetAsync(trainers.Clients[eligible[0]], "/api/v1/me/assignment-offers"))
+            .EnumerateArray().Single();
+        var prospectus = offer.GetProperty("details").GetProperty("prospectus");
+        Assert.Equal("النشرة التعريفية.pdf", prospectus.GetProperty("fileName").GetString());
+        var url = "/api" + prospectus.GetProperty("url").GetString();
+
+        // The trainer the offer is addressed to previews it in the browser…
+        var preview = await trainers.Clients[eligible[0]].GetAsync(url);
+        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+        Assert.Equal("inline", preview.Content.Headers.ContentDisposition?.DispositionType);
+        Assert.Equal("%PDF-1.4 expert hub test", await preview.Content.ReadAsStringAsync());
+        // …and downloads it, when they ask to save it.
+        var download = await trainers.Clients[eligible[0]].GetAsync(url + "?disposition=attachment");
+        Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+        Assert.Equal("attachment", download.Content.Headers.ContentDisposition?.DispositionType);
+
+        // A backup with no offer of their own (yet) cannot, and neither can a
+        // trainer who was never part of this request.
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await trainers.Clients[eligible[1]].GetAsync(url)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await trainers.Clients[eligible[2]].GetAsync(url)).StatusCode);
     }
 
     /* ── Notion «Assignment Matrix» — types, routing, required fields, values ── */

@@ -15,6 +15,7 @@ import {
   validatePoolDecision,
   type CandidateDecision,
   type CandidatePoolDto,
+  type ManualSearchResultDto,
   type MatchCandidateDto,
   type MatchingRunDto,
   type MatchingViewerDto,
@@ -88,9 +89,15 @@ export default function AssignmentMatchingPage() {
   const [run, setRun] = useState<MatchingRunDto | null>(null);
   const [running, setRunning] = useState(false);
   const [manualQuery, setManualQuery] = useState('');
-  const [manualResults, setManualResults] = useState<readonly MatchCandidateDto[]>([]);
+  const [manualResults, setManualResults] = useState<ManualSearchResultDto | null>(null);
   /** The latest manual search sent; earlier answers are stale. */
   const searchSequence = useRef(0);
+  /**
+   * UAT `BUG-039` — every candidate the page has shown, by id. A trainer picked
+   * from one search stays named in the selection after the next search
+   * replaces the results, instead of becoming an invisible tick in the count.
+   */
+  const [known, setKnown] = useState<Readonly<Record<string, MatchCandidateDto>>>({});
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [decisions, setDecisions] = useState<Record<string, CandidateDecision>>({});
   const [ranks, setRanks] = useState<Record<string, string>>({});
@@ -181,22 +188,40 @@ export default function AssignmentMatchingPage() {
       setRunning(false);
       if (result.ok) {
         setRun(result.value);
+        remember(result.value.ranked);
       }
     });
   };
 
+  const remember = (candidates: readonly MatchCandidateDto[]) =>
+    setKnown((current) => {
+      const next = { ...current };
+      for (const candidate of candidates) {
+        next[candidate.trainerId] = candidate;
+      }
+      return next;
+    });
+
   const searchManual = (query: string) => {
     setManualQuery(query);
-    if (requestId == null) {
-      return;
-    }
     // UAT `BUG-039` — one search per keystroke, and the answers can land out
     // of order: only the latest query may write the results, or a slower
-    // answer for «أحمد» overwrites the one for «أحمد العتيبي».
+    // answer for «أحمد» overwrites the one for «أحمد العتيبي». An empty box
+    // clears the results rather than listing everyone.
     const sequence = ++searchSequence.current;
+    if (requestId == null || query.trim() === '') {
+      setManualResults(null);
+      return;
+    }
     void service.searchCandidates(requestId, query).then((result) => {
-      if (result.ok && sequence === searchSequence.current) {
+      if (sequence !== searchSequence.current) {
+        return;
+      }
+      if (result.ok) {
         setManualResults(result.value);
+        remember(result.value.ranked);
+      } else {
+        setManualResults({ ranked: [], excluded: [] });
       }
     });
   };
@@ -327,11 +352,41 @@ export default function AssignmentMatchingPage() {
       : `${formatNumber(value, locale)} ${candidate.price.currency}`;
   };
 
-  const selectable = run == null ? manualResults : [...run.ranked, ...manualResults];
-  const deduped = selectable.filter(
-    (candidate, index, all) =>
-      all.findIndex((other) => other.trainerId === candidate.trainerId) === index
+  /** One selectable candidate — the same row on the engine and manual paths. */
+  const renderCandidate = (candidate: MatchCandidateDto) => (
+    <li key={candidate.trainerId} className={styles.candidate}>
+      <Checkbox
+        label={candidate.name}
+        checked={selected.includes(candidate.trainerId)}
+        onChange={() => toggle(candidate.trainerId)}
+      />
+      <div className={styles.candidateMeta}>
+        <Tag variant="information" size="xs">
+          {`${copy.scoreLabel}: ${candidate.totalScore.toFixed(2)}`}
+        </Tag>
+        {/* F1/AC-3 — the breakdown behind the rank. */}
+        {candidate.scores.map((score) => (
+          <Tag key={score.criterion} variant="neutral" size="xs">
+            {`${copy.criteria[score.criterion]} ${score.weighted.toFixed(2)}`}
+          </Tag>
+        ))}
+      </div>
+      <div className={styles.candidateMeta}>
+        <Typography as="span" variant="text-sm">
+          {`${copy.priceLabel}: ${priceFor(candidate)}`}
+        </Typography>
+        <Typography as="span" variant="text-xs" color="muted">
+          {copy.priceSource(candidate.price.agreementReference)}
+        </Typography>
+        {/* F3/AC-2 — the identity card travels with the candidate. */}
+        <Link href={expertHubPaths.internalTrainer(candidate.trainerId)}>
+          {copy.identityCardLink}
+        </Link>
+      </div>
+    </li>
   );
+
+  const searching = manualQuery.trim() !== '';
 
   return (
     <WorkspacePage labelledBy="eh-matching-title">
@@ -410,41 +465,8 @@ export default function AssignmentMatchingPage() {
                   </Typography>
                 )}
 
-                {deduped.length > 0 && (
-                  <ul className={styles.candidates}>
-                    {deduped.map((candidate) => (
-                      <li key={candidate.trainerId} className={styles.candidate}>
-                        <Checkbox
-                          label={candidate.name}
-                          checked={selected.includes(candidate.trainerId)}
-                          onChange={() => toggle(candidate.trainerId)}
-                        />
-                        <div className={styles.candidateMeta}>
-                          <Tag variant="information" size="xs">
-                            {`${copy.scoreLabel}: ${candidate.totalScore.toFixed(2)}`}
-                          </Tag>
-                          {/* F1/AC-3 — the breakdown behind the rank. */}
-                          {candidate.scores.map((score) => (
-                            <Tag key={score.criterion} variant="neutral" size="xs">
-                              {`${copy.criteria[score.criterion]} ${score.weighted.toFixed(2)}`}
-                            </Tag>
-                          ))}
-                        </div>
-                        <div className={styles.candidateMeta}>
-                          <Typography as="span" variant="text-sm">
-                            {`${copy.priceLabel}: ${priceFor(candidate)}`}
-                          </Typography>
-                          <Typography as="span" variant="text-xs" color="muted">
-                            {copy.priceSource(candidate.price.agreementReference)}
-                          </Typography>
-                          {/* F3/AC-2 — the identity card travels with the candidate. */}
-                          <Link href={expertHubPaths.internalTrainer(candidate.trainerId)}>
-                            {copy.identityCardLink}
-                          </Link>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                {run != null && run.ranked.length > 0 && (
+                  <ul className={styles.candidates}>{run.ranked.map(renderCandidate)}</ul>
                 )}
               </Panel>
 
@@ -483,6 +505,21 @@ export default function AssignmentMatchingPage() {
                 <Typography as="p" variant="text-xs" color="muted">
                   {copy.sendNote}
                 </Typography>
+                {/* `BUG-039` — who is picked, by name, whichever path found them. */}
+                {selected.length > 0 && (
+                  <ul className={styles.selection} aria-label={copy.selectedHeading}>
+                    {selected.map((trainerId) => (
+                      <li key={trainerId} className={styles.selectionRow}>
+                        <Typography as="span" variant="text-sm">
+                          {known[trainerId]?.name ?? trainerId}
+                        </Typography>
+                        <Button variant="tertiary" size="sm" onClick={() => toggle(trainerId)}>
+                          {copy.removeSelected(known[trainerId]?.name ?? trainerId)}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </Panel>
 
               {/* F2/AC-1 — the manual path. */}
@@ -496,6 +533,49 @@ export default function AssignmentMatchingPage() {
                   value={manualQuery}
                   onChange={(event) => searchManual(event.target.value)}
                 />
+                {/* `BUG-039` — the results sit under the box that asked for
+                    them, selectable right here; matches the matrix rules out
+                    are shown with their reasons instead of silently missing. */}
+                {searching && manualResults != null && (
+                  <div aria-live="polite" className={styles.results}>
+                    {manualResults.ranked.length === 0 && manualResults.excluded.length === 0 ? (
+                      <Typography as="p" variant="text-sm" color="muted">
+                        {copy.manualNoResults(manualQuery.trim())}
+                      </Typography>
+                    ) : (
+                      <>
+                        {manualResults.ranked.length > 0 && (
+                          <ul className={styles.candidates} aria-label={copy.manualResultsLabel}>
+                            {manualResults.ranked.map(renderCandidate)}
+                          </ul>
+                        )}
+                        {manualResults.excluded.length > 0 && (
+                          <>
+                            <Typography as="p" variant="text-xs" color="muted">
+                              {copy.manualExcludedNote}
+                            </Typography>
+                            <ul className={styles.excluded}>
+                              {manualResults.excluded.map((candidate) => (
+                                <li key={candidate.trainerId} className={styles.excludedRow}>
+                                  <Typography as="span" variant="text-sm">
+                                    {candidate.name}
+                                  </Typography>
+                                  <span className={styles.candidateMeta}>
+                                    {candidate.reasons.map((reason) => (
+                                      <Tag key={reason} variant="error" size="xs">
+                                        {copy.exclusionReasons[reason]}
+                                      </Tag>
+                                    ))}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </Panel>
             </div>
           </div>

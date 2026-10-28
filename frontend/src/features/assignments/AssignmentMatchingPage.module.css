@@ -77,3 +77,28 @@
   flex-wrap: wrap;
   gap: var(--fads-sys-space-inline-sm);
 }
+
+/* `BUG-039` — the manual results, under the search box that produced them. */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+}
+
+/* The selection, named — a pick from an earlier search stays visible. */
+.selection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fads-sys-space-stack-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.selectionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fads-sys-space-inline-sm);
+}

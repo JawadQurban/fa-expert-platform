@@ -163,6 +163,18 @@ export interface MatchingRunDto {
   readonly requiredPoolSize: number;
 }
 
+/**
+ * **F2/AC-1** — the manual search, in the run's own two lists (`BUG-039`,
+ * `P-378`). `ranked` holds who matched the name and may be selected;
+ * `excluded` holds who matched the name but the matrix rules out, with the
+ * reasons — so staff looking for one specific person learn *why* they cannot
+ * pick them instead of seeing an empty list that reads as a broken search.
+ */
+export interface ManualSearchResultDto {
+  readonly ranked: readonly MatchCandidateDto[];
+  readonly excluded: readonly ExcludedCandidateDto[];
+}
+
 /* ------------------------------------------------------------------ *
  * The pool, and the requesting party's decision
  * ------------------------------------------------------------------ */

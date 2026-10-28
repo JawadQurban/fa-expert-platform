@@ -95,6 +95,35 @@ describe('J-20 contract — pages against the real API responses', () => {
     }
   });
 
+  it('BUG-049: every surface names the programme and the assignment request the upload is for', async () => {
+    const belongsTo = content.belongsTo(detail.programName, detail.requestReference);
+    expect(belongsTo).toContain('برنامج القيادة');
+    expect(belongsTo).toContain('ASR-2026-0001');
+
+    // The trainer's list…
+    serve({ 'v1/me/submissions': meSubmissions });
+    const portal = await renderPortal();
+    expect(await screen.findByText(belongsTo)).toBeInTheDocument();
+    portal.unmount();
+
+    // …the review queue…
+    serve({
+      'v1/internal/submissions': internalSubmissions.map((item) => ({
+        ...item,
+        status: SUBMISSION_STATUS.pendingApproval,
+      })),
+    });
+    seedExpertHubSession(['internal']);
+    const queue = renderExpertHubAt(expertHubPaths.internalSubmissions);
+    expect(await screen.findByText(belongsTo)).toBeInTheDocument();
+    queue.unmount();
+
+    // …and the review page.
+    serve({ [`v1/internal/submissions/${id}`]: detail });
+    await renderReview();
+    expect(await screen.findByText(belongsTo)).toBeInTheDocument();
+  });
+
   it('trainer: a changes_requested submission shows the upload control and its round', async () => {
     serve({ 'v1/me/submissions': meSubmissions });
     const { container } = await renderPortal();

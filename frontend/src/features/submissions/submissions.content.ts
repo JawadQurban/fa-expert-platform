@@ -34,6 +34,8 @@ export interface SubmissionsContent {
   readonly emptyTitle: string;
   readonly emptyBody: string;
   readonly openedOn: (date: string) => string;
+  /** `BUG-049` — what the upload belongs to: the programme, then the request. */
+  readonly belongsTo: (programName: string | null, reference: string) => string;
 
   /** The submitter's side. */
   readonly uploadHeading: string;
@@ -124,6 +126,10 @@ const ar: SubmissionsContent = {
   emptyTitle: 'لا توجد مواد مطلوبة منك',
   emptyBody: 'يظهر هنا ما يُطلب رفعه عند تأكيد ارتباط يستدعي ذلك.',
   openedOn: (date) => `فُتح باب الرفع في ${date}`,
+  belongsTo: (programName, reference) =>
+    programName == null
+      ? `طلب الإسناد ${reference}`
+      : `البرنامج: ${programName} — طلب الإسناد ${reference}`,
 
   uploadHeading: 'رفع الملف',
   uploadLabel: 'اختر الملف',
@@ -221,6 +227,10 @@ const en: SubmissionsContent = {
   emptyTitle: 'Nothing is required from you',
   emptyBody: 'Anything you are asked to upload appears here when an engagement calls for it.',
   openedOn: (date) => `Upload opened on ${date}`,
+  belongsTo: (programName, reference) =>
+    programName == null
+      ? `Assignment request ${reference}`
+      : `Programme: ${programName} — assignment request ${reference}`,
 
   uploadHeading: 'Upload a file',
   uploadLabel: 'Choose a file',

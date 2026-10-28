@@ -67,6 +67,8 @@ function seed(now: string): SubmissionDto[] {
       submissionId: 'sub-002',
       engagementId: 'eng-9',
       kind: 'service-content',
+      requestReference: 'ASR-2026-0002',
+      programName: 'إدارة المخاطر المؤسسية',
       // F4/AC-1 — open from the moment the engagement was confirmed.
       status: SUBMISSION_STATUS.pendingApproval,
       syncState: 'none',

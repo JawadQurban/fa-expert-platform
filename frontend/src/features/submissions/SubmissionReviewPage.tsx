@@ -176,6 +176,8 @@ export default function SubmissionReviewPage() {
         title={copy.detailTitle}
         icon="note-01"
         meta={[
+          // `BUG-049` — which programme / request this upload is for.
+          <bdi>{content.belongsTo(submission.programName, submission.requestReference)}</bdi>,
           <bdi>{copy.submittedBy(submission.trainerName)}</bdi>,
           content.openedOn(dates.format(new Date(submission.openedAt))),
         ]}

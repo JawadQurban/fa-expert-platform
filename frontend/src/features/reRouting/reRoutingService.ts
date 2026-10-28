@@ -4,6 +4,7 @@ import { createExpertHubApiClient } from '../../shared/services/apiClient';
 import type { ExpertHubApiClient, ExpertHubApiError } from '../../shared/services/apiClient';
 import type {
   CandidatePoolDto,
+  ManualSearchResultDto,
   MatchCandidateDto,
   MatchingRunDto,
   PoolDecisionInput,
@@ -85,11 +86,14 @@ export function createHttpReRoutingProvider(
     runSlotMatching(requestId, slotNumber) {
       return client.post<MatchingRunDto>(`${slotPath(requestId, slotNumber)}/matching/run`);
     },
-    searchSlotCandidates(requestId, slotNumber, query) {
+    async searchSlotCandidates(requestId, slotNumber, query) {
       const suffix = query.trim() === '' ? '' : `?q=${encodeURIComponent(query.trim())}`;
-      return client.get<readonly MatchCandidateDto[]>(
+      // `BUG-039` — the API answers in two lists (`ManualSearchResultDto`);
+      // this page offers only the selectable ones.
+      const result = await client.get<ManualSearchResultDto>(
         `${slotPath(requestId, slotNumber)}/matching/candidates${suffix}`
       );
+      return result.ok ? { ok: true, value: result.value.ranked } : result;
     },
     sendSlotPool(requestId, slotNumber, input) {
       return client.post<CandidatePoolDto>(`${slotPath(requestId, slotNumber)}/pool`, input);

@@ -68,10 +68,19 @@ internal sealed record SubmissionRoundWire(
     int RoundNumber, string FileName, string? Decision, string? Note,
     string? DecidedByName, string? DecidedAt, string UploadedAt, string? FileUrl);
 
+/// <summary>
+/// One J-20 material/content submission. `BUG-049` — <c>RequestId</c>,
+/// <c>RequestReference</c> and <c>ProgramName</c> name the assignment request
+/// (and its programme) the material is for: a trainer with two engagements,
+/// or a reviewer with a queue, could not otherwise tell which upload was which.
+/// <c>ProgramName</c> is null for a request type whose form has no programme
+/// (a consultation, for instance) — the reference is always there.
+/// </summary>
 internal sealed record SubmissionWire(
     string SubmissionId, string EngagementId, string Kind, string Status,
     string SyncState, string TrainerName, string OpenedAt,
-    IReadOnlyList<SubmissionRoundWire> Rounds);
+    IReadOnlyList<SubmissionRoundWire> Rounds,
+    string RequestId, string RequestReference, string? ProgramName);
 
 internal sealed record SubmissionDecisionInputWire(string? Decision, string? Note);
 
@@ -850,12 +859,20 @@ public static class EngagementEndpoints
         var engagements = await db.Engagements
             .Where(e => engagementIds.Contains(e.EngagementId))
             .ToListAsync(ct);
+        var requests = await (
+            from engagement in db.Engagements
+            join slot in db.AssignmentSlots on engagement.SlotId equals slot.SlotId
+            join request in db.AssignmentRequests on slot.RequestId equals request.RequestId
+            where engagementIds.Contains(engagement.EngagementId)
+            select new { engagement.EngagementId, request }).ToDictionaryAsync(
+                x => x.EngagementId, x => x.request, ct);
         var names = await TrainerNamesAsync(db, ct);
         var deciders = await db.Users.ToDictionaryAsync(u => u.UserId, u => u.FullNameAr, ct);
 
         return [.. submissions.Select(submission =>
         {
             var engagement = engagements.First(e => e.EngagementId == submission.EngagementId);
+            var request = requests[submission.EngagementId];
             return new SubmissionWire(
                 submission.SubmissionId.ToString(),
                 submission.EngagementId.ToString(),
@@ -877,7 +894,10 @@ public static class EngagementEndpoints
                         r.AttachmentId is not { } fileId ? null
                             : internalView
                                 ? $"/{ExpertHub.Core.ApiVersions.V1}/internal/submissions/{submission.SubmissionId:D}/rounds/{r.RoundNumber}/file"
-                                : Documents.AttachmentUploads.DownloadUrl(fileId)))]);
+                                : Documents.AttachmentUploads.DownloadUrl(fileId)))],
+                request.RequestId.ToString(),
+                request.Reference,
+                FormOf(request)?.ProgramName is { Length: > 0 } program ? program : null);
         })];
     }
 
@@ -915,7 +935,49 @@ public static class EngagementEndpoints
             // J-21/F2 — the meeting link is FAST's (B-11): served only on the
             // engagement view, from the plan; null otherwise, never fabricated.
             meetingUrl,
+            prospectus = ProspectusOf(form),
         };
+    }
+
+    /// <summary>
+    /// `BUG-042` (J-18/F1/AC-3) — «النشرة التعريفية», the
+    /// document the centre attached to the request, travels with the offer so
+    /// the trainer can read what they are being asked to deliver. The link is
+    /// the ordinary attachment route; <see cref="IsOfferRecipientAsync"/> is
+    /// what lets the trainer the offer is addressed to open exactly this file.
+    /// Null for a request saved before the brochure was stored by id.
+    /// </summary>
+    private static object? ProspectusOf(CreateRequestInputWire form) =>
+        Guid.TryParse(form.AttachmentId, out var id)
+            ? new
+            {
+                fileName = form.AttachmentName ?? string.Empty,
+                url = Documents.AttachmentUploads.DownloadUrl(id),
+            }
+            : null;
+
+    /// <summary>
+    /// True when <paramref name="userId"/> is the trainer of an assignment
+    /// offer whose request carries <paramref name="attachmentId"/> as its
+    /// prospectus. Any offer addressed to them counts — answered or expired
+    /// ones too, because the offer stays on their record and so does what it
+    /// described. Nobody else's offer, and no other file, is reachable.
+    /// </summary>
+    internal static async Task<bool> IsOfferRecipientAsync(
+        ExpertHubDbContext db, Guid userId, Guid attachmentId, CancellationToken ct)
+    {
+        var forms = await (
+            from offer in db.AssignmentOffers
+            join profile in db.TrainerProfiles on offer.TrainerId equals profile.TrainerId
+            join slot in db.AssignmentSlots on offer.SlotId equals slot.SlotId
+            join request in db.AssignmentRequests on slot.RequestId equals request.RequestId
+            where profile.UserId == userId
+            select request.FormValues).ToListAsync(ct);
+        return forms.Any(values =>
+            JsonSerializer.Deserialize<CreateRequestInputWire>(values, AssignmentEndpoints.WireJson)
+                is { AttachmentId: { } stored }
+            && Guid.TryParse(stored, out var parsed)
+            && parsed == attachmentId);
     }
 
     private static DateTime? ParseDate(string? value) =>

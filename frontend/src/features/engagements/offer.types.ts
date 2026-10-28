@@ -69,6 +69,19 @@ export interface RequestDetailsDto {
   readonly specializationDomain: string | null;
   /** J-21/F2 — FAST's, and there is no feed: `null` rather than fabricated. */
   readonly meetingUrl: string | null;
+  /**
+   * J-18/F1/AC-3 (`BUG-042`) — «النشرة التعريفية», the document the centre
+   * attached to the request. `url` is the API's attachment route, which lets
+   * the trainer an offer is addressed to open exactly this file. `null` for a
+   * request saved before the brochure was stored as a document.
+   */
+  readonly prospectus: ProspectusDto | null;
+}
+
+/** The request's prospectus file, as `DetailsOf` serves it. */
+export interface ProspectusDto {
+  readonly fileName: string;
+  readonly url: string;
 }
 
 /* ------------------------------------------------------------------ *

@@ -6,6 +6,7 @@ import { ENGAGEMENT_STATUS_TAG, engagementStatusLabel } from '../../../contracts
 import type { EngagementsContent } from '../engagements.content';
 import type { MyEngagementDto } from '../offer.types';
 import { PlanDetailsList } from './PlanDetailsList';
+import { ProspectusFile } from './ProspectusFile';
 import styles from './OfferCard.module.css';
 import { formatDate } from '../../../shared/formatting';
 
@@ -66,6 +67,9 @@ export function EngagementCard({
       </div>
 
       <PlanDetailsList details={engagement.details} content={content} locale={locale} />
+      {engagement.details?.prospectus != null && (
+        <ProspectusFile prospectus={engagement.details.prospectus} content={content} />
+      )}
 
       {/* J-21 — the follow-up page: session link or venue, live enrolment,
           attendance, and the MTM evaluations. */}
