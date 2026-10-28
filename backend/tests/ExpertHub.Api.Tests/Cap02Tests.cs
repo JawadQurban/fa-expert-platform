@@ -1114,6 +1114,230 @@ public sealed class Cap02Tests
         }
     }
 
+    /* ── P-384 / UAT BUG-027 — one interview, evaluated and decided per service ── */
+
+    /// <summary>
+    /// «اذا كان الطلب يحوي أكثر من خدمة يجب أن تكون مقابلة وحدة لكل الخدمات على
+    /// أن يكون التقييم واتخاذ القرار منفصل لكل خدمة.» Three services: two go to
+    /// the interview, one is exempted. One interview, one set of times, one
+    /// invitation, one booking — and then a score and a decision per service.
+    /// </summary>
+    [Fact]
+    public async Task A_multi_service_application_gets_one_interview_evaluated_and_decided_per_service()
+    {
+        var meetings = new CapturingMeetings();
+        var original = _configured!;
+        _configured = original.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.AddSingleton<IMeetingProvider>(meetings)));
+        try
+        {
+            using var applicant = await SignInAsync("applicant-one", "unmapped", "متقدم متعدد الخدمات");
+            var applicationId = await SubmitCompleteApplicationAsync(
+                applicant, ["trainer", "consultant", "content-developer"]);
+            using var decider = await SignInAsync("decider-one", "fa-staff", "مدير الفرز", RoleCode.Manager);
+            using var member1 = await SignInAsync("member-one-a", "fa-staff", "عضو أول", RoleCode.Manager);
+            using var member2 = await SignInAsync("member-one-b", "fa-staff", "عضو ثان", RoleCode.Manager);
+            var members = new[] { await UserIdOfAsync("member-one-a"), await UserIdOfAsync("member-one-b") };
+
+            // The application's ONE interview plan is named once.
+            await PostAsync(decider,
+                $"/api/v1/internal/applications/{applicationId}/screening/decision",
+                new
+                {
+                    kind = "accept",
+                    services = new object[]
+                    {
+                        new { service = "trainer", path = "interview" },
+                        new { service = "consultant", path = "interview" },
+                        new
+                        {
+                            service = "content-developer",
+                            path = "exemption",
+                            exemptionReason = "prior-collaboration",
+                            exemptionReasonOther = "",
+                        },
+                    },
+                    interview = new
+                    {
+                        slots = new[] { In(TimeSpan.FromDays(7)), In(TimeSpan.FromDays(8)) },
+                        committeeMemberIds = members,
+                    },
+                });
+
+            var id = Guid.Parse(applicationId);
+            await using (var db = _database.CreateContext())
+            {
+                var interview = await db.Interviews.SingleAsync(i => i.ApplicationId == id);
+                Assert.Equal(
+                    ["consultant", "trainer"],
+                    await db.InterviewServices.Where(s => s.InterviewId == interview.InterviewId)
+                        .Select(s => s.Service).OrderBy(s => s).ToListAsync());
+                Assert.Equal(2, await db.InterviewSlots.CountAsync(s => s.InterviewId == interview.InterviewId));
+                Assert.Equal(2, await db.InterviewEvaluations.CountAsync(e => e.InterviewId == interview.InterviewId));
+                // One invitation to pick a time — not one per service.
+                Assert.Equal(1, await db.NotificationOccurrences.CountAsync(
+                    o => o.EventCode == "EV-0201" && o.SourceEntityId == id));
+            }
+
+            await PickFirstSlotAsync(applicant, applicationId);
+            // One meeting for the application.
+            Assert.Single(meetings.Requests);
+            await StartInterviewAsync(applicationId);
+
+            var detail = await GetAsync(member1, $"/api/v1/internal/applications/{applicationId}/interview");
+            Assert.Equal(["trainer", "consultant"],
+                detail.GetProperty("acceptedServices").EnumerateArray().Select(s => s.GetString()!).ToArray());
+            Assert.Equal(["content-developer"],
+                detail.GetProperty("exemptedServices").EnumerateArray().Select(s => s.GetString()!).ToArray());
+
+            // Each member scores EACH covered service; the exempted one is not asked for.
+            var partial = await member1.PostAsJsonAsync(
+                $"/api/v1/internal/applications/{applicationId}/interview/evaluations",
+                new
+                {
+                    kind = "evaluation",
+                    services = new[]
+                    {
+                        new
+                        {
+                            service = "trainer",
+                            axisScores = ApprovedCriteria.Select(c => new { axisId = c.Code, score = 5m }).ToArray(),
+                            recommendation = (string?)null,
+                            notes = "",
+                        },
+                    },
+                });
+            Assert.Equal(HttpStatusCode.BadRequest, partial.StatusCode);
+            await EvaluateAsync(member1, applicationId,
+                new Dictionary<string, decimal> { ["trainer"] = 5m, ["consultant"] = 3m });
+            var completed = await EvaluateAsync(member2, applicationId,
+                new Dictionary<string, decimal> { ["trainer"] = 4m, ["consultant"] = 3m });
+            var results = completed.GetProperty("result").EnumerateArray()
+                .ToDictionary(r => r.GetProperty("service").GetString()!, r => r.GetProperty("average").GetDecimal());
+            Assert.Equal(["trainer", "consultant"], results.Keys.ToArray());
+            Assert.Equal(90m, results["trainer"]);
+            Assert.Equal(60m, results["consultant"]);
+
+            // The decision is per service — and every covered service must have one.
+            var decisionPath = $"/api/v1/internal/applications/{applicationId}/interview/decision";
+            var incomplete = await decider.PostAsJsonAsync(decisionPath, new
+            {
+                services = new[] { new { service = "trainer", kind = "forward" } },
+            });
+            Assert.Equal("service-decision-missing",
+                (await incomplete.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+            var exemptedDecided = await decider.PostAsJsonAsync(decisionPath, new
+            {
+                services = new object[]
+                {
+                    new { service = "trainer", kind = "forward" },
+                    new { service = "consultant", kind = "forward" },
+                    new { service = "content-developer", kind = "forward" },
+                },
+            });
+            Assert.Equal(HttpStatusCode.BadRequest, exemptedDecided.StatusCode);
+            var noReason = await decider.PostAsJsonAsync(decisionPath, new
+            {
+                services = new object[]
+                {
+                    new { service = "trainer", kind = "forward" },
+                    new { service = "consultant", kind = "reject" },
+                },
+            });
+            Assert.Equal("reason-missing",
+                (await noReason.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+
+            var decided = await PostAsync(decider, decisionPath, new
+            {
+                services = new object[]
+                {
+                    new { service = "trainer", kind = "forward" },
+                    new { service = "consultant", kind = "reject", reason = "insufficient-experience", reasonOther = "" },
+                },
+            });
+            Assert.Equal("forward", decided.GetProperty("kind").GetString());
+            var perService = decided.GetProperty("services").EnumerateArray()
+                .ToDictionary(s => s.GetProperty("service").GetString()!, s => s);
+            Assert.Equal("forward", perService["trainer"].GetProperty("kind").GetString());
+            Assert.Equal("reject", perService["consultant"].GetProperty("kind").GetString());
+            Assert.Equal("insufficient-experience",
+                perService["consultant"].GetProperty("rejectionReason").GetString());
+
+            // A second decision is refused: the decision was claimed once.
+            var again = await decider.PostAsJsonAsync(decisionPath, new { kind = "forward" });
+            Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
+
+            await using (var db = _database.CreateContext())
+            {
+                var outcomes = await db.ApplicationServices
+                    .Where(s => s.ApplicationId == id)
+                    .ToDictionaryAsync(s => s.Service, s => s.Outcome);
+                Assert.Equal("pending", outcomes["trainer"]);
+                Assert.Equal("rejected", outcomes["consultant"]);
+                Assert.Equal("pending", outcomes["content-developer"]); // exempted: untouched
+                var application = await db.Applications.SingleAsync(a => a.ApplicationId == id);
+                Assert.Equal("approval-in-progress", application.Status);
+            }
+
+            // The approval committee sees the forwarded service and the exempted
+            // one — never the one the interview decision closed.
+            var committee = await GetAsync(decider, $"/api/v1/internal/applications/{applicationId}/committee");
+            Assert.Equal(
+                ["content-developer", "trainer"],
+                committee.GetProperty("context").EnumerateArray()
+                    .Select(c => c.GetProperty("service").GetString()!).OrderBy(s => s).ToArray());
+        }
+        finally
+        {
+            _configured.Dispose();
+            _configured = original;
+        }
+    }
+
+    [Fact]
+    public async Task Rejecting_every_interviewed_service_rejects_the_application_with_each_reason()
+    {
+        using var applicant = await SignInAsync("applicant-allrej", "unmapped", "متقدم");
+        var applicationId = await SubmitCompleteApplicationAsync(applicant, ["trainer", "consultant"]);
+        using var decider = await SignInAsync("decider-allrej", "fa-staff", "مدير الفرز", RoleCode.Manager);
+        using var member = await SignInAsync("member-allrej", "fa-staff", "عضو", RoleCode.Manager);
+        await MixedScreeningAsync(decider, applicationId, await UserIdOfAsync("member-allrej"), ["trainer", "consultant"], []);
+        await PickFirstSlotAsync(applicant, applicationId);
+        await StartInterviewAsync(applicationId);
+        await EvaluateAsync(member, applicationId,
+            new Dictionary<string, decimal> { ["trainer"] = 2m, ["consultant"] = 2m });
+
+        var decided = await PostAsync(decider,
+            $"/api/v1/internal/applications/{applicationId}/interview/decision",
+            new
+            {
+                services = new object[]
+                {
+                    new { service = "trainer", kind = "reject", reason = "insufficient-experience", reasonOther = "" },
+                    new { service = "consultant", kind = "reject", reason = "other", reasonOther = "لا يناسب الاحتياج الحالي" },
+                },
+            });
+        Assert.Equal("reject", decided.GetProperty("kind").GetString());
+
+        await using var db = _database.CreateContext();
+        var id = Guid.Parse(applicationId);
+        var application = await db.Applications.SingleAsync(a => a.ApplicationId == id);
+        Assert.Equal("rejected", application.Status);
+        Assert.Contains("لا يناسب الاحتياج الحالي", application.RejectionReason, StringComparison.Ordinal);
+        Assert.All(
+            await db.ApplicationServices.Where(s => s.ApplicationId == id).ToListAsync(),
+            s => Assert.Equal("rejected", s.Outcome));
+        var rows = await db.InterviewServices
+            .Where(s => db.Interviews.Any(i => i.InterviewId == s.InterviewId && i.ApplicationId == id))
+            .ToDictionaryAsync(s => s.Service);
+        Assert.Equal("insufficient-experience", rows["trainer"].DecisionReasonId);
+        Assert.Equal("other", rows["consultant"].DecisionReasonId);
+        Assert.Equal("لا يناسب الاحتياج الحالي", rows["consultant"].DecisionReasonText);
+        // The applicant is told once, for the application.
+        Assert.Equal(1, await db.NotificationOccurrences.CountAsync(
+            o => o.EventCode == "EV-0210" && o.SourceEntityId == id));
+    }
+
     private static async Task MixedScreeningAsync(
         HttpClient decider, string applicationId, string memberId,
         IReadOnlyList<string> interviewed, IReadOnlyList<string> exempted)
@@ -1153,7 +1377,7 @@ public sealed class Cap02Tests
             new { slotId = slot.GetProperty("id").GetString() });
     }
 
-    private static async Task EvaluateAsync(
+    private static async Task<JsonElement> EvaluateAsync(
         HttpClient member, string applicationId, IReadOnlyDictionary<string, decimal> scores) =>
         await PostAsync(member,
             $"/api/v1/internal/applications/{applicationId}/interview/evaluations",

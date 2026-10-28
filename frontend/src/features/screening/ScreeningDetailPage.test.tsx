@@ -12,6 +12,7 @@ import { setScreeningServiceForTesting } from './screeningService';
 import { createMockScreeningProvider } from './mockScreeningProvider';
 import type { MockScreeningProviderOptions } from './mockScreeningProvider';
 import { getScreeningContent } from './screening.content';
+import type { ScreeningDecisionInput } from './screening.types';
 
 /**
  * EH-INT-03 — Screening Detail (J-05 Screening & Initial Decision, J-08
@@ -88,20 +89,69 @@ describe('EH-INT-03 — Screening & Initial Decision', () => {
     await user.click(await screen.findByRole('checkbox', { name: content.services.trainer }));
     await user.click(screen.getByRole('button', { name: content.decision.accept }));
 
-    // Both halves of the interview path are reported — not one at a time.
+    // Both halves of the (one) interview plan are reported — not one at a time.
     const errors = await screen.findByRole('alert');
     expect(
-      within(errors).getByText(content.decision.errors['slots-missing'](content.services.trainer))
+      within(errors).getByText(content.decision.errors['slots-missing'](''))
     ).toBeInTheDocument();
     expect(
-      within(errors).getByText(
-        content.decision.errors['committee-missing'](content.services.trainer)
-      )
+      within(errors).getByText(content.decision.errors['committee-missing'](''))
     ).toBeInTheDocument();
     // The confirmation dialog never opened.
     expect(
       screen.queryByRole('dialog', { name: content.acceptDialog.title })
     ).not.toBeInTheDocument();
+  });
+
+  it('P-384: services sent to the interview share ONE interview — one set of times, one committee', async () => {
+    const base = createMockScreeningProvider({ latencyMs: 0 });
+    const sent: ScreeningDecisionInput[] = [];
+    setScreeningServiceForTesting({
+      ...base,
+      submitDecision: (id, decision) => {
+        sent.push(decision);
+        return base.submitDecision(id, decision);
+      },
+    });
+    const { user } = await renderScreening();
+
+    await user.click(await screen.findByRole('checkbox', { name: content.services.trainer }));
+    await user.click(screen.getByRole('checkbox', { name: content.services.consultant }));
+
+    // One interview block naming both services — not one block per service.
+    const interview = screen.getByRole('region', { name: content.decision.interviewHeading });
+    expect(
+      within(interview).getByText(
+        content.decision.interviewCovers(
+          `${content.services.trainer}، ${content.services.consultant}`
+        )
+      )
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: content.decision.addSlot })).toHaveLength(1);
+    expect(screen.getAllByText(content.decision.committeeHeading)).toHaveLength(1);
+
+    await user.click(within(interview).getByRole('button', { name: content.decision.addSlot }));
+    await user.type(
+      within(interview).getByLabelText(content.decision.slotLabel(1)),
+      '2030-08-01T09:00'
+    );
+    await user.click(within(interview).getByRole('checkbox', { name: /د. أحمد الزهراني/ }));
+    await user.click(screen.getByRole('button', { name: content.decision.accept }));
+    const dialog = await screen.findByRole('dialog', { name: content.acceptDialog.title });
+    await user.click(within(dialog).getByRole('button', { name: content.acceptDialog.confirm }));
+
+    await screen.findByText(content.recorded.acceptTitle);
+    expect(sent).toHaveLength(1);
+    const decision = sent[0];
+    expect(decision.kind).toBe('accept');
+    if (decision.kind === 'accept') {
+      expect(decision.services.map((entry) => [entry.service, entry.path])).toEqual([
+        ['trainer', 'interview'],
+        ['consultant', 'interview'],
+      ]);
+      expect(decision.interview?.committeeMemberIds).toEqual(['stf-01']);
+      expect(decision.interview?.slots).toHaveLength(1);
+    }
   });
 
   it('requires at least one service before accepting (F5/AC-1)', async () => {

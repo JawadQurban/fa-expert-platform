@@ -4,6 +4,7 @@ import { getMyApplicationsContent } from '../applications/myApplications.content
 import { getScreeningContent } from '../screening/screening.content';
 import type { RejectionReasonId } from '../screening/screening.types';
 import type {
+  DecisionValidationCode,
   EvaluationBlockedReason,
   EvaluationValidationCode,
   InterviewPhase,
@@ -120,8 +121,17 @@ export interface InterviewsContent {
     readonly heading: string;
     readonly description: string;
     readonly authorityNote: string;
+    /** P-384 — the decision is taken per covered service. */
+    readonly serviceHeading: (service: string) => string;
+    readonly choiceLegend: string;
     readonly forward: string;
     readonly reject: string;
+    readonly reasonLabel: string;
+    readonly reasonPlaceholder: string;
+    readonly otherLabel: string;
+    readonly submit: string;
+    readonly errorsHeading: string;
+    readonly errors: Readonly<Record<DecisionValidationCode, (service: string) => string>>;
     readonly blockedTitle: string;
     readonly blockedBody: string;
     readonly noPassTitle: string;
@@ -133,21 +143,14 @@ export interface InterviewsContent {
     readonly rejectOnlyTitle: string;
     readonly rejectOnlyBody: string;
   };
-  readonly forwardDialog: {
+  /** P-384 — restates, per service, what the decision will do before it is recorded. */
+  readonly decisionDialog: {
     readonly title: string;
-    readonly body: string;
+    readonly forwarded: (services: string) => string;
+    readonly rejected: (services: string) => string;
+    readonly exemptedStay: (services: string) => string;
     readonly notPassedNote: (services: string) => string;
-    readonly confirm: string;
-    readonly cancel: string;
-  };
-  readonly rejectDialog: {
-    readonly title: string;
-    readonly warning: string;
-    readonly reasonLabel: string;
-    readonly reasonPlaceholder: string;
-    readonly otherLabel: string;
-    readonly reasonRequired: string;
-    readonly otherRequired: string;
+    readonly wholeRejection: string;
     readonly confirm: string;
     readonly cancel: string;
   };
@@ -172,6 +175,10 @@ export interface InterviewsContent {
     readonly forwardBody: string;
     readonly rejectTitle: string;
     readonly rejectBody: string;
+    /** P-384 — one line per covered service. */
+    readonly servicesLabel: string;
+    readonly serviceForwarded: (service: string) => string;
+    readonly serviceRejected: (service: string, reason: string) => string;
     readonly reasonLabel: string;
     readonly decidedBy: (name: string, date: string) => string;
     /** Link to EH-INT-05, where a forwarded application continues (J-09). */
@@ -311,15 +318,28 @@ const ar: InterviewsContent = {
     thresholdMet: (threshold) => `ناجح — بلغ حد النجاح (${threshold} فأكثر)`,
     thresholdNotMet: (threshold) => `لم يجتز — دون حد النجاح (${threshold})`,
     thresholdNote:
-      'الخدمة الناجحة يمكن تحويلها إلى لجنة الاعتماد التي تبقى صاحبة القرار، والخدمة التي لم تجتز حد النجاح لا تُحوَّل.',
+      'حد النجاح استرشادي: تُحوَّل كل خدمة أو تُرفض بقرار منفصل، ولجنة الاعتماد تبقى صاحبة القرار في الخدمات المحوَّلة.',
   },
   decision: {
     heading: 'قرار ما بعد المقابلة',
-    description: 'حوِّل الطلب إلى لجنة الاعتماد، أو ارفضه رفضًا مباشرًا مع ذكر السبب.',
+    description:
+      'المقابلة واحدة للطلب، والقرار لكل خدمة على حدة: حوِّل الخدمة إلى لجنة الاعتماد، أو ارفضها مع ذكر السبب.',
     authorityNote:
       'هذا القرار محصور بمن شكّل لجنة المقابلة واتخذ قرار القبول الأولي في مرحلة الفرز.',
+    serviceHeading: (service) => `قرار خدمة ${service}`,
+    choiceLegend: 'القرار لهذه الخدمة',
     forward: 'تحويل إلى لجنة الاعتماد',
-    reject: 'رفض مباشر',
+    reject: 'رفض الخدمة',
+    reasonLabel: 'سبب الرفض',
+    reasonPlaceholder: 'اختر السبب',
+    otherLabel: 'اذكر السبب',
+    submit: 'تسجيل القرار',
+    errorsHeading: 'أكمل ما يلي قبل تسجيل القرار',
+    errors: {
+      'decision-missing': (service) => `اختر القرار لخدمة ${service}.`,
+      'reason-missing': (service) => `اختر سبب رفض خدمة ${service}.`,
+      'reason-other-missing': (service) => `اذكر سبب رفض خدمة ${service}.`,
+    },
     blockedTitle: 'القرار غير متاح الآن',
     blockedBody: 'يتاح اتخاذ القرار بعد رد جميع أعضاء اللجنة واحتساب النتيجة.',
     noPassTitle: 'لا توجد خدمة ناجحة',
@@ -332,23 +352,17 @@ const ar: InterviewsContent = {
     rejectOnlyBody:
       'يتاح التحويل إلى لجنة الاعتماد بعد انعقاد المقابلة واحتساب النتيجة، ويبقى الرفض المباشر متاحًا في أي وقت.',
   },
-  forwardDialog: {
-    title: 'تأكيد التحويل إلى لجنة الاعتماد',
-    body: 'سيُحوَّل الطلب إلى لجنة الاعتماد مرفقًا بنتيجة الفرز ونتيجة المقابلة المجمّعة.',
+  decisionDialog: {
+    title: 'تأكيد قرار ما بعد المقابلة',
+    forwarded: (services) =>
+      `تُحوَّل إلى لجنة الاعتماد مع نتيجة الفرز ونتيجة المقابلة: ${services}.`,
+    rejected: (services) => `تُرفض دون عرضها على لجنة الاعتماد: ${services}.`,
+    exemptedStay: (services) =>
+      `الخدمات المستثناة من المقابلة تبقى في طريقها إلى لجنة الاعتماد: ${services}.`,
     notPassedNote: (services) =>
       `الخدمات التالية لم تبلغ حد النجاح، وستُحوَّل مع نتيجتها إلى لجنة الاعتماد: ${services}.`,
-    confirm: 'تأكيد التحويل',
-    cancel: 'إلغاء',
-  },
-  rejectDialog: {
-    title: 'تأكيد الرفض المباشر',
-    warning: 'هذا الإجراء يرفض الطلب بالكامل دون عرضه على لجنة الاعتماد.',
-    reasonLabel: 'سبب الرفض',
-    reasonPlaceholder: 'اختر السبب',
-    otherLabel: 'اذكر السبب',
-    reasonRequired: 'اختر سبب الرفض للمتابعة.',
-    otherRequired: 'اذكر سبب الرفض.',
-    confirm: 'تأكيد الرفض',
+    wholeRejection: 'لا تبقى أي خدمة للجنة الاعتماد، فيُرفض الطلب بالكامل.',
+    confirm: 'تأكيد القرار',
     cancel: 'إلغاء',
   },
   rescheduleDialog: {
@@ -371,6 +385,9 @@ const ar: InterviewsContent = {
     forwardBody: 'الطلب الآن في مسار لجنة الاعتماد.',
     rejectTitle: 'تم تسجيل الرفض المباشر',
     rejectBody: 'رُفض الطلب بالكامل دون عرضه على لجنة الاعتماد.',
+    servicesLabel: 'القرار لكل خدمة',
+    serviceForwarded: (service) => `${service}: حُوّلت إلى لجنة الاعتماد`,
+    serviceRejected: (service, reason) => `${service}: رُفضت — ${reason}`,
     reasonLabel: 'سبب الرفض',
     decidedBy: (name, date) => `بواسطة ${name} في ${date}`,
     goToCommittee: 'الانتقال إلى لجنة الاعتماد',
@@ -519,16 +536,28 @@ const en: InterviewsContent = {
     thresholdMet: (threshold) => `Passed — meets the pass mark (${threshold} or above)`,
     thresholdNotMet: (threshold) => `Did not pass — below the pass mark (${threshold})`,
     thresholdNote:
-      'A service that passed can be forwarded to the approval committee, which still decides; a service that did not pass is not forwarded.',
+      'The pass mark is advisory: each service is forwarded or rejected by its own decision, and the approval committee still decides the forwarded ones.',
   },
   decision: {
     heading: 'Post-interview decision',
     description:
-      'Forward the application to the approval committee, or reject it directly with a reason.',
+      'The application has one interview, and the decision is taken per service: forward the service to the approval committee, or reject it with a reason.',
     authorityNote:
       'This decision is restricted to the person who formed the interview committee and made the initial screening acceptance.',
+    serviceHeading: (service) => `${service} decision`,
+    choiceLegend: 'Decision for this service',
     forward: 'Forward to the approval committee',
-    reject: 'Direct rejection',
+    reject: 'Reject the service',
+    reasonLabel: 'Rejection reason',
+    reasonPlaceholder: 'Select a reason',
+    otherLabel: 'State the reason',
+    submit: 'Record the decision',
+    errorsHeading: 'Complete the following before recording the decision',
+    errors: {
+      'decision-missing': (service) => `Choose the decision for ${service}.`,
+      'reason-missing': (service) => `Select the rejection reason for ${service}.`,
+      'reason-other-missing': (service) => `State the rejection reason for ${service}.`,
+    },
     blockedTitle: 'The decision is not available yet',
     blockedBody:
       'The decision becomes available once every committee member has responded and the result is calculated.',
@@ -542,23 +571,18 @@ const en: InterviewsContent = {
     rejectOnlyBody:
       'Forwarding to the approval committee becomes available once the interview takes place and the result is calculated. Direct rejection stays available at any time.',
   },
-  forwardDialog: {
-    title: 'Confirm forwarding to the approval committee',
-    body: 'The application will be forwarded with its screening result and the consolidated interview result.',
+  decisionDialog: {
+    title: 'Confirm the post-interview decision',
+    forwarded: (services) =>
+      `Forwarded to the approval committee with the screening and interview results: ${services}.`,
+    rejected: (services) => `Rejected without going to the approval committee: ${services}.`,
+    exemptedStay: (services) =>
+      `Services exempted from the interview stay on their way to the approval committee: ${services}.`,
     notPassedNote: (services) =>
       `These services did not reach the pass mark and are forwarded to the approval committee with their result: ${services}.`,
-    confirm: 'Confirm forwarding',
-    cancel: 'Cancel',
-  },
-  rejectDialog: {
-    title: 'Confirm direct rejection',
-    warning: 'This rejects the whole application without sending it to the approval committee.',
-    reasonLabel: 'Rejection reason',
-    reasonPlaceholder: 'Select a reason',
-    otherLabel: 'State the reason',
-    reasonRequired: 'Select a rejection reason to continue.',
-    otherRequired: 'State the rejection reason.',
-    confirm: 'Confirm rejection',
+    wholeRejection:
+      'No service is left for the approval committee, so the whole application is rejected.',
+    confirm: 'Confirm the decision',
     cancel: 'Cancel',
   },
   rescheduleDialog: {
@@ -581,6 +605,9 @@ const en: InterviewsContent = {
     forwardBody: 'The application is now in the approval committee path.',
     rejectTitle: 'Direct rejection recorded',
     rejectBody: 'The application was rejected in full without going to the approval committee.',
+    servicesLabel: 'Decision per service',
+    serviceForwarded: (service) => `${service}: forwarded to the approval committee`,
+    serviceRejected: (service, reason) => `${service}: rejected — ${reason}`,
     reasonLabel: 'Rejection reason',
     decidedBy: (name, date) => `By ${name} on ${date}`,
     goToCommittee: 'Go to the approval committee',

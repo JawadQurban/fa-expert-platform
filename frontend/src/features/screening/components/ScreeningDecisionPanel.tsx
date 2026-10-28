@@ -10,6 +10,7 @@ import {
   EXEMPTION_REASONS,
   REJECTION_REASONS,
   createServiceDecision,
+  interviewedServices,
   validateAcceptDecision,
   validateRejectDecision,
 } from '../screening.types';
@@ -19,6 +20,7 @@ import type {
   AcceptedServiceDecision,
   CommitteeMemberDto,
   ExemptionReasonId,
+  InterviewPlan,
   RejectionReasonId,
   ScreeningDecisionInput,
 } from '../screening.types';
@@ -33,10 +35,12 @@ import styles from './ScreeningDecisionPanel.module.css';
  *   one decision, and every service left unselected is auto-rejected (AC-2) —
  *   surfaced as a standing warning before the manager confirms, never as a
  *   surprise afterwards.
- * - **Each accepted service must carry a complete path** (AC-3): interview slots
- *   **and** committee members together, *or* an exemption with a reason (J-08).
- *   `validateAcceptDecision` is the only gate (AC-4); the confirm dialog does
- *   not open while any issue remains.
+ * - **Each accepted service must carry a complete path** (AC-3): the interview,
+ *   *or* an exemption with a reason (J-08). `validateAcceptDecision` is the only
+ *   gate (AC-4); the confirm dialog does not open while any issue remains.
+ * - **The interview is one per application** (P-384, UAT BUG-027): one set of
+ *   slots and one committee, entered once, cover every service whose path is
+ *   the interview. Evaluation and the post-interview decision stay per service.
  * - **Rejection is whole-application** (AC-7): a distinct destructive flow with
  *   an explicit warning, confirmation, and a mandatory reason (AC-8, `BR-0219`).
  *
@@ -77,6 +81,7 @@ export function ScreeningDecisionPanel({
   const errorsRef = useRef<HTMLDivElement>(null);
 
   const [draft, setDraft] = useState<Draft>({});
+  const [plan, setPlan] = useState<InterviewPlan>({ slots: [], committeeMemberIds: [] });
   const [issues, setIssues] = useState<readonly AcceptValidationIssue[]>([]);
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -99,7 +104,9 @@ export function ScreeningDecisionPanel({
   const acceptInput: AcceptDecisionInput = {
     kind: 'accept',
     services: acceptedServices.map((service) => draft[service]),
+    interview: null,
   };
+  const interviewed = interviewedServices(acceptInput);
 
   const updateDecision = (service: ApplicationService, patch: Partial<AcceptedServiceDecision>) => {
     setDraft((current) => {
@@ -122,31 +129,31 @@ export function ScreeningDecisionPanel({
     setIssues([]);
   };
 
-  const toggleCommitteeMember = (
-    service: ApplicationService,
-    memberId: string,
-    checked: boolean
-  ) => {
-    const existing = draft[service];
-    if (existing == null) {
-      return;
-    }
-    const next = checked
-      ? [...existing.committeeMemberIds, memberId]
-      : existing.committeeMemberIds.filter((id) => id !== memberId);
-    updateDecision(service, { committeeMemberIds: next });
+  const toggleCommitteeMember = (memberId: string, checked: boolean) => {
+    setPlan((current) => ({
+      ...current,
+      committeeMemberIds: checked
+        ? [...current.committeeMemberIds, memberId]
+        : current.committeeMemberIds.filter((id) => id !== memberId),
+    }));
   };
 
-  /** AC-4 — the single gate. Empty slot rows count as "not provided". */
+  /**
+   * The decision as sent: the ONE interview plan when any service takes the
+   * interview, `null` when every accepted service is exempted. Empty slot rows
+   * count as "not provided".
+   */
+  const normalized = (): AcceptDecisionInput => ({
+    ...acceptInput,
+    interview:
+      interviewed.length === 0
+        ? null
+        : { ...plan, slots: plan.slots.filter((slot) => slot.trim() !== '') },
+  });
+
+  /** AC-4 — the single gate. */
   const handleAcceptClick = () => {
-    const normalized: AcceptDecisionInput = {
-      kind: 'accept',
-      services: acceptInput.services.map((decision) => ({
-        ...decision,
-        slots: decision.slots.filter((slot) => slot.trim() !== ''),
-      })),
-    };
-    const found = validateAcceptDecision(normalized);
+    const found = validateAcceptDecision(normalized());
     setIssues(found);
     if (found.length > 0) {
       errorsRef.current?.focus();
@@ -157,13 +164,7 @@ export function ScreeningDecisionPanel({
 
   const confirmAccept = () => {
     setAcceptOpen(false);
-    onSubmit({
-      kind: 'accept',
-      services: acceptInput.services.map((decision) => ({
-        ...decision,
-        slots: decision.slots.filter((slot) => slot.trim() !== ''),
-      })),
-    });
+    onSubmit(normalized());
   };
 
   const handleRejectConfirm = () => {
@@ -228,7 +229,8 @@ export function ScreeningDecisionPanel({
         </Alert>
       )}
 
-      {/* AC-3 — one complete path per accepted service. */}
+      {/* AC-3 — one complete path per accepted service; the interview itself
+          is entered once, below (P-384). */}
       {acceptedServices.map((service) => {
         const decision = draft[service];
         return (
@@ -253,48 +255,7 @@ export function ScreeningDecisionPanel({
               <Radio value="exemption" label={copy.pathExemption} />
             </RadioGroup>
 
-            {decision.path === 'interview' ? (
-              <div className={styles.pathBody}>
-                {/* Shared with the J-06 staff reschedule — one slots editor. */}
-                <InterviewSlotsField
-                  slots={decision.slots}
-                  idPrefix={`${panelId}-${service}`}
-                  copy={{
-                    heading: copy.slotsHeading,
-                    hint: copy.slotsHint,
-                    slotLabel: copy.slotLabel,
-                    add: copy.addSlot,
-                    remove: copy.removeSlot,
-                    tooSoon: copy.slotTooSoon,
-                  }}
-                  onChange={(slots) => updateDecision(service, { slots })}
-                />
-
-                <fieldset className={styles.fieldset}>
-                  <legend className={styles.legend}>
-                    <Typography as="span" variant="text-md" weight="bold">
-                      {copy.committeeHeading}
-                    </Typography>
-                  </legend>
-                  <Typography as="p" variant="text-sm" color="muted" className={styles.hint}>
-                    {copy.committeeHint}
-                  </Typography>
-                  <div className={styles.committee}>
-                    {committeePool.map((member) => (
-                      <Checkbox
-                        key={member.id}
-                        label={member.name}
-                        description={member.roleTitle[locale] ?? member.roleTitle.ar}
-                        checked={decision.committeeMemberIds.includes(member.id)}
-                        onChange={(event) =>
-                          toggleCommitteeMember(service, member.id, event.target.checked)
-                        }
-                      />
-                    ))}
-                  </div>
-                </fieldset>
-              </div>
-            ) : (
+            {decision.path === 'exemption' && (
               <div className={styles.pathBody}>
                 <Select
                   label={copy.exemptionReasonLabel}
@@ -322,6 +283,60 @@ export function ScreeningDecisionPanel({
           </section>
         );
       })}
+
+      {/* P-384 (UAT BUG-027) — ONE interview for the application: one set of
+          times, one committee, covering every service sent to the interview. */}
+      {interviewed.length > 0 && (
+        <section className={styles.servicePath} aria-labelledby={`${panelId}-interview-heading`}>
+          <Typography as="h3" id={`${panelId}-interview-heading`} variant="text-sm" weight="bold">
+            {copy.interviewHeading}
+          </Typography>
+          <Typography as="p" variant="text-sm">
+            {copy.interviewCovers(formatServiceList(interviewed, content, locale))}
+          </Typography>
+          <Typography as="p" variant="text-sm" color="muted" className={styles.hint}>
+            {copy.interviewPerServiceNote}
+          </Typography>
+          <div className={styles.pathBody}>
+            {/* Shared with the J-06 staff reschedule — one slots editor. */}
+            <InterviewSlotsField
+              slots={plan.slots}
+              idPrefix={`${panelId}-interview`}
+              copy={{
+                heading: copy.slotsHeading,
+                hint: copy.slotsHint,
+                slotLabel: copy.slotLabel,
+                add: copy.addSlot,
+                remove: copy.removeSlot,
+                tooSoon: copy.slotTooSoon,
+              }}
+              onChange={(slots) => setPlan((current) => ({ ...current, slots }))}
+            />
+
+            <fieldset className={styles.fieldset}>
+              <legend className={styles.legend}>
+                <Typography as="span" variant="text-md" weight="bold">
+                  {copy.committeeHeading}
+                </Typography>
+              </legend>
+              <Typography as="p" variant="text-sm" color="muted" className={styles.hint}>
+                {copy.committeeHint}
+              </Typography>
+              <div className={styles.committee}>
+                {committeePool.map((member) => (
+                  <Checkbox
+                    key={member.id}
+                    label={member.name}
+                    description={member.roleTitle[locale] ?? member.roleTitle.ar}
+                    checked={plan.committeeMemberIds.includes(member.id)}
+                    onChange={(event) => toggleCommitteeMember(member.id, event.target.checked)}
+                  />
+                ))}
+              </div>
+            </fieldset>
+          </div>
+        </section>
+      )}
 
       {issues.length > 0 && (
         <div

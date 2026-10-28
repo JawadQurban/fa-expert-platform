@@ -159,6 +159,8 @@ public sealed class ExpertHubDbContext : DbContext
 
     public DbSet<Interview> Interviews => Set<Interview>();
 
+    public DbSet<InterviewServiceEntry> InterviewServices => Set<InterviewServiceEntry>();
+
     public DbSet<InterviewSlot> InterviewSlots => Set<InterviewSlot>();
 
     public DbSet<InterviewModel> InterviewModels => Set<InterviewModel>();

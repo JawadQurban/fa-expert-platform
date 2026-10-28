@@ -397,6 +397,7 @@ export default function InterviewEvaluationPage() {
         {/* J-07/F3 — restricted to the screening decision-maker (`BR-0208`). */}
         {(viewer.canDecide || viewer.canReject === true) && (
           <PostInterviewDecisionPanel
+            services={detail.acceptedServices}
             fullNoShow={viewer.fullNoShow === true}
             rejectOnly={!viewer.canDecide && viewer.canReject === true}
             resultReady={resultReady}

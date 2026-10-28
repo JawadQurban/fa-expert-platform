@@ -130,10 +130,14 @@ export default function ScreeningDetailPage() {
       decision.kind === 'accept'
         ? {
             ...decision,
-            services: decision.services.map((entry) => ({
-              ...entry,
-              slots: entry.slots.map(slotInputToInstant),
-            })),
+            // P-384 — the slots belong to the application's one interview.
+            interview:
+              decision.interview == null
+                ? null
+                : {
+                    ...decision.interview,
+                    slots: decision.interview.slots.map(slotInputToInstant),
+                  },
           }
         : decision;
     void getScreeningService()

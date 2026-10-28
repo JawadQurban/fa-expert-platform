@@ -21,6 +21,10 @@ import type { RejectionReasonId } from '../screening/screening.types';
  * 4. **Only the screening decision-maker may decide** (`BR-0208`, F3/AC-1):
  *    authority arrives as a server-decided `viewer.canDecide` flag, never
  *    inferred client-side from a role string.
+ * 5. **One interview per application, decided per service** (P-384, UAT
+ *    BUG-027): one ticket, one time, one meeting, one committee for every
+ *    covered service (`acceptedServices`), while the post-interview decision
+ *    carries one entry per covered service (`PostInterviewDecisionInput`).
  *
  * The evaluation model itself (criteria, weights, rating scale) is
  * **configuration** served by the API (`BR-0203` pattern) — the approved Notion
@@ -186,12 +190,29 @@ export type InterviewPhase =
 
 export type PostInterviewDecisionKind = 'forward' | 'reject';
 
+/** P-384 — the recorded decision for ONE covered service. */
+export interface ServiceDecisionSummaryDto {
+  readonly service: ApplicationService;
+  readonly kind: PostInterviewDecisionKind;
+  /** Present only on a rejection (`BR-0219`). */
+  readonly rejectionReason: RejectionReasonId | null;
+  /** The free text of an «other» reason. */
+  readonly rejectionReasonText: string | null;
+}
+
 export interface PostInterviewDecisionSummaryDto {
+  /**
+   * The APPLICATION's outcome: `forward` when anything goes on to the approval
+   * committee (a forwarded service, or one exempted at screening), `reject`
+   * when nothing does.
+   */
   readonly kind: PostInterviewDecisionKind;
   readonly decidedAt: string;
   readonly decidedByName: string;
-  /** Present only on a direct rejection (`BR-0219`). */
+  /** Present only when the whole application was rejected (`BR-0219`). */
   readonly rejectionReason: RejectionReasonId | null;
+  /** P-384 — the decision itself, one entry per covered service. */
+  readonly services: readonly ServiceDecisionSummaryDto[];
 }
 
 /* ------------------------------------------------------------------ *
@@ -202,7 +223,10 @@ export interface InterviewDetailDto {
   readonly applicationId: string;
   readonly reference: string;
   readonly applicantName: string;
-  /** Only services accepted at screening reach an interview (J-05/F5/AC-5). */
+  /**
+   * The services the application's ONE interview covers (P-384) — those
+   * screening sent to the interview (J-05/F5/AC-5); never an exempted one.
+   */
   readonly acceptedServices: readonly ApplicationService[];
   readonly ticket: InterviewTicketDto;
   readonly status: InterviewPhase;
@@ -269,17 +293,29 @@ export type InterviewEvaluationInput = EvaluationSubmissionInput | NonAttendance
  * Post-interview decision input — J-07/F3
  * ------------------------------------------------------------------ */
 
-export interface ForwardDecisionInput {
+export interface ForwardServiceInput {
+  readonly service: ApplicationService;
   readonly kind: 'forward';
 }
 
-export interface DirectRejectInput {
+export interface RejectServiceInput {
+  readonly service: ApplicationService;
   readonly kind: 'reject';
   readonly reason: RejectionReasonId;
   readonly reasonOther: string;
 }
 
-export type PostInterviewDecisionInput = ForwardDecisionInput | DirectRejectInput;
+/** P-384 — the decision for one covered service. */
+export type ServiceDecisionInput = ForwardServiceInput | RejectServiceInput;
+
+/**
+ * J-07/F3 + P-384 — one decision per service the interview covers, sent
+ * together. The application goes on to the approval committee when anything
+ * is left for it, and is rejected when nothing is.
+ */
+export interface PostInterviewDecisionInput {
+  readonly services: readonly ServiceDecisionInput[];
+}
 
 /* ------------------------------------------------------------------ *
  * Reschedule input — J-06/F4/AC-3+AC-4 (staff side)
@@ -341,19 +377,60 @@ export function validateEvaluation(
   return issues;
 }
 
-export type DecisionValidationCode = 'reason-missing' | 'reason-other-missing';
+export type DecisionValidationCode = 'decision-missing' | 'reason-missing' | 'reason-other-missing';
 
-/** J-07/F3/AC-2 — a direct rejection needs a reason from the unified list. */
+export interface DecisionValidationIssue {
+  readonly code: DecisionValidationCode;
+  readonly service: ApplicationService;
+}
+
+/** A per-service draft while the decision-maker is still choosing. */
+export interface ServiceDecisionDraft {
+  readonly kind: PostInterviewDecisionKind | null;
+  readonly reason: RejectionReasonId | null;
+  readonly reasonOther: string;
+}
+
+/**
+ * J-07/F3/AC-2 + P-384 — every covered service needs a decision, and every
+ * rejection a reason from the unified list (`BR-0219`). Returns every issue,
+ * per service, so the panel can name them all at once.
+ */
 export function validatePostInterviewDecision(
-  input: PostInterviewDecisionInput
-): readonly DecisionValidationCode[] {
-  if (input.kind === 'forward') {
-    return [];
+  services: readonly ApplicationService[],
+  drafts: Readonly<Partial<Record<ApplicationService, ServiceDecisionDraft>>>
+): readonly DecisionValidationIssue[] {
+  const issues: DecisionValidationIssue[] = [];
+  for (const service of services) {
+    const draft = drafts[service];
+    if (draft?.kind == null) {
+      issues.push({ code: 'decision-missing', service });
+    } else if (draft.kind === 'reject' && draft.reason == null) {
+      issues.push({ code: 'reason-missing', service });
+    } else if (
+      draft.kind === 'reject' &&
+      draft.reason === 'other' &&
+      draft.reasonOther.trim() === ''
+    ) {
+      issues.push({ code: 'reason-other-missing', service });
+    }
   }
-  if (input.reason === 'other' && input.reasonOther.trim() === '') {
-    return ['reason-other-missing'];
-  }
-  return [];
+  return issues;
+}
+
+/** The validated drafts as the API takes them — call only when there are no issues. */
+export function toDecisionInput(
+  services: readonly ApplicationService[],
+  drafts: Readonly<Partial<Record<ApplicationService, ServiceDecisionDraft>>>
+): PostInterviewDecisionInput {
+  return {
+    services: services.map((service): ServiceDecisionInput => {
+      const draft = drafts[service];
+      return draft?.kind === 'reject' && draft.reason != null
+        ? { service, kind: 'reject', reason: draft.reason, reasonOther: draft.reasonOther }
+        : { service, kind: 'forward' };
+    }),
+  };
 }
 
 /** J-06/F4 — a reschedule must propose at least one usable slot. */

@@ -5,6 +5,7 @@ import {
   createServiceEvaluation,
   noServicePassed,
   pendingMembers,
+  toDecisionInput,
   validateEvaluation,
   validatePostInterviewDecision,
   validateReschedule,
@@ -194,25 +195,60 @@ describe('allMembersResponded / pendingMembers (BR-0220, F2/AC-1)', () => {
   });
 });
 
-describe('validatePostInterviewDecision (J-07/F3/AC-2, BR-0219)', () => {
-  it('needs no reason to forward', () => {
-    expect(validatePostInterviewDecision({ kind: 'forward' })).toEqual([]);
-  });
+describe('validatePostInterviewDecision (J-07/F3/AC-2, BR-0219, P-384)', () => {
+  const both = ['trainer', 'consultant'] as const;
 
-  it('accepts a listed rejection reason', () => {
+  it('needs no reason to forward', () => {
     expect(
-      validatePostInterviewDecision({
-        kind: 'reject',
-        reason: 'insufficient-experience',
-        reasonOther: '',
+      validatePostInterviewDecision(['trainer'], {
+        trainer: { kind: 'forward', reason: null, reasonOther: '' },
       })
     ).toEqual([]);
   });
 
+  it('P-384: needs a decision for every covered service, named per service', () => {
+    expect(
+      validatePostInterviewDecision(both, {
+        trainer: { kind: 'forward', reason: null, reasonOther: '' },
+      })
+    ).toEqual([{ code: 'decision-missing', service: 'consultant' }]);
+  });
+
+  it('accepts a listed rejection reason, and requires one per rejected service', () => {
+    expect(
+      validatePostInterviewDecision(both, {
+        trainer: { kind: 'forward', reason: null, reasonOther: '' },
+        consultant: { kind: 'reject', reason: 'insufficient-experience', reasonOther: '' },
+      })
+    ).toEqual([]);
+    expect(
+      validatePostInterviewDecision(both, {
+        trainer: { kind: 'reject', reason: null, reasonOther: '' },
+        consultant: { kind: 'reject', reason: 'insufficient-experience', reasonOther: '' },
+      })
+    ).toEqual([{ code: 'reason-missing', service: 'trainer' }]);
+  });
+
   it('requires free text when the reason is "other"', () => {
     expect(
-      validatePostInterviewDecision({ kind: 'reject', reason: 'other', reasonOther: '  ' })
-    ).toEqual(['reason-other-missing']);
+      validatePostInterviewDecision(['trainer'], {
+        trainer: { kind: 'reject', reason: 'other', reasonOther: '  ' },
+      })
+    ).toEqual([{ code: 'reason-other-missing', service: 'trainer' }]);
+  });
+
+  it('sends one decision per covered service, in order', () => {
+    expect(
+      toDecisionInput(both, {
+        trainer: { kind: 'forward', reason: null, reasonOther: '' },
+        consultant: { kind: 'reject', reason: 'other', reasonOther: 'خارج الاحتياج' },
+      })
+    ).toEqual({
+      services: [
+        { service: 'trainer', kind: 'forward' },
+        { service: 'consultant', kind: 'reject', reason: 'other', reasonOther: 'خارج الاحتياج' },
+      ],
+    });
   });
 });
 

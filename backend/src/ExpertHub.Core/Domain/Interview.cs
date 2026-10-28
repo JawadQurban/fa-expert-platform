@@ -67,7 +67,14 @@ public sealed class Interview
 
     /* ── J-07/F3 — the post-interview decision, `BR-0208`-gated ──────────── */
 
-    /// <summary>`forward` | `reject`, once the screening decision-maker acts.</summary>
+    /// <summary>
+    /// The APPLICATION's outcome of the post-interview decision, written in the
+    /// same transaction as the per-service decisions on
+    /// <see cref="InterviewServiceEntry"/> (`P-384`): `forward` when anything
+    /// goes on to the approval committee, `reject` when nothing does. Null
+    /// while undecided — every reader that asks «is the interview decided?»
+    /// keeps asking here.
+    /// </summary>
     public string? DecisionKind { get; set; }
 
     public string? DecisionReasonId { get; set; }
@@ -79,6 +86,51 @@ public sealed class Interview
     public DateTime? DecidedAt { get; set; }
 
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// One service the application's interview covers — `INTERVIEW_SERVICE`
+/// (`P-384`, UAT BUG-027). The interview itself is ONE per application: one
+/// slot set, one applicant pick, one meeting, one committee. What stays per
+/// service is the evaluation (each member scores each covered service —
+/// `INTERVIEW_AXIS_SCORE.service`) and the post-interview DECISION, which lives
+/// here: forward or reject, with its reason, per service.
+/// </summary>
+/// <remarks>
+/// A service exempted from the interview at screening (J-08, «مستثنى من
+/// المقابلة») has no row: it is not in the interview, so the interview neither
+/// scores nor decides it.
+/// </remarks>
+public sealed class InterviewServiceEntry
+{
+    public Guid InterviewServiceId { get; set; }
+
+    public Guid InterviewId { get; set; }
+
+    /// <summary>The covered service — the same grain as <see cref="InterviewAxisScore.Service"/>.</summary>
+    public required string Service { get; set; }
+
+    /// <summary>`forward` | `reject`; null while the service is undecided.</summary>
+    public string? DecisionKind { get; set; }
+
+    /// <summary>Unified list id (`BR-0219`); rejections only.</summary>
+    public string? DecisionReasonId { get; set; }
+
+    public string? DecisionReasonText { get; set; }
+
+    public Guid? DecidedBy { get; set; }
+
+    public DateTime? DecidedAt { get; set; }
+}
+
+/// <summary>`INTERVIEW_SERVICE.decision` — the closed set.</summary>
+public static class InterviewServiceDecisions
+{
+    /// <summary>The service goes to the approval committee (J-09).</summary>
+    public const string Forward = "forward";
+
+    /// <summary>The service is closed as not accepted, with a reason.</summary>
+    public const string Reject = "reject";
 }
 
 /// <summary>One proposed time — `INTERVIEW_SLOT`. Superseded slots are kept,

@@ -160,6 +160,33 @@ public sealed class InterviewConfiguration : IEntityTypeConfiguration<Interview>
     }
 }
 
+/// <summary>
+/// `INTERVIEW_SERVICE` — the services one application interview covers, and
+/// the post-interview decision per service (`P-384`, migration `M56`). One row
+/// per (interview, service), so a service is decided once.
+/// </summary>
+public sealed class InterviewServiceEntryConfiguration : IEntityTypeConfiguration<InterviewServiceEntry>
+{
+    public void Configure(EntityTypeBuilder<InterviewServiceEntry> builder)
+    {
+        builder.ToTable("INTERVIEW_SERVICE");
+        builder.HasKey(s => s.InterviewServiceId);
+        builder.Property(s => s.InterviewServiceId).HasColumnName("interview_service_id");
+        builder.Property(s => s.InterviewId).HasColumnName("interview_id");
+        builder.Property(s => s.Service).HasColumnName("service").HasMaxLength(30);
+        builder.Property(s => s.DecisionKind).HasColumnName("decision").HasMaxLength(20);
+        builder.Property(s => s.DecisionReasonId).HasColumnName("decision_reason_id").HasMaxLength(60);
+        builder.Property(s => s.DecisionReasonText).HasColumnName("decision_reason_text");
+        builder.Property(s => s.DecidedBy).HasColumnName("decided_by");
+        builder.Property(s => s.DecidedAt).HasColumnName("decided_at");
+        builder.HasIndex(s => new { s.InterviewId, s.Service }).IsUnique();
+        builder.HasOne<Interview>().WithMany().HasForeignKey(s => s.InterviewId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(s => s.DecidedBy)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>`INTERVIEW_SLOT` — superseded slots kept for the history.</summary>
 public sealed class InterviewSlotConfiguration : IEntityTypeConfiguration<InterviewSlot>
 {

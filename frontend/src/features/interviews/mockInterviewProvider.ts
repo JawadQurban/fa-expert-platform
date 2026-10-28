@@ -275,11 +275,24 @@ export function createMockInterviewProvider(
       if (failWith != null) {
         return { ok: false, error: failWith };
       }
+      // P-384 — decided per service; the application goes on to the committee
+      // when any service is forwarded (this seed has no exempted service).
+      const rejections = input.services.flatMap((entry) =>
+        entry.kind === 'reject' ? [entry] : []
+      );
+      const allRejected = rejections.length === input.services.length;
       const summary: PostInterviewDecisionSummaryDto = {
-        kind: input.kind,
+        kind: allRejected ? 'reject' : 'forward',
         decidedAt: new Date(now).toISOString(),
         decidedByName: 'مدير الفرز',
-        rejectionReason: input.kind === 'reject' ? input.reason : null,
+        rejectionReason: allRejected ? (rejections[0]?.reason ?? null) : null,
+        services: input.services.map((entry) => ({
+          service: entry.service,
+          kind: entry.kind,
+          rejectionReason: entry.kind === 'reject' ? entry.reason : null,
+          rejectionReasonText:
+            entry.kind === 'reject' && entry.reasonOther.trim() !== '' ? entry.reasonOther : null,
+        })),
       };
       decision = summary;
       return { ok: true, value: summary };

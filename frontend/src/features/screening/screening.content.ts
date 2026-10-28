@@ -116,6 +116,10 @@ export interface ScreeningContent {
     readonly pathLegend: string;
     readonly pathInterview: string;
     readonly pathExemption: string;
+    /** P-384 — the application's ONE interview, for every interviewed service. */
+    readonly interviewHeading: string;
+    readonly interviewCovers: (services: string) => string;
+    readonly interviewPerServiceNote: string;
     readonly slotsHeading: string;
     readonly slotsHint: string;
     readonly slotLabel: (index: number) => string;
@@ -274,15 +278,19 @@ const ar: ScreeningContent = {
   decision: {
     heading: 'القرار',
     description:
-      'حدّد الخدمات المقبولة، ولكل خدمة مقبولة اختر إمّا مواعيد مقابلة مع أعضاء اللجنة معًا، أو استثناءً من المقابلة مع سببه.',
+      'حدّد الخدمات المقبولة، ولكل خدمة مقبولة اختر إمّا المقابلة أو الاستثناء من المقابلة مع سببه. للطلب مقابلة واحدة تشمل جميع الخدمات المحوّلة إلى المقابلة.',
     selectServicesHeading: 'الخدمات المقبولة',
     selectServicesHint: 'يمكن قبول أكثر من خدمة في القرار نفسه.',
     autoRejectWarning: (services) =>
       `الخدمات غير المحدّدة تُرفض تلقائيًا مع تسجيل تنبيه في القرار: ${services}`,
     pathHeading: (service) => `مسار خدمة ${service}`,
     pathLegend: 'مسار الخدمة بعد القبول',
-    pathInterview: 'جدولة مقابلة',
+    pathInterview: 'ضمن مقابلة الطلب',
     pathExemption: 'استثناء من المقابلة',
+    interviewHeading: 'مقابلة الطلب',
+    interviewCovers: (services) => `مقابلة واحدة تشمل: ${services}`,
+    interviewPerServiceNote:
+      'يختار المتقدم موعدًا واحدًا وتُعقد مقابلة واحدة، ويقيّم أعضاء اللجنة كل خدمة على حدة، ويُتخذ القرار بعد المقابلة لكل خدمة منفصلة.',
     slotsHeading: 'المواعيد المقترحة',
     slotsHint: 'أضف موعدًا واحدًا على الأقل ليختار منه المتقدم.',
     slotLabel: (index) => `الموعد ${arNumber(index)}`,
@@ -299,10 +307,9 @@ const ar: ScreeningContent = {
     errorsHeading: 'لا يمكن إتمام القرار قبل استكمال ما يلي',
     errors: {
       'no-service-selected': () => 'اختر خدمة واحدة على الأقل لقبولها.',
-      'slots-missing': (service) => `أضف موعد مقابلة واحدًا على الأقل لخدمة ${service}.`,
-      'slot-too-soon': (service) =>
-        `يجب أن تبدأ مواعيد مقابلة خدمة ${service} بعد ساعة على الأقل من الوقت الحالي.`,
-      'committee-missing': (service) => `اختر عضو لجنة واحدًا على الأقل لخدمة ${service}.`,
+      'slots-missing': () => 'أضف موعدًا واحدًا على الأقل لمقابلة الطلب.',
+      'slot-too-soon': () => 'يجب أن تبدأ مواعيد مقابلة الطلب بعد ساعة على الأقل من الوقت الحالي.',
+      'committee-missing': () => 'اختر عضوًا واحدًا على الأقل في لجنة مقابلة الطلب.',
       'exemption-reason-missing': (service) => `اختر سبب الاستثناء لخدمة ${service}.`,
       'exemption-reason-other-missing': (service) => `اذكر سبب الاستثناء لخدمة ${service}.`,
     },
@@ -465,15 +472,19 @@ const en: ScreeningContent = {
   decision: {
     heading: 'Decision',
     description:
-      'Select the accepted services. For each accepted service choose either interview slots together with committee members, or an interview exemption with its reason.',
+      'Select the accepted services. For each accepted service choose either the interview or an interview exemption with its reason. The application has one interview covering every service sent to it.',
     selectServicesHeading: 'Accepted services',
     selectServicesHint: 'More than one service can be accepted in the same decision.',
     autoRejectWarning: (services) =>
       `Services left unselected are automatically rejected, with an alert logged against the decision: ${services}`,
     pathHeading: (service) => `${service} path`,
     pathLegend: 'Path after acceptance',
-    pathInterview: 'Schedule an interview',
+    pathInterview: 'Include in the application interview',
     pathExemption: 'Exempt from the interview',
+    interviewHeading: 'The application interview',
+    interviewCovers: (services) => `One interview covering: ${services}`,
+    interviewPerServiceNote:
+      'The applicant picks one time and one interview is held; the committee scores each service separately, and the post-interview decision is taken for each service on its own.',
     slotsHeading: 'Proposed slots',
     slotsHint: 'Add at least one slot for the applicant to choose from.',
     slotLabel: (index) => `Slot ${formatNumber(index, 'en')}`,
@@ -491,10 +502,11 @@ const en: ScreeningContent = {
     errorsHeading: 'The decision cannot be completed until the following is done',
     errors: {
       'no-service-selected': () => 'Select at least one service to accept.',
-      'slots-missing': (service) => `Add at least one interview slot for ${service}.`,
-      'slot-too-soon': (service) =>
-        `Every interview slot for ${service} must start at least one hour from now.`,
-      'committee-missing': (service) => `Select at least one committee member for ${service}.`,
+      'slots-missing': () => 'Add at least one slot for the application interview.',
+      'slot-too-soon': () =>
+        'Every slot for the application interview must start at least one hour from now.',
+      'committee-missing': () =>
+        'Select at least one member for the application interview committee.',
       'exemption-reason-missing': (service) => `Select the exemption reason for ${service}.`,
       'exemption-reason-other-missing': (service) => `State the exemption reason for ${service}.`,
     },

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   createServiceDecision,
+  interviewedServices,
   validateAcceptDecision,
   validateRejectDecision,
 } from './screening.types';
-import type { AcceptDecisionInput } from './screening.types';
+import type { AcceptDecisionInput, InterviewPlan } from './screening.types';
 
 /**
  * J-05/F5/AC-4 and AC-8 as unit tests. The gate lives in the contract module,
@@ -12,8 +13,15 @@ import type { AcceptDecisionInput } from './screening.types';
  * page today, an API-side re-check or a different surface later).
  */
 function acceptWith(...services: AcceptDecisionInput['services']): AcceptDecisionInput {
-  return { kind: 'accept', services };
+  return { kind: 'accept', services, interview: null };
 }
+
+/** P-384 — the application's ONE interview plan. */
+function withPlan(input: AcceptDecisionInput, plan: Partial<InterviewPlan>): AcceptDecisionInput {
+  return { ...input, interview: { slots: [], committeeMemberIds: [], ...plan } };
+}
+
+const COMPLETE_PLAN = { slots: ['2030-08-01T09:00'], committeeMemberIds: ['stf-01'] };
 
 describe('validateAcceptDecision (J-05/F5/AC-4)', () => {
   it('rejects an empty selection', () => {
@@ -22,36 +30,32 @@ describe('validateAcceptDecision (J-05/F5/AC-4)', () => {
     ]);
   });
 
-  it('requires slots AND committee together on the interview path', () => {
+  it('requires slots AND committee together for the application interview', () => {
     const issues = validateAcceptDecision(acceptWith(createServiceDecision('trainer')));
-    expect(issues.map((issue) => issue.code)).toEqual(['slots-missing', 'committee-missing']);
+    expect(issues).toEqual([
+      { code: 'slots-missing', service: null },
+      { code: 'committee-missing', service: null },
+    ]);
   });
 
-  it('still blocks when only one half of the interview path is provided', () => {
-    const withSlotsOnly = {
-      ...createServiceDecision('trainer'),
-      slots: ['2030-08-01T09:00'],
-    };
-    expect(validateAcceptDecision(acceptWith(withSlotsOnly)).map((issue) => issue.code)).toEqual([
-      'committee-missing',
-    ]);
-
-    const withCommitteeOnly = {
-      ...createServiceDecision('trainer'),
-      committeeMemberIds: ['stf-01'],
-    };
+  it('still blocks when only one half of the interview plan is provided', () => {
+    const trainer = acceptWith(createServiceDecision('trainer'));
     expect(
-      validateAcceptDecision(acceptWith(withCommitteeOnly)).map((issue) => issue.code)
+      validateAcceptDecision(withPlan(trainer, { slots: ['2030-08-01T09:00'] })).map(
+        (issue) => issue.code
+      )
+    ).toEqual(['committee-missing']);
+    expect(
+      validateAcceptDecision(withPlan(trainer, { committeeMemberIds: ['stf-01'] })).map(
+        (issue) => issue.code
+      )
     ).toEqual(['slots-missing']);
   });
 
   it('passes when slots and committee are both present', () => {
-    const complete = {
-      ...createServiceDecision('trainer'),
-      slots: ['2030-08-01T09:00'],
-      committeeMemberIds: ['stf-01'],
-    };
-    expect(validateAcceptDecision(acceptWith(complete))).toEqual([]);
+    expect(
+      validateAcceptDecision(withPlan(acceptWith(createServiceDecision('trainer')), COMPLETE_PLAN))
+    ).toEqual([]);
   });
 
   it('requires a reason on the exemption path (J-08/F1/AC-2)', () => {
@@ -73,27 +77,40 @@ describe('validateAcceptDecision (J-05/F5/AC-4)', () => {
   });
 
   it('allows one service to be exempted while another goes to interview (J-08/F1/AC-3)', () => {
-    const interview = {
-      ...createServiceDecision('trainer'),
-      slots: ['2030-08-01T09:00'],
-      committeeMemberIds: ['stf-01'],
-    };
     const exempt = {
       ...createServiceDecision('consultant'),
       path: 'exemption' as const,
       exemptionReason: 'expert' as const,
     };
-    expect(validateAcceptDecision(acceptWith(interview, exempt))).toEqual([]);
+    const input = withPlan(acceptWith(createServiceDecision('trainer'), exempt), COMPLETE_PLAN);
+    expect(validateAcceptDecision(input)).toEqual([]);
+    // The one interview covers the trainer only; the exempted service stays out.
+    expect(interviewedServices(input)).toEqual(['trainer']);
   });
 
-  it('reports every incomplete service at once, not one at a time', () => {
+  it('P-384: several interviewed services share ONE plan, so its gaps are reported once', () => {
     const issues = validateAcceptDecision(
       acceptWith(createServiceDecision('trainer'), createServiceDecision('consultant'))
     );
-    expect(issues).toHaveLength(4);
-    expect(new Set(issues.map((issue) => issue.service))).toEqual(
-      new Set(['trainer', 'consultant'])
+    expect(issues).toEqual([
+      { code: 'slots-missing', service: null },
+      { code: 'committee-missing', service: null },
+    ]);
+    const complete = withPlan(
+      acceptWith(createServiceDecision('trainer'), createServiceDecision('consultant')),
+      COMPLETE_PLAN
     );
+    expect(validateAcceptDecision(complete)).toEqual([]);
+    expect(interviewedServices(complete)).toEqual(['trainer', 'consultant']);
+  });
+
+  it('needs no interview plan when every accepted service is exempted', () => {
+    const exempt = {
+      ...createServiceDecision('trainer'),
+      path: 'exemption' as const,
+      exemptionReason: 'expert' as const,
+    };
+    expect(validateAcceptDecision(acceptWith(exempt))).toEqual([]);
   });
 });
 
@@ -116,24 +133,18 @@ describe('validateRejectDecision (J-05/F5/AC-8, BR-0219)', () => {
 });
 
 describe('BUG-056 — screening slots start at least an hour from now', () => {
-  it('flags a slot inside the next hour, for its service', () => {
+  it('flags a slot inside the next hour, for the application interview', () => {
     const now = new Date('2026-10-28T09:00:00Z');
-    const issues = validateAcceptDecision(
-      acceptWith({
-        ...createServiceDecision('trainer'),
-        slots: ['2026-10-28T09:20:00Z'],
-        committeeMemberIds: ['stf-01'],
-      }),
-      now
-    );
-    expect(issues).toEqual([{ code: 'slot-too-soon', service: 'trainer' }]);
+    const trainer = acceptWith(createServiceDecision('trainer'));
     expect(
       validateAcceptDecision(
-        acceptWith({
-          ...createServiceDecision('trainer'),
-          slots: ['2026-10-28T10:20:00Z'],
-          committeeMemberIds: ['stf-01'],
-        }),
+        withPlan(trainer, { slots: ['2026-10-28T09:20:00Z'], committeeMemberIds: ['stf-01'] }),
+        now
+      )
+    ).toEqual([{ code: 'slot-too-soon', service: null }]);
+    expect(
+      validateAcceptDecision(
+        withPlan(trainer, { slots: ['2026-10-28T10:20:00Z'], committeeMemberIds: ['stf-01'] }),
         now
       )
     ).toEqual([]);

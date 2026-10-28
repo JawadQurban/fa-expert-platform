@@ -157,7 +157,7 @@ fixes them is named in §7.
 | **Shared** | `ATTACHMENT` · `REFERENCE_LIST` · `REFERENCE_VALUE` |
 | **CAP-08** Identity & access | `APP_USER` · `ROLE` · `PERMISSION` · `ROLE_PERMISSION` · `USER_ROLE` · `AUDIT_LOG` |
 | **CAP-01** Application | `APPLICATION` · `APPLICATION_SERVICE` · `FORM_SCHEMA` · `FORM_SECTION` · `FORM_FIELD` · `ATTACHMENT_RULE` · `APPLICATION_FIELD_VALUE` · `APPLICATION_ATTACHMENT` · `SERVICE_REQUEST` · `SPEAKER_RECORD` |
-| **CAP-02** Screening & evaluation | `EVALUATION_MODEL` · `EVALUATION_CRITERION` · `SCREENING_RESULT` · `SCREENING_CRITERION_SCORE` · `AI_ANALYSIS` · `INTERVIEW` · `INTERVIEW_SLOT` · `INTERVIEW_MODEL` · `INTERVIEW_AXIS` · `INTERVIEW_EVALUATION` · `INTERVIEW_AXIS_SCORE` · `COMMITTEE_TEMPLATE` · `COMMITTEE_SEQUENCE` · `COMMITTEE_STEP` · `ACCREDITATION_DECISION` |
+| **CAP-02** Screening & evaluation | `EVALUATION_MODEL` · `EVALUATION_CRITERION` · `SCREENING_RESULT` · `SCREENING_CRITERION_SCORE` · `AI_ANALYSIS` · `INTERVIEW` · `INTERVIEW_SERVICE` · `INTERVIEW_SLOT` · `INTERVIEW_MODEL` · `INTERVIEW_AXIS` · `INTERVIEW_EVALUATION` · `INTERVIEW_AXIS_SCORE` · `COMMITTEE_TEMPLATE` · `COMMITTEE_SEQUENCE` · `COMMITTEE_STEP` · `ACCREDITATION_DECISION` |
 | **CAP-03** Agreement | `AGREEMENT` · `AGREEMENT_SERVICE` · `ADDENDUM` · `AGREEMENT_TEMPLATE` · `AGREEMENT_DOCUMENT` · `SIGNING_SEQUENCE` · `SIGNATORY` · `E_SIGNATURE` · `AGREEMENT_EVENT` |
 | **CAP-04** Trainer profile | `TRAINER_PROFILE` · `TRAINER_SERVICE` · `EDUCATION` · `PROFESSIONAL_CERTIFICATION` · `PRACTICAL_EXPERIENCE` · `TRAINING_COURSE` · `AREA_OF_TRAINING` · `AREA_OF_COOPERATION` · `AVAILABILITY` · `BANK_DATA` · `PROFILE_CHANGE_REQUEST` · `TRAINER_RECORD` · `RATING_SOURCE_RECORD` · `TRAINER_RATING` |
 | **CAP-05** Assignment | `ASSIGNMENT_REQUEST` · `ASSIGNMENT_SLOT` · `MATCHING_MODEL` · `MATCHING_RUN` · `MATCH_CANDIDATE` · `MATCH_EXCLUSION` · `CANDIDATE_POOL` · `POOL_MEMBER` · `SLOT_CYCLE` · `ASSIGNMENT_OFFER` · `ENGAGEMENT` · `ENGAGEMENT_TERMINATION` · `MATERIAL_SUBMISSION` · `SUBMISSION_ROUND` |
@@ -431,6 +431,17 @@ evaluated and accredited independently (§6.1, `BR-0403`).
 > single fields); and the J-07/F3 post-interview decision columns live on
 > `INTERVIEW`. The member assignment is an `INTERVIEW_EVALUATION` row with
 > `submitted_at IS NULL`, which makes `BR-0220` a query rather than a flag.
+>
+> **Implementation note (2026-10-28, `P-384`, migration `M56`, UAT BUG-027):**
+> the interview stays ONE per application (`IX_INTERVIEW_application_id`,
+> unique since M06): one slot set, one pick, one meeting, one committee. The
+> services it covers, and the post-interview decision **per service**, live in
+> `INTERVIEW_SERVICE` (`interview_id`, `service`, `decision`,
+> `decision_reason_id`, `decision_reason_text`, `decided_by`, `decided_at`;
+> unique on `interview_id, service`). A service exempted at screening (J-08)
+> has no row. `INTERVIEW.decision` remains, as the application's outcome of
+> that decision (`forward` when anything goes on to the approval committee,
+> `reject` when nothing does).
 
 **`AI_ANALYSIS` is a sibling of `SCREENING_RESULT`, never a column on it**
 (`BR-0201`/`BR-0202`, §2.2).
@@ -443,6 +454,7 @@ erDiagram
   SCREENING_RESULT ||--|{ SCREENING_CRITERION_SCORE : "broken down into"
   APPLICATION ||--o| AI_ANALYSIS : "advisory only - BR-0202"
   APPLICATION_SERVICE ||--o| INTERVIEW : "may require"
+  INTERVIEW ||--|{ INTERVIEW_SERVICE : "covers, decided per service - P-384"
   INTERVIEW ||--|{ INTERVIEW_SLOT : proposes
   INTERVIEW_MODEL ||--|{ INTERVIEW_AXIS : "measured on"
   INTERVIEW ||--o{ INTERVIEW_EVALUATION : "evaluated by"
@@ -511,6 +523,14 @@ erDiagram
     text reschedule_note
     string meeting_url "Teams - integration not in CAP-12"
     datetime sla_due_at "3 business days - J-06/F1/AC-4"
+  }
+  INTERVIEW_SERVICE {
+    uuid interview_service_id PK
+    uuid interview_id FK
+    string service "never an exempted service - J-08"
+    string decision "forward | reject - null while undecided"
+    string decision_reason_id "unified list - BR-0219"
+    uuid decided_by FK
   }
   INTERVIEW_SLOT {
     uuid slot_id PK

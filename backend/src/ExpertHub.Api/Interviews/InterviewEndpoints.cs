@@ -29,6 +29,11 @@ namespace ExpertHub.Api.Interviews;
  *   per (axis, service); no blended application score exists.
  * - `BR-0208`: only the screening decision-maker decides — compared against
  *   `SCREENING_RESULT.decided_by`, never a role string.
+ * - `P-384` (UAT BUG-027): ONE interview per application — one slot set, one
+ *   pick, one meeting, one committee — covering the services listed in
+ *   `INTERVIEW_SERVICE`. Each member scores each covered service, and the
+ *   post-interview decision is taken PER SERVICE (forward or reject, with its
+ *   reason). A service exempted at screening has no row and is never decided here.
  */
 
 /// <remarks><c>ScheduledAt</c> is the CONFIRMED time only — null while the
@@ -81,8 +86,16 @@ internal sealed record InterviewViewerWire(
     string? MemberId, bool CanEvaluate, bool CanDecide, bool CanReschedule,
     bool CanReject = false, bool FullNoShow = false, string? EvaluationBlockedReason = null);
 
+/// <summary>`P-384` — the post-interview decision for ONE covered service.</summary>
+internal sealed record ServiceDecisionWire(
+    string Service, string Kind, string? RejectionReason, string? RejectionReasonText);
+
+/// <remarks><c>Kind</c> is the application's outcome — `forward` when anything
+/// goes on to the approval committee, `reject` when nothing does; the decision
+/// itself is <c>Services</c>, one per covered service (`P-384`).</remarks>
 internal sealed record PostInterviewDecisionWire(
-    string Kind, string DecidedAt, string DecidedByName, string? RejectionReason);
+    string Kind, string DecidedAt, string DecidedByName, string? RejectionReason,
+    IReadOnlyList<ServiceDecisionWire> Services);
 
 /// <remarks><c>ExemptedServices</c> — services of the same application exempted
 /// from interview (J-08). They are eligible for the committee without an
@@ -121,8 +134,15 @@ internal sealed record ServiceEvaluationInputWire(
 internal sealed record EvaluationInputWire(
     string? Kind, IReadOnlyList<ServiceEvaluationInputWire>? Services);
 
+internal sealed record ServiceDecisionInputWire(
+    string? Service, string? Kind, string? Reason, string? ReasonOther);
+
+/// <remarks>`P-384` — <c>Services</c> carries one decision per covered service.
+/// Without it, the pre-P-384 shape (<c>Kind</c>/<c>Reason</c> for the whole
+/// interview) is applied to every covered service alike.</remarks>
 internal sealed record PostInterviewDecisionInputWire(
-    string? Kind, string? Reason, string? ReasonOther);
+    string? Kind, string? Reason, string? ReasonOther,
+    IReadOnlyList<ServiceDecisionInputWire>? Services = null);
 
 internal sealed record StaffRescheduleInputWire(IReadOnlyList<string>? Slots, string? Note);
 
@@ -228,14 +248,15 @@ public static class InterviewEndpoints
             }
             else
             {
-                var acceptedServices = await AcceptedServicesAsync(db, application.ApplicationId, ct);
-                var (model, axes) = await ModelForAsync(db, acceptedServices, interviewRow.ModelVersion, ct);
+                var coveredServices = await CoveredServicesAsync(db, interviewRow.InterviewId, ct);
+                var (model, axes) = await ModelForAsync(db, coveredServices, interviewRow.ModelVersion, ct);
                 var levels = RatingLevels(model);
                 var services = input.Services ?? [];
-                // F1 — every axis of every accepted service; nothing partial is
+                // F1 — every axis of every service the interview covers (P-384:
+                // one interview, scored per service); nothing partial is
                 // storable. The recommendation is optional (business decision,
                 // 2026-09-16) and stored as given.
-                foreach (var service in acceptedServices)
+                foreach (var service in coveredServices)
                 {
                     var entry = services.FirstOrDefault(s => s.Service == service);
                     if (entry is null
@@ -267,7 +288,7 @@ public static class InterviewEndpoints
                     }
                 }
                 assignment.Recommendations = JsonSerializer.Serialize(
-                    services.Where(s => s.Service is not null)
+                    services.Where(s => s.Service is not null && coveredServices.Contains(s.Service))
                         .ToDictionary(s => s.Service!, s => s.Recommendation));
                 assignment.Note = string.Join(
                     "\n", services.Select(s => s.Notes).Where(n => !string.IsNullOrWhiteSpace(n)));
@@ -326,11 +347,19 @@ public static class InterviewEndpoints
             {
                 return Results.Problem(statusCode: 409, detail: "Already decided.");
             }
+            var covered = await db.InterviewServices
+                .Where(s => s.InterviewId == interviewRow.InterviewId)
+                .ToListAsync(ct);
+            var (decisions, inputError) = ResolveServiceDecisions(input, covered);
+            if (inputError is not null)
+            {
+                return Results.Problem(statusCode: 400, detail: inputError);
+            }
             // J-07/F3/AC-4 — after a reschedule for a full committee no-show,
             // rejection stays available at any point; forwarding still needs
             // the consolidated result of an interview that actually happened.
-            var rejectAnyTime = interviewRow.NoShowRescheduleCount > 0
-                && string.Equals(input.Kind, "reject", StringComparison.Ordinal);
+            var allRejected = decisions.All(d => d.Kind == InterviewServiceDecisions.Reject);
+            var rejectAnyTime = interviewRow.NoShowRescheduleCount > 0 && allRejected;
             if (interviewRow.Status != InterviewStatuses.Completed && !rejectAnyTime)
             {
                 // F2/AC-1 — the decision follows the consolidated result.
@@ -338,29 +367,70 @@ public static class InterviewEndpoints
             }
             var now = DateTime.UtcNow;
 
-            if (string.Equals(input.Kind, "forward", StringComparison.Ordinal))
+            /*
+             * P-355 (BUG-033): the pass mark is advisory — forwarding is always
+             * the decision-maker's choice, and so is rejecting. P-384 (BUG-027):
+             * that choice is made PER SERVICE. The application goes on to the
+             * approval committee when anything is left for it — a forwarded
+             * service, or one exempted from the interview at screening (J-08)
+             * — and is rejected when nothing is.
+             */
+            var exempted = await ExemptedServicesAsync(db, application.ApplicationId, ct);
+            var forwardsAnything = !allRejected || exempted.Count > 0;
+            var firstRejection = decisions.FirstOrDefault(d => d.Kind == InterviewServiceDecisions.Reject);
+
+            // Claim the decision: a double-click is one decision (backend/AGENTS.md).
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            var claimed = await db.Interviews
+                .Where(i => i.InterviewId == interviewRow.InterviewId && i.DecisionKind == null)
+                .ExecuteUpdateAsync(set => set
+                    .SetProperty(i => i.DecisionKind, forwardsAnything
+                        ? InterviewServiceDecisions.Forward
+                        : InterviewServiceDecisions.Reject), ct);
+            if (claimed == 0)
             {
-                // P-355 (BUG-033, owner ruling 2026-10-20, supersedes the
-                // 2026-09-16 binding pass mark): the pass mark is advisory.
-                // Every pending service goes to the approval committee (J-09);
-                // a rejection is only ever the decision-maker's own choice.
-                interviewRow.DecisionKind = "forward";
+                return Results.Problem(statusCode: 409, detail: "Already decided.");
+            }
+            interviewRow.DecisionKind = forwardsAnything
+                ? InterviewServiceDecisions.Forward
+                : InterviewServiceDecisions.Reject;
+            interviewRow.DecisionReasonId = forwardsAnything ? null : firstRejection?.Reason?.Id;
+            interviewRow.DecisionReasonText = forwardsAnything ? null : firstRejection?.ReasonOther;
+            interviewRow.DecidedBy = actor.UserId;
+            interviewRow.DecidedAt = now;
+
+            var serviceRows = await db.ApplicationServices
+                .Where(s => s.ApplicationId == application.ApplicationId)
+                .ToListAsync(ct);
+            foreach (var decision in decisions)
+            {
+                decision.Row.DecisionKind = decision.Kind;
+                decision.Row.DecisionReasonId = decision.Reason?.Id;
+                decision.Row.DecisionReasonText = decision.Reason is null ? null : decision.ReasonOther;
+                decision.Row.DecidedBy = actor.UserId;
+                decision.Row.DecidedAt = now;
+                if (decision.Kind == InterviewServiceDecisions.Reject
+                    && serviceRows.FirstOrDefault(r => r.Service == decision.Row.Service) is { } serviceRow
+                    && serviceRow.Outcome == ServiceOutcomes.Pending)
+                {
+                    // The service is closed as not accepted; the others wait
+                    // for the approval committee, which never sees this one.
+                    serviceRow.Outcome = ServiceOutcomes.Rejected;
+                    serviceRow.DecidedAt = now;
+                }
+            }
+
+            if (forwardsAnything)
+            {
                 application.Status = ApplicationStatuses.ApprovalInProgress;
             }
-            else if (string.Equals(input.Kind, "reject", StringComparison.Ordinal))
+            else
             {
-                var reason = ServiceRequestRejectionReasons.All
-                    .FirstOrDefault(r => r.Id == input.Reason);
-                if (reason is null
-                    || (reason.RequiresText && string.IsNullOrWhiteSpace(input.ReasonOther)))
-                {
-                    return Results.Problem(statusCode: 400, detail: "reason-missing");
-                }
-                interviewRow.DecisionKind = "reject";
-                interviewRow.DecisionReasonId = reason.Id;
-                interviewRow.DecisionReasonText = input.ReasonOther;
                 application.Status = ApplicationStatuses.Rejected;
-                application.RejectionReason = reason.RequiresText ? input.ReasonOther : reason.LabelAr;
+                application.RejectionReason = string.Join("؛ ", decisions
+                    .Select(d => d.Reason!.RequiresText ? d.ReasonOther : d.Reason.LabelAr)
+                    .Where(text => !string.IsNullOrWhiteSpace(text))
+                    .Distinct(StringComparer.Ordinal));
                 // P-372 E-019 — the applicant hears the post-interview rejection.
                 await dispatcher.RaiseAsync(
                     "EV-0210",
@@ -374,31 +444,12 @@ public static class InterviewEndpoints
                         ["reasonText"] = application.RejectionReason ?? string.Empty,
                     },
                     ct);
-                var serviceRows = await db.ApplicationServices
-                    .Where(s => s.ApplicationId == application.ApplicationId)
-                    .ToListAsync(ct);
-                foreach (var row in serviceRows.Where(r => r.Outcome == ServiceOutcomes.Pending))
-                {
-                    row.Outcome = ServiceOutcomes.Rejected;
-                    row.DecidedAt = now;
-                }
             }
-            else
-            {
-                return Results.Problem(statusCode: 400, detail: "Unknown decision.");
-            }
-
-            interviewRow.DecidedBy = actor.UserId;
-            interviewRow.DecidedAt = now;
             application.UpdatedAt = now;
             await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
 
-            var decider = await db.Users.SingleAsync(u => u.UserId == actor.UserId, ct);
-            return Results.Ok(new PostInterviewDecisionWire(
-                interviewRow.DecisionKind!,
-                ApplicationEndpoints.Iso(now),
-                decider.FullNameAr,
-                interviewRow.DecisionReasonId));
+            return Results.Ok(await DecisionWireAsync(db, interviewRow, ct));
         }).WithName("PostInterviewDecision")
             .RequireFeature("F-0203");
 
@@ -597,6 +648,97 @@ public static class InterviewEndpoints
         return interview is null ? null : (application, interview);
     }
 
+    /// <summary>One covered service's decision, validated.</summary>
+    private sealed record ResolvedServiceDecision(
+        InterviewServiceEntry Row, string Kind, ServiceRequestRejectionReason? Reason, string? ReasonOther);
+
+    /// <summary>
+    /// Reads the decision input as one decision per covered service (`P-384`),
+    /// or — the pre-P-384 shape — one decision applied to every covered service.
+    /// Every covered service must be decided, once; a rejection carries a reason
+    /// from the unified list (`BR-0219`).
+    /// </summary>
+    private static (IReadOnlyList<ResolvedServiceDecision> Decisions, string? Error) ResolveServiceDecisions(
+        PostInterviewDecisionInputWire input, List<InterviewServiceEntry> covered)
+    {
+        if (covered.Count == 0)
+        {
+            return ([], "No service is covered by this interview.");
+        }
+        var requested = input.Services
+            ?? [.. covered.Select(row => new ServiceDecisionInputWire(
+                row.Service, input.Kind, input.Reason, input.ReasonOther))];
+        if (requested.Any(d => d.Service is null || covered.All(row => row.Service != d.Service))
+            || requested.GroupBy(d => d.Service).Any(group => group.Count() > 1))
+        {
+            return ([], "Unknown service.");
+        }
+        var resolved = new List<ResolvedServiceDecision>();
+        foreach (var row in covered)
+        {
+            var entry = requested.FirstOrDefault(d => d.Service == row.Service);
+            if (entry is null)
+            {
+                return ([], "service-decision-missing");
+            }
+            if (string.Equals(entry.Kind, InterviewServiceDecisions.Forward, StringComparison.Ordinal))
+            {
+                resolved.Add(new ResolvedServiceDecision(row, InterviewServiceDecisions.Forward, null, null));
+                continue;
+            }
+            if (!string.Equals(entry.Kind, InterviewServiceDecisions.Reject, StringComparison.Ordinal))
+            {
+                return ([], "Unknown decision.");
+            }
+            var reason = ServiceRequestRejectionReasons.All.FirstOrDefault(r => r.Id == entry.Reason);
+            if (reason is null || (reason.RequiresText && string.IsNullOrWhiteSpace(entry.ReasonOther)))
+            {
+                return ([], "reason-missing");
+            }
+            resolved.Add(new ResolvedServiceDecision(
+                row, InterviewServiceDecisions.Reject, reason,
+                string.IsNullOrWhiteSpace(entry.ReasonOther) ? null : entry.ReasonOther.Trim()));
+        }
+        return (resolved, null);
+    }
+
+    /// <summary>
+    /// The services the application's ONE interview covers (`P-384`), in the
+    /// platform's service order — never a service exempted at screening.
+    /// </summary>
+    internal static async Task<IReadOnlyList<string>> CoveredServicesAsync(
+        ExpertHubDbContext db, Guid interviewId, CancellationToken ct)
+    {
+        var services = await db.InterviewServices
+            .Where(s => s.InterviewId == interviewId)
+            .Select(s => s.Service)
+            .ToListAsync(ct);
+        return [.. services.OrderBy(service => ApplicationServices.All.ToList().IndexOf(service))];
+    }
+
+    /// <summary>The recorded decision, application outcome and per service.</summary>
+    private static async Task<PostInterviewDecisionWire?> DecisionWireAsync(
+        ExpertHubDbContext db, Interview interviewRow, CancellationToken ct)
+    {
+        if (interviewRow.DecisionKind is null)
+        {
+            return null;
+        }
+        var decider = await db.Users.SingleAsync(u => u.UserId == interviewRow.DecidedBy, ct);
+        var rows = await db.InterviewServices
+            .Where(s => s.InterviewId == interviewRow.InterviewId && s.DecisionKind != null)
+            .ToListAsync(ct);
+        return new PostInterviewDecisionWire(
+            interviewRow.DecisionKind,
+            ApplicationEndpoints.Iso(interviewRow.DecidedAt ?? interviewRow.CreatedAt),
+            decider.FullNameAr,
+            interviewRow.DecisionReasonId,
+            [.. rows
+                .OrderBy(row => ApplicationServices.All.ToList().IndexOf(row.Service))
+                .Select(row => new ServiceDecisionWire(
+                    row.Service, row.DecisionKind!, row.DecisionReasonId, row.DecisionReasonText))]);
+    }
+
     /// <summary>The application's services exempted from interview and still
     /// undecided — eligible for the committee without an interview result.</summary>
     internal static async Task<IReadOnlyList<string>> ExemptedServicesAsync(
@@ -726,13 +868,13 @@ public static class InterviewEndpoints
         {
             return null;
         }
-        var acceptedServices = await AcceptedServicesAsync(db, applicationId, ct);
-        var (model, axes) = await ModelForAsync(db, acceptedServices, interviewRow.ModelVersion, ct);
+        var coveredServices = await CoveredServicesAsync(db, interviewRow.InterviewId, ct);
+        var (model, axes) = await ModelForAsync(db, coveredServices, interviewRow.ModelVersion, ct);
         var counted = evaluations.Where(e => !e.DidNotAttend).ToList();
         var scores = await db.InterviewAxisScores
             .Where(s => counted.Select(e => e.InterviewEvaluationId).Contains(s.InterviewEvaluationId))
             .ToListAsync(ct);
-        return [.. acceptedServices.Select(service =>
+        return [.. coveredServices.Select(service =>
         {
             // Weighted total per evaluation (0..the model's result max),
             // averaged over the ATTENDED evaluations only (F2/AC-2).
@@ -762,8 +904,8 @@ public static class InterviewEndpoints
         TimeSpan? length = null)
     {
         var applicant = await db.Users.SingleAsync(u => u.UserId == application.ApplicantUserId, ct);
-        var acceptedServices = await AcceptedServicesAsync(db, application.ApplicationId, ct);
-        var (model, axes) = await ModelForAsync(db, acceptedServices, interviewRow.ModelVersion, ct);
+        var coveredServices = await CoveredServicesAsync(db, interviewRow.InterviewId, ct);
+        var (model, axes) = await ModelForAsync(db, coveredServices, interviewRow.ModelVersion, ct);
         var evaluations = await db.InterviewEvaluations
             .Where(e => e.InterviewId == interviewRow.InterviewId)
             .ToListAsync(ct);
@@ -793,16 +935,7 @@ public static class InterviewEndpoints
         var isDecider = await IsScreeningDeciderAsync(db, application.ApplicationId, viewerUserId, ct);
         var fullNoShow = interviewRow.Status == InterviewStatuses.Completed
             && await IsFullNoShowAsync(db, interviewRow.InterviewId, ct);
-        PostInterviewDecisionWire? decision = null;
-        if (interviewRow.DecisionKind is not null)
-        {
-            var decider = await db.Users.SingleAsync(u => u.UserId == interviewRow.DecidedBy, ct);
-            decision = new PostInterviewDecisionWire(
-                interviewRow.DecisionKind,
-                ApplicationEndpoints.Iso(interviewRow.DecidedAt ?? interviewRow.CreatedAt),
-                decider.FullNameAr,
-                interviewRow.DecisionReasonId);
-        }
+        var decision = await DecisionWireAsync(db, interviewRow, ct);
 
         var titles = await (
             from userRole in db.UserRoles
@@ -813,7 +946,7 @@ public static class InterviewEndpoints
             application.ApplicationId.ToString(),
             application.Reference ?? string.Empty,
             applicant.FullNameAr,
-            acceptedServices,
+            coveredServices,
             new TicketWire(
                 interviewRow.TicketNumber ?? string.Empty,
                 confirmed is null ? null : ApplicationEndpoints.Iso(confirmed.StartsAt),

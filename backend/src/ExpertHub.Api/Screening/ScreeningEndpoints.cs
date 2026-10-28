@@ -26,9 +26,12 @@ namespace ExpertHub.Api.Screening;
  *   the advisory insight is a separate read of the sibling `AI_ANALYSIS` row.
  * - One score per SERVICE, never a blended total (J-05/F2/AC-3).
  * - An acceptance is complete only when every accepted service carries a full
- *   path — slots AND committee together, or an exemption with its reason
- *   (J-05/F5/AC-4, J-08) — and every requested-but-unlisted service is
- *   auto-rejected (AC-2), reported as such.
+ *   path — the interview, or an exemption with its reason (J-05/F5/AC-4,
+ *   J-08) — and every requested-but-unlisted service is auto-rejected (AC-2),
+ *   reported as such.
+ * - The interview is ONE per application (`P-384`, UAT BUG-027): one slot set
+ *   and one committee, named once in `interview`, covering every service whose
+ *   path is the interview. Slots AND committee together, or no acceptance.
  */
 
 /// <summary>
@@ -102,15 +105,24 @@ internal sealed record ScreeningDetailWire(
     ScreeningDecisionSummaryWire? Decision,
     bool CommitteeApproved);
 
+/// <remarks><c>Slots</c> and <c>CommitteeMemberIds</c> per service are the
+/// pre-`P-384` shape, still read when <see cref="ScreeningDecisionInputWire.Interview"/>
+/// is absent (their union was always one interview); new clients send the plan once.</remarks>
 internal sealed record AcceptedServiceDecisionWire(
     string? Service, string? Path, IReadOnlyList<string>? Slots,
     IReadOnlyList<string>? CommitteeMemberIds, string? ExemptionReason,
     string? ExemptionReasonOther);
 
+/// <summary>`P-384` — the application's ONE interview: its proposed times and
+/// its committee, for every service whose path is the interview.</summary>
+internal sealed record InterviewPlanWire(
+    IReadOnlyList<string>? Slots, IReadOnlyList<string>? CommitteeMemberIds);
+
 internal sealed record ScreeningDecisionInputWire(
     string? Kind,
     IReadOnlyList<AcceptedServiceDecisionWire>? Services,
-    string? Reason, string? ReasonOther);
+    string? Reason, string? ReasonOther,
+    InterviewPlanWire? Interview = null);
 
 internal sealed record ScreeningDecisionResultWire(
     string ApplicationId, string Status,
@@ -229,18 +241,26 @@ public static class ScreeningEndpoints
             {
                 return Results.Problem(statusCode: 400, detail: "no-service-selected");
             }
-            // J-05/F5/AC-4 — every accepted service carries one COMPLETE path.
+            var interviewDecisions = decisions
+                .Where(d => string.Equals(d.Path, "interview", StringComparison.Ordinal))
+                .ToList();
+            var plan = InterviewPlanOf(input, interviewDecisions);
+            // J-05/F5/AC-4 — every accepted service carries one COMPLETE path;
+            // the interview path is complete when the ONE interview has times
+            // AND a committee (P-384).
+            if (interviewDecisions.Count > 0
+                && (plan.Slots.Count == 0 || plan.CommitteeMemberIds.Count == 0
+                    || plan.CommitteeMemberIds.Any(memberId => !Guid.TryParse(memberId, out _))))
+            {
+                return Results.Problem(statusCode: 400, detail: "slots-or-committee-missing");
+            }
             foreach (var decision in decisions)
             {
                 if (string.Equals(decision.Path, "interview", StringComparison.Ordinal))
                 {
-                    if (decision.Slots is not { Count: > 0 }
-                        || decision.CommitteeMemberIds is not { Count: > 0 })
-                    {
-                        return Results.Problem(statusCode: 400, detail: "slots-or-committee-missing");
-                    }
+                    continue;
                 }
-                else if (string.Equals(decision.Path, "exemption", StringComparison.Ordinal))
+                if (string.Equals(decision.Path, "exemption", StringComparison.Ordinal))
                 {
                     if (decision.ExemptionReason is null
                         || !ExemptionReasons.All.Contains(decision.ExemptionReason)
@@ -287,17 +307,12 @@ public static class ScreeningEndpoints
                 }
             }
 
-            var interviewDecisions = decisions
-                .Where(d => string.Equals(d.Path, "interview", StringComparison.Ordinal))
-                .ToList();
-
             // D-04 — a slot in the past was accepted, offered to the applicant,
             // and issued an interview ticket for a date that had already gone.
             // The picker's `min` is a convenience; this is the rule.
             // BUG-056 — and at least an hour ahead: the same rule, and the same
             // parser, as the staff reschedule (`InterviewSlotRules`).
-            var (_, slotError) = InterviewSlotRules.Check(
-                interviewDecisions.SelectMany(d => d.Slots ?? []), now);
+            var (_, slotError) = InterviewSlotRules.Check(plan.Slots, now);
             switch (slotError)
             {
                 case InterviewSlotRules.Invalid:
@@ -317,7 +332,8 @@ public static class ScreeningEndpoints
 
             if (interviewDecisions.Count > 0)
             {
-                await CreateInterviewAsync(db, application, interviewDecisions, now, ct);
+                await CreateInterviewAsync(
+                    db, application, [.. interviewDecisions.Select(d => d.Service!)], plan, now, ct);
                 // RUN-022 — accepted to the interview stage: «مقابلة مجدولة»,
                 // not «قيد المراجعة» until the applicant picks a time. The
                 // interview row's own status still says the time is unpicked.
@@ -538,21 +554,43 @@ public static class ScreeningEndpoints
         }
     }
 
+    /// <summary>
+    /// The application's one interview plan (`P-384`): the plan the decision
+    /// named once, or — from a pre-P-384 client — the union of what it named per
+    /// interviewed service, which is what the single interview always held.
+    /// </summary>
+    private static InterviewPlan InterviewPlanOf(
+        ScreeningDecisionInputWire input, IReadOnlyList<AcceptedServiceDecisionWire> interviewDecisions)
+    {
+        static List<string> Clean(IEnumerable<string?> values) =>
+            [.. values.Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v!.Trim()).Distinct(StringComparer.Ordinal)];
+        return input.Interview is { } plan
+            ? new InterviewPlan(Clean(plan.Slots ?? []), Clean(plan.CommitteeMemberIds ?? []))
+            : new InterviewPlan(
+                Clean(interviewDecisions.SelectMany(d => d.Slots ?? [])),
+                Clean(interviewDecisions.SelectMany(d => d.CommitteeMemberIds ?? [])));
+    }
+
+    /// <summary>The one interview's proposed times and committee, cleaned.</summary>
+    private sealed record InterviewPlan(
+        IReadOnlyList<string> Slots, IReadOnlyList<string> CommitteeMemberIds);
+
     private static async Task CreateInterviewAsync(
         ExpertHubDbContext db,
         Application application,
-        List<AcceptedServiceDecisionWire> interviewDecisions,
+        IReadOnlyList<string> services,
+        InterviewPlan plan,
         DateTime now,
         CancellationToken ct)
     {
-        // One application-scoped interview: the slot set and the committee are
-        // the union of what the decision named per service (the applicant
-        // confirms ONE time for the application — J-06's shape).
+        // ONE application-scoped interview (P-384, BUG-027): one slot set, one
+        // committee, one applicant pick, one meeting — covering every service
+        // whose path is the interview. Evaluation and decision stay per service
+        // (`INTERVIEW_AXIS_SCORE.service`, `INTERVIEW_SERVICE`).
         var due = await SelectionDueAsync(db, now, ct);
         // Pinned to the model active NOW, so activating a newer model later
         // never changes how this interview is scored.
-        var model = await Interviews.InterviewEndpoints.ActiveModelAsync(
-            db, interviewDecisions[0].Service!, ct);
+        var model = await Interviews.InterviewEndpoints.ActiveModelAsync(db, services[0], ct);
         var interview = new Interview
         {
             InterviewId = Guid.NewGuid(),
@@ -563,8 +601,16 @@ public static class ScreeningEndpoints
             CreatedAt = now,
         };
         db.Interviews.Add(interview);
-        foreach (var startsAt in interviewDecisions
-            .SelectMany(d => d.Slots ?? [])
+        foreach (var service in services.Distinct(StringComparer.Ordinal))
+        {
+            db.InterviewServices.Add(new InterviewServiceEntry
+            {
+                InterviewServiceId = Guid.NewGuid(),
+                InterviewId = interview.InterviewId,
+                Service = service,
+            });
+        }
+        foreach (var startsAt in plan.Slots
             // The client sends an instant; keep it one (`D-03`). Read by the
             // same parser that validated it, so what was checked is what is
             // stored — every value here already passed `InterviewSlotRules`.
@@ -578,10 +624,7 @@ public static class ScreeningEndpoints
                 StartsAt = startsAt,
             });
         }
-        foreach (var memberId in interviewDecisions
-            .SelectMany(d => d.CommitteeMemberIds ?? [])
-            .Distinct()
-            .Select(Guid.Parse))
+        foreach (var memberId in plan.CommitteeMemberIds.Select(Guid.Parse).Distinct())
         {
             // The assignment IS the pending evaluation row (BR-0220).
             db.InterviewEvaluations.Add(new InterviewEvaluation

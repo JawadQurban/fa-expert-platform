@@ -32,6 +32,21 @@ function injectProvider(options: MockInterviewProviderOptions = {}) {
   setInterviewServiceForTesting(createMockInterviewProvider({ latencyMs: 0, ...options }));
 }
 
+/** P-384 — the decision block of one covered service. */
+function decisionBlock(service: 'trainer' | 'consultant') {
+  return screen.getByRole('region', {
+    name: content.decision.serviceHeading(content.services[service]),
+  });
+}
+
+function forwardChoices() {
+  return screen.getAllByRole('radio', { name: content.decision.forward });
+}
+
+function rejectChoices() {
+  return screen.getAllByRole('radio', { name: content.decision.reject });
+}
+
 async function renderInterview() {
   seedExpertHubSession(['internal']);
   const result = renderExpertHubAt(expertHubPaths.internalApplicationInterview(APPLICATION_ID));
@@ -110,8 +125,10 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
   it('blocks the post-interview decision while the result is pending (BR-0220)', async () => {
     await renderInterview();
     expect(await screen.findByText(content.decision.blockedTitle)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: content.decision.forward })).toBeDisabled();
-    expect(screen.getByRole('button', { name: content.decision.reject })).toBeDisabled();
+    expect(screen.getByRole('button', { name: content.decision.submit })).toBeDisabled();
+    for (const choice of [...forwardChoices(), ...rejectChoices()]) {
+      expect(choice).toBeDisabled();
+    }
   });
 
   it('requires every axis before submitting, but not a recommendation (F1/AC-1, AC-2)', async () => {
@@ -156,7 +173,11 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     // trainer (84 + 80) / 2 = 82 and consultant (76 + 64) / 2 = 70 — both pass.
     expect(await screen.findAllByText(content.result.thresholdMet(threshold))).toHaveLength(2);
     expect(screen.getByText(content.result.thresholdNote)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: content.decision.forward })).toBeEnabled();
+    // P-384 — one forward choice per covered service, each open.
+    expect(forwardChoices()).toHaveLength(2);
+    for (const choice of forwardChoices()) {
+      expect(choice).toBeEnabled();
+    }
   });
 
   it('BUG-033: the pass mark is advisory — forwarding stays open when no service passed', async () => {
@@ -170,8 +191,9 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     const threshold = arNumber(70);
     expect(await screen.findAllByText(content.result.thresholdNotMet(threshold))).toHaveLength(2);
     expect(screen.getByText(content.decision.noPassTitle)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: content.decision.forward })).toBeEnabled();
-    expect(screen.getByRole('button', { name: content.decision.reject })).toBeEnabled();
+    for (const choice of [...forwardChoices(), ...rejectChoices()]) {
+      expect(choice).toBeEnabled();
+    }
   });
 
   it('names the services forwarded below the pass mark', async () => {
@@ -182,10 +204,16 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
       viewer: { canEvaluate: false },
     });
     const { user } = await renderInterview();
-    await user.click(await screen.findByRole('button', { name: content.decision.forward }));
-    const dialog = await screen.findByRole('dialog', { name: content.forwardDialog.title });
+    await screen.findByRole('region', {
+      name: content.decision.serviceHeading(content.services.trainer),
+    });
+    for (const choice of forwardChoices()) {
+      await user.click(choice);
+    }
+    await user.click(screen.getByRole('button', { name: content.decision.submit }));
+    const dialog = await screen.findByRole('dialog', { name: content.decisionDialog.title });
     expect(
-      within(dialog).getByText(content.forwardDialog.notPassedNote(content.services.consultant))
+      within(dialog).getByText(content.decisionDialog.notPassedNote(content.services.consultant))
     ).toBeInTheDocument();
   });
 
@@ -221,40 +249,112 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     expect(await screen.findByText(content.result.excludedNote)).toBeInTheDocument();
   });
 
-  it('enables the decision and forwards to the approval committee once complete (F3/AC-1)', async () => {
+  it('enables the decision and forwards every service to the approval committee once complete (F3/AC-1)', async () => {
     injectProvider({ allResponded: true, viewer: { canEvaluate: false } });
     const { user } = await renderInterview();
+    await screen.findByRole('region', {
+      name: content.decision.serviceHeading(content.services.trainer),
+    });
 
-    const forward = await screen.findByRole('button', { name: content.decision.forward });
-    expect(forward).toBeEnabled();
-    await user.click(forward);
+    for (const choice of forwardChoices()) {
+      expect(choice).toBeEnabled();
+      await user.click(choice);
+    }
+    await user.click(screen.getByRole('button', { name: content.decision.submit }));
 
-    const dialog = await screen.findByRole('dialog', { name: content.forwardDialog.title });
-    await user.click(within(dialog).getByRole('button', { name: content.forwardDialog.confirm }));
+    const dialog = await screen.findByRole('dialog', { name: content.decisionDialog.title });
+    await user.click(within(dialog).getByRole('button', { name: content.decisionDialog.confirm }));
 
     expect(await screen.findByText(content.recorded.forwardTitle)).toBeInTheDocument();
+    expect(
+      screen.getByText(content.recorded.serviceForwarded(content.services.trainer))
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(content.recorded.serviceForwarded(content.services.consultant))
+    ).toBeInTheDocument();
   });
 
-  it('requires a reason for a direct rejection (F3/AC-2, BR-0219)', async () => {
+  it('P-384: decides each service on its own — one forwarded, one rejected with its reason', async () => {
     injectProvider({ allResponded: true, viewer: { canEvaluate: false } });
     const { user } = await renderInterview();
+    await screen.findByRole('region', {
+      name: content.decision.serviceHeading(content.services.trainer),
+    });
 
-    await user.click(await screen.findByRole('button', { name: content.decision.reject }));
-    const dialog = await screen.findByRole('dialog', { name: content.rejectDialog.title });
-    expect(within(dialog).getByText(content.rejectDialog.warning)).toBeInTheDocument();
+    await user.click(
+      within(decisionBlock('trainer')).getByRole('radio', { name: content.decision.forward })
+    );
+    await user.click(
+      within(decisionBlock('consultant')).getByRole('radio', { name: content.decision.reject })
+    );
 
-    await user.click(within(dialog).getByRole('button', { name: content.rejectDialog.confirm }));
-    expect(await screen.findByText(content.rejectDialog.reasonRequired)).toBeInTheDocument();
-    expect(screen.queryByText(content.recorded.rejectTitle)).not.toBeInTheDocument();
+    // BR-0219 — the rejected service needs its reason before anything is sent.
+    await user.click(screen.getByRole('button', { name: content.decision.submit }));
+    const errors = await screen.findByRole('alert');
+    expect(
+      within(errors).getByText(
+        content.decision.errors['reason-missing'](content.services.consultant)
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('combobox', { name: /سبب الرفض/ }));
+    await user.click(
+      within(decisionBlock('consultant')).getByRole('combobox', { name: /سبب الرفض/ })
+    );
     await user.click(
       await screen.findByRole('option', {
         name: content.rejectionReasons['insufficient-experience'],
       })
     );
-    await user.click(within(dialog).getByRole('button', { name: content.rejectDialog.confirm }));
+    await user.click(screen.getByRole('button', { name: content.decision.submit }));
 
+    const dialog = await screen.findByRole('dialog', { name: content.decisionDialog.title });
+    expect(
+      within(dialog).getByText(content.decisionDialog.forwarded(content.services.trainer))
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(content.decisionDialog.rejected(content.services.consultant))
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByText(content.decisionDialog.wholeRejection)
+    ).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: content.decisionDialog.confirm }));
+
+    // Something went on to the committee, so the application is forwarded.
+    expect(await screen.findByText(content.recorded.forwardTitle)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        content.recorded.serviceRejected(
+          content.services.consultant,
+          content.rejectionReasons['insufficient-experience']
+        )
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('P-384: rejecting every service rejects the application, and the dialog says so', async () => {
+    injectProvider({ allResponded: true, viewer: { canEvaluate: false } });
+    const { user } = await renderInterview();
+    await screen.findByRole('region', {
+      name: content.decision.serviceHeading(content.services.trainer),
+    });
+
+    for (const service of ['trainer', 'consultant'] as const) {
+      await user.click(
+        within(decisionBlock(service)).getByRole('radio', { name: content.decision.reject })
+      );
+      await user.click(within(decisionBlock(service)).getByRole('combobox', { name: /سبب الرفض/ }));
+      await user.click(
+        await screen.findByRole('option', {
+          name: content.rejectionReasons['insufficient-experience'],
+        })
+      );
+    }
+    await user.click(screen.getByRole('button', { name: content.decision.submit }));
+
+    const dialog = await screen.findByRole('dialog', { name: content.decisionDialog.title });
+    expect(within(dialog).getByText(content.decisionDialog.wholeRejection)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: content.decisionDialog.confirm }));
     expect(await screen.findByText(content.recorded.rejectTitle)).toBeInTheDocument();
   });
 
@@ -262,9 +362,8 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     injectProvider({ allResponded: true, viewer: { canDecide: false, canEvaluate: false } });
     await renderInterview();
     await screen.findByRole('heading', { level: 1 });
-    expect(
-      screen.queryByRole('button', { name: content.decision.forward })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: content.decision.submit })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: content.decision.forward })).not.toBeInTheDocument();
   });
 
   it('J-07/F3/AC-3: a full committee no-show says so, and offers reschedule and rejection', async () => {
@@ -275,15 +374,22 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     await renderInterview();
     expect(await screen.findByText(content.decision.noShowTitle)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: content.ticket.reschedule })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: content.decision.reject })).toBeEnabled();
+    for (const choice of rejectChoices()) {
+      expect(choice).toBeEnabled();
+    }
   });
 
   it('J-07/F3/AC-4: before the rescheduled interview, rejection stays available and forwarding does not', async () => {
     injectProvider({ viewer: { canDecide: false, canReject: true, canEvaluate: false } });
     await renderInterview();
     expect(await screen.findByText(content.decision.rejectOnlyTitle)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: content.decision.forward })).toBeDisabled();
-    expect(screen.getByRole('button', { name: content.decision.reject })).toBeEnabled();
+    for (const choice of forwardChoices()) {
+      expect(choice).toBeDisabled();
+    }
+    for (const choice of rejectChoices()) {
+      expect(choice).toBeEnabled();
+    }
+    expect(screen.getByRole('button', { name: content.decision.submit })).toBeEnabled();
   });
 
   it('keeps the same interview number after a staff reschedule (J-06/F4/AC-6)', async () => {

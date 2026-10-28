@@ -13243,6 +13243,55 @@ namespace ExpertHub.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ExpertHub.Core.Domain.InterviewServiceEntry", b =>
+                {
+                    b.Property<Guid>("InterviewServiceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("interview_service_id");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("decided_by");
+
+                    b.Property<string>("DecisionKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("decision");
+
+                    b.Property<string>("DecisionReasonId")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("decision_reason_id");
+
+                    b.Property<string>("DecisionReasonText")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("decision_reason_text");
+
+                    b.Property<Guid>("InterviewId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("interview_id");
+
+                    b.Property<string>("Service")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("service");
+
+                    b.HasKey("InterviewServiceId");
+
+                    b.HasIndex("DecidedBy");
+
+                    b.HasIndex("InterviewId", "Service")
+                        .IsUnique();
+
+                    b.ToTable("INTERVIEW_SERVICE", (string)null);
+                });
+
             modelBuilder.Entity("ExpertHub.Core.Domain.InterviewSlot", b =>
                 {
                     b.Property<Guid>("SlotId")
@@ -19178,6 +19227,20 @@ namespace ExpertHub.Infrastructure.Migrations
                         .HasForeignKey("EvaluatorUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("ExpertHub.Core.Domain.Interview", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ExpertHub.Core.Domain.InterviewServiceEntry", b =>
+                {
+                    b.HasOne("ExpertHub.Core.Domain.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ExpertHub.Core.Domain.Interview", null)
                         .WithMany()

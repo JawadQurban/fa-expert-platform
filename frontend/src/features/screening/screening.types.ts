@@ -21,10 +21,12 @@ import type {
  * 2. **One score per service, never a blended total** (J-05/F2/AC-3): `scores`
  *    is a list keyed by service, with no application-level score field.
  * 3. **Acceptance is per service and always carries a full path**
- *    (J-05/F5/AC-3/AC-4): every accepted service must resolve to *either*
- *    interview slots **and** committee members together, *or* an interview
- *    exemption with a reason (J-08). `validateAcceptDecision` is the single
- *    gate; the UI cannot finalize a half-specified decision.
+ *    (J-05/F5/AC-3/AC-4): every accepted service resolves to *either* the
+ *    interview *or* an interview exemption with a reason (J-08). The interview
+ *    is **one per application** (P-384, UAT BUG-027): one set of slots and one
+ *    committee, named once in `AcceptDecisionInput.interview`, cover every
+ *    service whose path is the interview. `validateAcceptDecision` is the
+ *    single gate; the UI cannot finalize a half-specified decision.
  *
  * Authored (non-UI-string) content that exists in both languages uses
  * `LocalizedText` — these values come from the API, not from `*.content.ts`.
@@ -189,25 +191,34 @@ export interface CommitteeMemberDto {
 export type AcceptedServicePath = 'interview' | 'exemption';
 
 /**
- * The decision for one accepted service. Interview path requires **both** slots
- * and committee members *in the same step*; exemption path requires a reason.
- * Enforced by `validateAcceptDecision` (AC-4).
+ * The decision for one accepted service: the interview, or an exemption with
+ * its reason. The interview itself is not per service (P-384) — see
+ * {@link InterviewPlan}. Enforced by `validateAcceptDecision` (AC-4).
  */
 export interface AcceptedServiceDecision {
   readonly service: ApplicationService;
   readonly path: AcceptedServicePath;
-  /** ISO date-times proposed to the applicant (interview path). */
-  readonly slots: readonly string[];
-  readonly committeeMemberIds: readonly string[];
   readonly exemptionReason: ExemptionReasonId | null;
   /** Free text, required when `exemptionReason === 'other'`. */
   readonly exemptionReasonOther: string;
+}
+
+/**
+ * The application's ONE interview (P-384, UAT BUG-027): the proposed times and
+ * the committee, together, for every service whose path is the interview.
+ */
+export interface InterviewPlan {
+  /** ISO date-times proposed to the applicant. */
+  readonly slots: readonly string[];
+  readonly committeeMemberIds: readonly string[];
 }
 
 export interface AcceptDecisionInput {
   readonly kind: 'accept';
   /** The accepted subset. Every other requested service is auto-rejected (AC-2). */
   readonly services: readonly AcceptedServiceDecision[];
+  /** The one interview — `null` when every accepted service is exempted (J-08). */
+  readonly interview: InterviewPlan | null;
 }
 
 export interface RejectDecisionInput {
@@ -307,11 +318,19 @@ export interface RejectValidationIssue {
   readonly code: RejectValidationCode;
 }
 
+/** The accepted services whose path is the interview — the one interview covers them. */
+export function interviewedServices(input: AcceptDecisionInput): readonly ApplicationService[] {
+  return input.services
+    .filter((decision) => decision.path === 'interview')
+    .map((decision) => decision.service);
+}
+
 /**
  * J-05/F5/AC-4 — acceptance cannot be finalized unless **every** accepted
- * service carries one complete path: slots **and** committee together, or an
- * exemption with a reason. Returns every issue so the UI can list them all at
- * once rather than revealing them one at a time.
+ * service carries one complete path: the interview — whose ONE plan has slots
+ * **and** committee together (P-384) — or an exemption with a reason. Returns
+ * every issue so the UI can list them all at once rather than revealing them
+ * one at a time. Interview issues are application-level (`service: null`).
  */
 export function validateAcceptDecision(
   input: AcceptDecisionInput,
@@ -324,18 +343,22 @@ export function validateAcceptDecision(
     return issues;
   }
 
+  if (interviewedServices(input).length > 0) {
+    const slots = input.interview?.slots ?? [];
+    if (slots.length === 0) {
+      issues.push({ code: 'slots-missing', service: null });
+    }
+    // BUG-056 — every slot at least an hour from now; the API refuses it too.
+    if (slots.some((slot) => isSlotTooSoon(slot, now))) {
+      issues.push({ code: 'slot-too-soon', service: null });
+    }
+    if ((input.interview?.committeeMemberIds ?? []).length === 0) {
+      issues.push({ code: 'committee-missing', service: null });
+    }
+  }
+
   for (const decision of input.services) {
     if (decision.path === 'interview') {
-      if (decision.slots.length === 0) {
-        issues.push({ code: 'slots-missing', service: decision.service });
-      }
-      // BUG-056 — every slot at least an hour from now; the API refuses it too.
-      if (decision.slots.some((slot) => isSlotTooSoon(slot, now))) {
-        issues.push({ code: 'slot-too-soon', service: decision.service });
-      }
-      if (decision.committeeMemberIds.length === 0) {
-        issues.push({ code: 'committee-missing', service: decision.service });
-      }
       continue;
     }
     if (decision.exemptionReason == null) {
@@ -365,8 +388,6 @@ export function createServiceDecision(service: ApplicationService): AcceptedServ
   return {
     service,
     path: 'interview',
-    slots: [],
-    committeeMemberIds: [],
     exemptionReason: null,
     exemptionReasonOther: '',
   };
