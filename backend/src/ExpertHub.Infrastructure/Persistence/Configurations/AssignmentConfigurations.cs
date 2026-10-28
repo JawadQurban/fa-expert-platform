@@ -28,6 +28,7 @@ public sealed class AssignmentRequestConfiguration : IEntityTypeConfiguration<As
         builder.Property(r => r.RequiredHeadcount).HasColumnName("required_headcount");
         builder.Property(r => r.Status).HasColumnName("status").HasMaxLength(20);
         builder.Property(r => r.FormValues).HasColumnName("form_values");
+        builder.Property(r => r.FastScheduleFingerprint).HasColumnName("fast_schedule_fingerprint").HasMaxLength(64);
         builder.Property(r => r.CreatedBy).HasColumnName("created_by");
         builder.Property(r => r.CreatedAt).HasColumnName("created_at");
         builder.HasIndex(r => r.Reference).IsUnique();

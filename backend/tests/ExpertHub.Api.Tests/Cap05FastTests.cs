@@ -480,6 +480,69 @@ public sealed partial class Cap05Tests
         Assert.Equal(0, await SyncPlanStatusAsync());
     }
 
+    [Fact]
+    public async Task FAST_changing_only_the_session_times_is_a_reschedule_too()
+    {
+        var fast = UseFakeFast();
+        var (_, engagementId, requestId) = await ConfirmFastEngagementAsync("p374-times");
+
+        // P-374 — the first read only records the timetable; nothing moved yet.
+        Assert.Equal(0, await SyncPlanStatusAsync());
+
+        // Same three days, later start.
+        fast.PlanStatus = StatusJson("open", "2026-12-06", null, startTime: "09:00:00");
+        Assert.Equal(1, await SyncPlanStatusAsync());
+        Assert.Equal(0, await SyncPlanStatusAsync());
+
+        await using var db = _database.CreateContext();
+        var form = JsonSerializer.Deserialize<JsonElement>(
+            (await db.AssignmentRequests.SingleAsync(r => r.RequestId == Guid.Parse(requestId))).FormValues);
+        Assert.Equal("2026-12-06", form.GetProperty("dateFrom").GetString());
+        Assert.NotNull((await db.Engagements.SingleAsync(e => e.EngagementId == Guid.Parse(engagementId))).ScheduleChangedAt);
+    }
+
+    [Fact]
+    public async Task A_trainer_FAST_dropped_from_the_plan_is_put_back_and_one_still_on_it_is_left_alone()
+    {
+        var fast = UseFakeFast();
+        var (_, engagementId, _) = await ConfirmFastEngagementAsync("p374-restore");
+        Assert.Equal(1, await PublishFastAsync());
+        Guid trainerFastUserId;
+        await using (var db = _database.CreateContext())
+        {
+            Assert.Equal("synchronized", (await db.AssignmentSlots.SingleAsync()).FastSyncState);
+            var trainerId = (await db.Engagements.SingleAsync(e => e.EngagementId == Guid.Parse(engagementId))).TrainerId;
+            trainerFastUserId = Guid.Parse((await (
+                from profile in db.TrainerProfiles
+                join replica in db.FastProfiles on profile.UserId equals replica.UserId
+                where profile.TrainerId == trainerId
+                select replica.FastUserId).SingleAsync())!);
+        }
+
+        // Still on the plan: nothing to do, and nothing is queued.
+        fast.Plan = PlanJson("open", null, "2026-12-06", trainerOnPlan: trainerFastUserId);
+        Assert.Equal(0, await SyncPlanStatusAsync());
+
+        // FAST rescheduled and dropped them: they are queued to be added again.
+        fast.Plan = PlanJson("open", null, "2026-12-06");
+        Assert.Equal(1, await SyncPlanStatusAsync());
+        await using (var db = _database.CreateContext())
+        {
+            Assert.Equal("processing", (await db.AssignmentSlots.SingleAsync()).FastSyncState);
+            var again = await db.OutboxMessages.SingleAsync(m => m.EntityId == Guid.Parse(engagementId) && m.Status == OutboxStatuses.Pending);
+            Assert.Equal(3, again.EntityVersion);
+        }
+        // While that assignment is on its way, the next pass does not queue another.
+        Assert.Equal(0, await SyncPlanStatusAsync());
+
+        Assert.Equal(1, await PublishFastAsync());
+        Assert.Equal(2, fast.Seen.Count(c => c.Url.EndsWith("/api/v1/Plan/AssignTrainer", StringComparison.Ordinal)));
+        await using (var db = _database.CreateContext())
+        {
+            Assert.Equal("synchronized", (await db.AssignmentSlots.SingleAsync()).FastSyncState);
+        }
+    }
+
     /* ── B-14 — what the trainer delivered with the Academy ───────────────── */
 
     [Fact]
@@ -549,7 +612,7 @@ public sealed partial class Cap05Tests
             CancellationToken.None);
     }
 
-    private static string StatusJson(string status, string firstDay, string? cancelCode) =>
+    private static string StatusJson(string status, string firstDay, string? cancelCode, string startTime = "17:00:00") =>
         FastTrainingApiTests.Envelope(new
         {
             planId = FastPlanId,
@@ -559,7 +622,7 @@ public sealed partial class Cap05Tests
             {
                 date = DateTime.Parse(firstDay, System.Globalization.CultureInfo.InvariantCulture)
                     .AddDays(offset).ToString("yyyy-MM-ddT00:00:00", System.Globalization.CultureInfo.InvariantCulture),
-                startTime = "17:00:00",
+                startTime,
                 endTime = "20:00:00",
                 isLatestSchedule = true,
             }),
@@ -627,7 +690,7 @@ public sealed partial class Cap05Tests
         return fast;
     }
 
-    private static string PlanJson(string status, string? finalClosedOn, string firstDay) =>
+    private static string PlanJson(string status, string? finalClosedOn, string firstDay, Guid? trainerOnPlan = null) =>
         FastTrainingApiTests.Envelope(new
         {
             planId = FastPlanId,
@@ -653,7 +716,9 @@ public sealed partial class Cap05Tests
                 endTime = "20:00:00",
                 isLatestSchedule = true,
             }),
-            trainers = Array.Empty<object>(),
+            trainers = trainerOnPlan is { } trainer
+                ? new object[] { new { trainerFastUserId = trainer.ToString(), nameAr = "مدرب", nameEn = "Trainer", isFreelance = true } }
+                : Array.Empty<object>(),
         });
 
     private sealed record SeenFastCall(string Method, string Url, string Body);

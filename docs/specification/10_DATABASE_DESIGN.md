@@ -943,6 +943,7 @@ erDiagram
     string reference
     string service_type "⟨gap⟩ only trainer defined - J-16 open item 1"
     uuid fast_plan_id FK
+    string fast_schedule_fingerprint "P-374 hash of the plan's latest timetable, M52"
     int required_headcount
     uuid requesting_centre_id "منسق مركز scope"
     uuid created_by FK

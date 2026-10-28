@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Fast;
+using ExpertHub.Infrastructure.Integration;
 using ExpertHub.Infrastructure.Notifications;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,24 +13,37 @@ namespace ExpertHub.Api.Assignments;
 /// B-11 — what FAST decides about a plan, carried into the engagements on it.
 /// Two facts only originate in FAST (J-21/F1/AC-3, J-22/F3):
 /// <list type="bullet">
-/// <item><b>The dates moved.</b> The request takes FAST's first and last
+/// <item><b>The timetable moved.</b> The request takes FAST's first and last
 /// schedule day, each live engagement records <c>ScheduleChangedAt</c>, and its
-/// trainer is told (EV-0505).</item>
+/// trainer is told (EV-0505). P-374 — a change in session times alone, on the
+/// same days, counts too.</item>
 /// <item><b>The plan was cancelled.</b> Every live engagement ends as
 /// <c>cancelled</c>, actor <c>fast</c>, with FAST's own reason code; the request
 /// closes, so nobody is offered a plan that no longer exists; each trainer is
 /// told (EV-0508).</item>
+/// <item><b>P-374 — the trainer is no longer on the plan.</b> FAST drops a
+/// plan's trainers when it reschedules it. A trainer Expert Hub had placed
+/// (<c>synchronized</c>) who is missing from the plan is queued to be added
+/// again; FAST's assignment is idempotent, so this is safe to repeat.</item>
 /// </list>
 /// Only requests linked to a FAST plan (RUN-030) with a live engagement are
 /// read. A plan FAST cannot answer for is skipped and read again next time.
 /// </summary>
-internal static class FastPlanStatusSync
+internal static partial class FastPlanStatusSync
 {
     /// <summary>`ENGAGEMENT_TERMINATION.reason` for a FAST cancellation.</summary>
     internal const string CancelledReason = "plan-cancelled";
 
+    /// <summary>
+    /// The first outbox version a re-assignment may use: 1 is the assignment
+    /// at confirmation and 2 the removal (`EngagementEndpoints`), whose
+    /// idempotency key must stay free.
+    /// </summary>
+    private const int FirstRestoreVersion = 3;
+
     internal static async Task<int> SyncAsync(
-        ExpertHubDbContext db, FastTrainingApi fast, NotificationDispatcher dispatcher, DateTime now, CancellationToken ct)
+        ExpertHubDbContext db, FastTrainingApi fast, NotificationDispatcher dispatcher, DateTime now, CancellationToken ct,
+        ILogger? logger = null)
     {
         if (!fast.IsConfigured)
         {
@@ -63,9 +77,13 @@ internal static class FastPlanStatusSync
                 await CancelAsync(db, dispatcher, request, rows, status.Value.Cancellation, now, ct);
                 changed++;
             }
-            else if (await RescheduleAsync(db, dispatcher, request, form, rows, status.Value.ScheduleDays, now, ct))
+            else
             {
-                changed++;
+                if (await RescheduleAsync(db, dispatcher, request, form, rows, status.Value.ScheduleDays, now, ct))
+                {
+                    changed++;
+                }
+                changed += await RestoreTrainersAsync(db, fast, planId, rows, logger, ct);
             }
         }
         await db.SaveChangesAsync(ct);
@@ -121,11 +139,20 @@ internal static class FastPlanStatusSync
         }
         var from = days.Min(d => d.Date).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var to = days.Max(d => d.Date).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        if (DayOf(form.DateFrom) == from && DayOf(form.DateTo) == to)
+        var datesMoved = DayOf(form.DateFrom) != from || DayOf(form.DateTo) != to;
+        // The first read only records the timetable: there is nothing earlier
+        // to compare the times with.
+        var fingerprint = Fingerprint(days);
+        var timesMoved = request.FastScheduleFingerprint is not null && request.FastScheduleFingerprint != fingerprint;
+        request.FastScheduleFingerprint = fingerprint;
+        if (!datesMoved && !timesMoved)
         {
             return false;
         }
-        request.FormValues = JsonSerializer.Serialize(form with { DateFrom = from, DateTo = to }, AssignmentEndpoints.WireJson);
+        if (datesMoved)
+        {
+            request.FormValues = JsonSerializer.Serialize(form with { DateFrom = from, DateTo = to }, AssignmentEndpoints.WireJson);
+        }
         foreach (var (engagement, slot) in rows)
         {
             engagement.ScheduleChangedAt = now;
@@ -140,6 +167,85 @@ internal static class FastPlanStatusSync
         }
         return true;
     }
+
+    /// <summary>
+    /// P-374 — puts back on the plan each trainer Expert Hub had placed there
+    /// and FAST no longer lists. Only a <c>synchronized</c> slot is checked: an
+    /// assignment still on its way belongs to the outbox, not to this pass.
+    /// </summary>
+    private static async Task<int> RestoreTrainersAsync(
+        ExpertHubDbContext db, FastTrainingApi fast, string planId,
+        List<(Engagement Engagement, AssignmentSlot Slot)> rows, ILogger? logger, CancellationToken ct)
+    {
+        var placed = rows
+            .Where(row => row.Slot.FastSyncState == "synchronized"
+                && row.Slot.ConfirmedEngagementId == row.Engagement.EngagementId)
+            .ToList();
+        if (placed.Count == 0)
+        {
+            return 0;
+        }
+        var plan = await fast.PlanDetailsAsync(planId, ct);
+        if (!plan.Ok || plan.Value is null)
+        {
+            return 0;
+        }
+        var onPlan = (plan.Value.Trainers ?? [])
+            .Select(t => Guid.TryParse(t.TrainerFastUserId, out var id) ? id : Guid.Empty)
+            .ToHashSet();
+        var hub = new IntegrationHub(db);
+        var restored = 0;
+        foreach (var (engagement, slot) in placed)
+        {
+            var fastUserId = await (
+                    from profile in db.TrainerProfiles
+                    join replica in db.FastProfiles on profile.UserId equals replica.UserId
+                    where profile.TrainerId == engagement.TrainerId
+                    select replica.FastUserId)
+                .FirstOrDefaultAsync(ct);
+            if (!Guid.TryParse(fastUserId, out var trainerFastUserId) || onPlan.Contains(trainerFastUserId))
+            {
+                continue;
+            }
+            var lastVersion = await db.OutboxMessages
+                .Where(m => m.EntityType == "ENGAGEMENT" && m.EntityId == engagement.EngagementId)
+                .MaxAsync(m => (int?)m.EntityVersion, ct) ?? 0;
+            slot.FastSyncState = "processing";
+            await hub.EnqueueOutboundAsync(
+                IntegrationSystems.Fast,
+                "engagement",
+                "ENGAGEMENT",
+                engagement.EngagementId,
+                entityVersion: Math.Max(lastVersion + 1, FirstRestoreVersion),
+                operation: "upsert",
+                JsonSerializer.Serialize(new
+                {
+                    engagementId = engagement.EngagementId,
+                    trainerId = engagement.TrainerId,
+                    slotNumber = slot.SlotNumber,
+                    restoredAfterFastRemoval = true,
+                }, AssignmentEndpoints.WireJson),
+                ct);
+            if (logger is not null)
+            {
+                LogTrainerRestored(logger, engagement.EngagementId, planId);
+            }
+            restored++;
+        }
+        return restored;
+    }
+
+    /// <summary>The latest timetable, day by day with its times, as one hash.</summary>
+    private static string Fingerprint(IEnumerable<FastScheduleDay> days) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            string.Join(';', days
+                .OrderBy(d => d.Date).ThenBy(d => d.StartTime)
+                .Select(d => string.Create(CultureInfo.InvariantCulture,
+                    $"{d.Date:yyyy-MM-dd} {d.StartTime:hh\\:mm}-{d.EndTime:hh\\:mm}"))))));
+
+    [LoggerMessage(EventId = 5312, Level = LogLevel.Warning,
+        Message = "FAST plan {PlanId} no longer lists the trainer of engagement {EngagementId}; the assignment is queued again.")]
+    private static partial void LogTrainerRestored(ILogger logger, Guid engagementId, string planId);
 
     [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(value))]
     private static string? Fit(string? value) => value is { Length: > 60 } ? value[..60] : value;
@@ -191,7 +297,8 @@ public sealed partial class FastPlanStatusWorker : BackgroundService
                     scope.ServiceProvider.GetRequiredService<FastTrainingApi>(),
                     scope.ServiceProvider.GetRequiredService<NotificationDispatcher>(),
                     DateTime.UtcNow,
-                    stoppingToken);
+                    stoppingToken,
+                    _logger);
                 if (changed > 0)
                 {
                     LogChanged(_logger, changed);
@@ -207,7 +314,7 @@ public sealed partial class FastPlanStatusWorker : BackgroundService
     }
 
     [LoggerMessage(EventId = 5310, Level = LogLevel.Information,
-        Message = "FAST plan status: {Count} request(s) changed (rescheduled or cancelled in FAST).")]
+        Message = "FAST plan status: {Count} change(s) carried over (rescheduled, cancelled, or a trainer re-added).")]
     private static partial void LogChanged(ILogger logger, int count);
 
     [LoggerMessage(EventId = 5311, Level = LogLevel.Warning, Message = "FAST plan status pass failed.")]

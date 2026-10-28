@@ -890,6 +890,11 @@ namespace ExpertHub.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("created_by");
 
+                    b.Property<string>("FastScheduleFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("fast_schedule_fingerprint");
+
                     b.Property<string>("FormValues")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")

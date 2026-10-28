@@ -36,6 +36,13 @@ public sealed class AssignmentRequest
     /// <summary>JSON — the centre's entered form, verbatim (`DM-GAP-06`).</summary>
     public required string FormValues { get; set; }
 
+    /// <summary>
+    /// P-374 — a hash of the FAST plan's latest timetable (every day with its
+    /// start and end time), as last read. A change in session times alone is a
+    /// reschedule too; null until the plan is first read.
+    /// </summary>
+    public string? FastScheduleFingerprint { get; set; }
+
     public Guid CreatedBy { get; set; }
 
     public DateTime CreatedAt { get; set; }

@@ -102,6 +102,13 @@ The history before this repository existed is in
 
 ### Changed
 
+- **A trainer FAST drops from a plan is put back, and a change of session
+  times is a reschedule (`P-374`).** Every hour Expert Hub now checks that each
+  trainer it placed on a FAST plan is still on it; if FAST removed them (it does
+  when it reschedules a plan), they are added again automatically. A plan whose
+  days stay the same but whose session times change now also tells the trainer
+  their schedule changed. Migration M52 adds one nullable column.
+
 - **The assignment request's programme list includes unpublished programmes
   (`P-373`).** «اسم البرنامج» used to offer only programmes whose current version
   is published; it now offers every programme except archived old versions, so a
