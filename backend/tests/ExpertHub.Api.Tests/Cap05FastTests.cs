@@ -38,7 +38,8 @@ public sealed partial class Cap05Tests
         var searchBody = JsonSerializer.Deserialize<JsonElement>(search.Body);
         Assert.Equal("قيادة", searchBody.GetProperty("searchText").GetString());
         Assert.True(searchBody.GetProperty("hasUpcomingPlans").GetBoolean());
-        Assert.Equal("active", searchBody.GetProperty("status").GetString());
+        // P-373 — unpublished (inactive) programmes are offered too: no status filter.
+        Assert.True(!searchBody.TryGetProperty("status", out var status) || status.ValueKind == JsonValueKind.Null);
 
         // Only plans that can still be assigned are offered.
         var plans = await GetAsync(centre,

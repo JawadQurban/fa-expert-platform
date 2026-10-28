@@ -81,6 +81,8 @@ internal static class FastPlanSelection
         // by name or code, only those with an upcoming plan to assign to. The
         // picker loads FAST's maximum page (200) once and filters it as you type.
         // `upcomingPlansOnly=false` — form 4 picks a programme, not a plan.
+        // P-373 — no status filter: FAST then returns active AND inactive
+        // (unpublished) programmes, and leaves out only archived old versions.
         requests.MapGet("/lookups/fast-programmes", async (
             string? q, bool? upcomingPlansOnly, FastTrainingApi fast, CancellationToken ct) =>
         {
@@ -89,7 +91,7 @@ internal static class FastPlanSelection
                 return Results.Ok(new FastProgrammesWire(false, []));
             }
             var result = await fast.SearchProgramsAsync(
-                new FastProgramSearch(1, 200, string.IsNullOrWhiteSpace(q) ? null : q.Trim(), "active",
+                new FastProgramSearch(1, 200, string.IsNullOrWhiteSpace(q) ? null : q.Trim(), Status: null,
                     upcomingPlansOnly != false), ct);
             if (!result.Ok || result.Value is null)
             {

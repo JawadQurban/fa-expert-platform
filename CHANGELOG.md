@@ -102,6 +102,11 @@ The history before this repository existed is in
 
 ### Changed
 
+- **The assignment request's programme list includes unpublished programmes
+  (`P-373`).** «اسم البرنامج» used to offer only programmes whose current version
+  is published; it now offers every programme except archived old versions, so a
+  programme with an upcoming plan appears whether or not it is published.
+
 - **No screen names FAST any more (`P-371`).** Engagements, slot re-routing,
   execution, speakers, submissions and withdrawal now say what the thing is
   («أُلغيت الخطة», «حالة المزامنة», «غير مرتبط بخطة», «رمز سبب إلغاء الخطة»)
