@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearExpertHubSession,
   expectNoA11yViolations,
@@ -21,6 +21,28 @@ import { getTrainerSearchContent } from './trainerSearch.content';
 import { DEFAULT_TRAINER_SEARCH_FILTERS } from './trainerSearch.types';
 import { arNumber } from '../../shared/formatting';
 import { getSpeakersContent } from '../speakers/speakers.content';
+
+/*
+ * BUG-051 — the PDF libraries are mocked: jsdom cannot draw, and these tests
+ * are about what the screen asks of them, not their output (that was checked
+ * against a real browser; see `P-387`).
+ */
+const pdf = vi.hoisted(() => ({
+  toPng: vi.fn<(node: HTMLElement, options?: unknown) => Promise<string>>(),
+  addImage: vi.fn(),
+  save: vi.fn(),
+  jsPDF: vi.fn(),
+}));
+vi.mock('html-to-image', () => ({ toPng: pdf.toPng }));
+vi.mock('jspdf', () => ({ jsPDF: pdf.jsPDF }));
+
+function pdfSucceeds() {
+  pdf.addImage.mockReset();
+  pdf.save.mockReset();
+  pdf.jsPDF.mockReset().mockImplementation(function () {
+    return { addImage: pdf.addImage, save: pdf.save };
+  });
+}
 
 const content = getTrainerSearchContent('ar');
 const profileContent = getProfileContent('ar');
@@ -464,11 +486,71 @@ describe('EH-INT-07/08 — Trainer Search & Unified Profile (J-15)', () => {
     expect(screen.getByText(/جامعة الملك سعود، 2012$/)).toBeInTheDocument();
   });
 
-  it('G26: PDF export is disabled and explains why, rather than being a dead button', async () => {
-    renderTrainer(ACTIVE);
+  it('BUG-051: the card is exported as a PDF of the card itself, named after the trainer', async () => {
+    pdfSucceeds();
+    pdf.toPng.mockReset().mockResolvedValue('data:image/png;base64,AAAA');
+    const { user } = renderTrainer(ACTIVE);
     await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
-    expect(screen.getByRole('button', { name: content.identityCard.export })).toBeDisabled();
-    expect(screen.getByText(content.identityCard.exportUnavailable)).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: content.identityCard.export });
+    expect(button).toBeEnabled();
+
+    await user.click(button);
+
+    await waitFor(() => expect(pdf.save).toHaveBeenCalledWith('trainer-card-د-سارة-العتيبي.pdf'));
+    // The captured node is the card — its rows, not the panel's chrome.
+    const captured = pdf.toPng.mock.calls[0][0];
+    expect(within(captured).getByText(content.identityCard.fields.certifications)).toBeTruthy();
+    expect(within(captured).queryByText(content.identityCard.heading)).toBeNull();
+    expect(within(captured).queryByRole('button')).toBeNull();
+    expect(pdf.addImage).toHaveBeenCalledWith(
+      'data:image/png;base64,AAAA',
+      'PNG',
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      undefined,
+      'FAST'
+    );
+    expect(screen.queryByText(content.identityCard.exportFailed)).not.toBeInTheDocument();
+    await waitFor(() => expect(button).toBeEnabled());
+  });
+
+  it('BUG-051: a failed export says so, and the button can be used again', async () => {
+    pdfSucceeds();
+    pdf.toPng.mockReset().mockRejectedValue(new Error('canvas tainted'));
+    const { user } = renderTrainer(ACTIVE);
+    await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
+    const button = screen.getByRole('button', { name: content.identityCard.export });
+
+    await user.click(button);
+
+    expect(await screen.findByText(content.identityCard.exportFailed)).toBeInTheDocument();
+    expect(pdf.save).not.toHaveBeenCalled();
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(button).not.toHaveAttribute('aria-busy');
+    await expectNoA11yViolations(document.body);
+  });
+
+  it('BUG-051: the button is busy and disabled while the PDF is drawn', async () => {
+    pdfSucceeds();
+    let finish: (value: string) => void = () => undefined;
+    pdf.toPng.mockReset().mockReturnValue(
+      new Promise<string>((resolve) => {
+        finish = resolve;
+      })
+    );
+    const { user } = renderTrainer(ACTIVE);
+    await screen.findByRole('heading', { level: 1, name: 'د. سارة العتيبي' });
+    const button = screen.getByRole('button', { name: content.identityCard.export });
+
+    await user.click(button);
+
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'));
+    expect(button).toBeDisabled();
+    finish('data:image/png;base64,AAAA');
+    await waitFor(() => expect(pdf.save).toHaveBeenCalled());
+    await waitFor(() => expect(button).toBeEnabled());
   });
 
   /* ── states ────────────────────────────────────────────────────────────── */

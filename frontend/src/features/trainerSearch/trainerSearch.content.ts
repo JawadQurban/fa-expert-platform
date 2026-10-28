@@ -146,8 +146,8 @@ export interface TrainerSearchContent {
     readonly missingSource: string;
     readonly missingList: (fields: string) => string;
     readonly export: string;
-    /** `G26` — no document generation, and no approved template here. */
-    readonly exportUnavailable: string;
+    /** BUG-051 / `P-387` — the card could not be turned into a PDF. */
+    readonly exportFailed: string;
   };
 
   readonly errors: {
@@ -282,8 +282,7 @@ const ar: TrainerSearchContent = {
     missingSource: 'لا يوجد مصدر لهذا الحقل في ملف المدرب حتى الآن.',
     missingList: (fields) => `حقول بلا مصدر في النظام: ${fields}.`,
     export: 'تصدير البطاقة (PDF)',
-    exportUnavailable:
-      'تصدير البطاقة كملف PDF غير متاح حاليًا: نموذج التصميم المعتمد وخدمة إنشاء المستندات لم يُربطا بعد.',
+    exportFailed: 'تعذّر تصدير البطاقة كملف PDF. حاول مجددًا.',
   },
 
   errors: {
@@ -419,8 +418,7 @@ const en: TrainerSearchContent = {
     missingSource: 'There is no source for this field in the trainer profile yet.',
     missingList: (fields) => `Fields with no source in the system: ${fields}.`,
     export: 'Export the card (PDF)',
-    exportUnavailable:
-      'PDF export is not available yet: the approved design template and the document-generation service are not wired up.',
+    exportFailed: 'The card could not be exported as a PDF. Try again.',
   },
 
   errors: {

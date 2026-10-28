@@ -281,10 +281,9 @@ export interface IdentityCardDto {
   /** The two most recent roles, latest first (`P-299`). */
   readonly recentRoles: readonly IdentityCardRoleDto[];
   /**
-   * The generated PDF. `null` while document generation/storage is unresolved
-   * (`G26`) — no fabricated download, and no client-side PDF invented to fill
-   * the gap, since AC-1 requires "the approved design template" which does not
-   * exist in this repository.
+   * A server-generated PDF — always `null`: the server generates none. Since
+   * BUG-051 (`P-387`) the card is exported as a PDF in the browser, from the
+   * card as shown (`identityCardPdf.ts`), so nothing reads this field.
    */
   readonly pdfUrl: string | null;
 }

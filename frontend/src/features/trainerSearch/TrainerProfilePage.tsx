@@ -372,7 +372,12 @@ export default function TrainerProfilePage() {
           )}
 
           {/* F2 — the identity card. */}
-          <IdentityCardPanel card={trainer.identityCard} content={content} locale={locale} />
+          <IdentityCardPanel
+            trainerId={trainer.trainerId}
+            card={trainer.identityCard}
+            content={content}
+            locale={locale}
+          />
         </div>
       </div>
 

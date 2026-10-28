@@ -198,8 +198,7 @@ function identityCardFor(trainer: MockTrainerRecord): IdentityCardDto {
         current: false,
       },
     ],
-    // `G26` — no document generation/storage, and the approved design template
-    // is not in this repository. No client-side PDF is invented to fill the gap.
+    // The server generates no PDF; the card is exported in the browser (`P-387`).
     pdfUrl: null,
   };
 }

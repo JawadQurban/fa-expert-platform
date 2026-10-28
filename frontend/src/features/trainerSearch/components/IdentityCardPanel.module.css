@@ -54,3 +54,15 @@
   align-items: center;
   gap: var(--fads-sys-space-inline-sm);
 }
+
+/*
+ * BUG-051 — the card as exported. It carries the panel's own surface, so the
+ * captured image is the card as seen rather than text on a transparent page.
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  /* The panel body's own rhythm, so the card reads as it did before. */
+  gap: var(--fads-ref-space-3);
+  background-color: var(--fads-sys-card-bg);
+}

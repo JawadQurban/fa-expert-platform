@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { Alert } from '@ds/composite';
 import { Avatar, Button, Icon, Typography } from '@ds/primitives';
 import type { Locale } from '@/types';
@@ -11,6 +12,11 @@ import type { TrainerSearchContent } from '../trainerSearch.content';
 import { apiUrl } from '../../../shared/services/apiClient';
 import { formatDate } from '../../../shared/formatting';
 import { Panel } from '../../../shared/workspace/Panel';
+import {
+  exportIdentityCardPdf,
+  identityCardFileName,
+  loadPhotoForExport,
+} from '../identityCardPdf';
 import styles from './IdentityCardPanel.module.css';
 
 /**
@@ -27,10 +33,10 @@ import styles from './IdentityCardPanel.module.css';
  * `null` (no source) still renders as explicitly unavailable rather than being
  * dropped, so a gap is never hidden.
  *
- * ⚠️ **PDF export is blocked.** `G26` leaves document generation and storage
- * unresolved, and the "approved design template" AC-1 requires is not in this
- * repository. Rendering a client-side PDF would produce a document in the wrong
- * design, which is worse than none — so the action is disabled and says why.
+ * **PDF export** (BUG-051, `P-387`): the card's own DOM — the `P-343` layout
+ * the screen shows — is drawn into a PDF in the browser (`identityCardPdf.ts`),
+ * so the PDF is the card and nothing else: no heading, description, gap note or
+ * button. It reuses the data this screen already holds; there is no endpoint.
  */
 /**
  * The Experience row. The profile holds it as free text, so it is shown as
@@ -58,15 +64,49 @@ function roleText(
 }
 
 export function IdentityCardPanel({
+  trainerId,
   card,
   content,
   locale,
 }: {
+  /** The file-name fallback when the card has no name. */
+  readonly trainerId: string;
   readonly card: IdentityCardDto;
   readonly content: TrainerSearchContent;
   readonly locale: Locale;
 }) {
   const copy = content.identityCard;
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportFailed, setExportFailed] = useState(false);
+  /**
+   * While exporting, the photo the capture embeds: a `data:` URL, or `null` for
+   * the initials when it could not be read. `undefined` — not exporting, the
+   * live URL.
+   */
+  const [exportPhoto, setExportPhoto] = useState<string | null | undefined>(undefined);
+  const livePhoto = card.photoUrl == null ? undefined : apiUrl(card.photoUrl);
+  const photo = exportPhoto === undefined ? livePhoto : (exportPhoto ?? undefined);
+
+  const exportPdf = async () => {
+    const node = cardRef.current;
+    if (node == null) {
+      return;
+    }
+    setExporting(true);
+    setExportFailed(false);
+    try {
+      const embedded = livePhoto == null ? null : await loadPhotoForExport(livePhoto);
+      // The capture reads the DOM, so the swap must be on screen first.
+      flushSync(() => setExportPhoto(embedded));
+      await exportIdentityCardPdf(node, identityCardFileName(card.name, trainerId));
+    } catch {
+      setExportFailed(true);
+    } finally {
+      setExportPhoto(undefined);
+      setExporting(false);
+    }
+  };
   const missing = missingIdentityCardFields(card);
   const missingLabels = missing
     .filter((field) => field !== 'photo')
@@ -126,46 +166,51 @@ export function IdentityCardPanel({
         {copy.description}
       </Typography>
 
-      <div className={styles.photoRow}>
-        <Avatar
-          name={card.name}
-          src={card.photoUrl == null ? undefined : apiUrl(card.photoUrl)}
-          size="xl"
-          border
-          decorative
-        />
-        <Typography as="p" variant="text-md" weight="bold">
-          {card.name}
-        </Typography>
+      {/* The card itself — exactly what the PDF holds. */}
+      <div ref={cardRef} className={styles.card}>
+        <div className={styles.photoRow}>
+          {/* Keyed on the source, so a swapped-in photo is tried afresh. */}
+          <Avatar
+            key={photo ?? 'initials'}
+            name={card.name}
+            src={photo}
+            size="xl"
+            border
+            decorative
+          />
+          <Typography as="p" variant="text-md" weight="bold">
+            {card.name}
+          </Typography>
+        </div>
+
+        {/* Front cover — certificates and LinkedIn, under the photo and name. */}
+        <dl className={styles.rows}>
+          {row(copy.fields.certifications, card.certifications)}
+          {row(copy.fields.socialAccounts, card.socialAccounts)}
+        </dl>
+
+        {/* Inner panel — the matrix's four groups, in its order. */}
+        {group(copy.sections.overview, [
+          row(copy.fields.sector, card.sector ?? ''),
+          row(copy.fields.participationTypes, card.participationTypes),
+        ])}
+        {group(copy.sections.experience, [
+          row(copy.fields.experience, experienceText(card.experience, content)),
+          row(
+            copy.fields.recentRoles,
+            card.recentRoles.map((role) => roleText(role, locale, content))
+          ),
+        ])}
+        {group(copy.sections.academic, [
+          row(
+            copy.fields.academicQualifications,
+            [card.academicQualifications, card.university, card.qualificationYear]
+              .filter((part): part is string => part != null && part !== '')
+              .join('، ')
+          ),
+        ])}
+        {group(copy.sections.relatedFields, [row(copy.fields.relatedFields, card.relatedFields)])}
       </div>
-
-      {/* Front cover — certificates and LinkedIn, under the photo and name. */}
-      <dl className={styles.rows}>
-        {row(copy.fields.certifications, card.certifications)}
-        {row(copy.fields.socialAccounts, card.socialAccounts)}
-      </dl>
-
-      {/* Inner panel — the matrix's four groups, in its order. */}
-      {group(copy.sections.overview, [
-        row(copy.fields.sector, card.sector ?? ''),
-        row(copy.fields.participationTypes, card.participationTypes),
-      ])}
-      {group(copy.sections.experience, [
-        row(copy.fields.experience, experienceText(card.experience, content)),
-        row(
-          copy.fields.recentRoles,
-          card.recentRoles.map((role) => roleText(role, locale, content))
-        ),
-      ])}
-      {group(copy.sections.academic, [
-        row(
-          copy.fields.academicQualifications,
-          [card.academicQualifications, card.university, card.qualificationYear]
-            .filter((part): part is string => part != null && part !== '')
-            .join('، ')
-        ),
-      ])}
-      {group(copy.sections.relatedFields, [row(copy.fields.relatedFields, card.relatedFields)])}
 
       {/* `Q19` — name the gaps once, for the person who can report them. */}
       {missingLabels.length > 0 && (
@@ -174,29 +219,21 @@ export function IdentityCardPanel({
         </Alert>
       )}
 
-      {card.pdfUrl == null ? (
-        <>
-          <div>
-            <Button variant="secondary" size="md" disabled>
-              {copy.export}
-            </Button>
-          </div>
-          {/* `G26` — say why, rather than leaving a dead control. */}
-          <Alert tone="info" surface="tinted" role="note">
-            {copy.exportUnavailable}
-          </Alert>
-        </>
-      ) : (
-        <div>
-          <Button
-            variant="secondary"
-            size="md"
-            href={card.pdfUrl}
-            iconStart={<Icon name="download-01" size="sm" decorative />}
-          >
-            {copy.export}
-          </Button>
-        </div>
+      <div>
+        <Button
+          variant="secondary"
+          size="md"
+          loading={exporting}
+          iconStart={<Icon name="download-01" size="sm" decorative />}
+          onClick={() => void exportPdf()}
+        >
+          {copy.export}
+        </Button>
+      </div>
+      {exportFailed && (
+        <Alert tone="error" surface="tinted" role="alert">
+          {copy.exportFailed}
+        </Alert>
       )}
     </Panel>
   );

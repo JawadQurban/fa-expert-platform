@@ -32,8 +32,10 @@
     "docker:run": "docker run --rm -p 127.0.0.1:8085:8080 --name expert-hub-frontend expert-hub-frontend:local"
   },
   "dependencies": {
+    "html-to-image": "1.11.13",
     "i18next": "^24.2.1",
     "i18next-browser-languagedetector": "^8.0.2",
+    "jspdf": "4.2.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-i18next": "^15.4.0",
