@@ -64,6 +64,16 @@ export interface ApplicationDetailContent {
     readonly ticketLabel: string;
     readonly joinMeeting: string;
     readonly meetingPending: string;
+    /** BUG-052/053 — the interview is behind them. */
+    readonly ended: {
+      readonly title: string;
+      /** A confirmed time that is over. */
+      readonly afterConfirmed: string;
+      /** Every proposed time passed before one was picked. */
+      readonly lapsed: string;
+    };
+    /** The confirmed time has started. */
+    readonly inProgress: string;
     /** F4 — asking for a different time. */
     readonly reschedule: {
       readonly beforeSelecting: string;
@@ -257,6 +267,13 @@ const ar: ApplicationDetailContent = {
     ticketLabel: 'رقم المقابلة',
     joinMeeting: 'الانضمام إلى الاجتماع',
     meetingPending: 'سيصلك رابط الاجتماع قبل الموعد، وسيظهر هنا أيضًا.',
+    ended: {
+      title: 'انتهت المقابلة',
+      afterConfirmed: 'انتهى موعد مقابلتك. ستُبلَّغ بالنتيجة بعد أن تُكمل لجنة المقابلة تقييمها.',
+      lapsed:
+        'انتهت جميع المواعيد المقترحة دون تأكيد موعد منها. يمكنك طلب موعد آخر، وسيقترح الفريق مواعيد جديدة.',
+    },
+    inProgress: 'مقابلتك جارية الآن.',
     reschedule: {
       beforeSelecting: 'لا يناسبك أي من المواعيد المقترحة؟ يمكنك طلب مواعيد أخرى.',
       afterConfirming: 'إن طرأ ما يمنعك عن هذا الموعد، يمكنك طلب موعد آخر.',
@@ -440,6 +457,14 @@ const en: ApplicationDetailContent = {
     joinMeeting: 'Join the meeting',
     meetingPending:
       'The meeting link will reach you before the interview, and will appear here too.',
+    ended: {
+      title: 'The interview has ended',
+      afterConfirmed:
+        'Your interview time is over. You will be told the result once the interview committee has finished its evaluation.',
+      lapsed:
+        'All the proposed times passed before one was confirmed. You can ask for another time and the team will propose new ones.',
+    },
+    inProgress: 'Your interview is under way now.',
     reschedule: {
       beforeSelecting: 'None of the proposed times work for you? You can ask for different ones.',
       afterConfirming: 'If something prevents you from attending, you can ask for another time.',

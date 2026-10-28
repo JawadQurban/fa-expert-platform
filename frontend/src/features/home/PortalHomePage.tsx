@@ -353,7 +353,14 @@ export default function PortalHomePage() {
                       </Typography>
                     ) : (
                       <Typography as="p" variant="text-md">
-                        {content.interview.reschedulePending}
+                        {home.upcomingInterview.state === 'awaiting-selection'
+                          ? content.interview.awaitingSelection
+                          : content.interview.reschedulePending}
+                      </Typography>
+                    )}
+                    {home.upcomingInterview.state === 'in-progress' && (
+                      <Typography as="p" variant="text-md" weight="bold">
+                        {content.interview.inProgress}
                       </Typography>
                     )}
                     <Typography as="p" variant="text-sm" color="muted">
@@ -366,14 +373,22 @@ export default function PortalHomePage() {
                       )}
                     </Typography>
                     <div>
+                      {/* Picking a time is the one thing the applicant must do,
+                          so the card says it as the action. */}
                       <Button
-                        variant="tertiary"
+                        variant={
+                          home.upcomingInterview.state === 'awaiting-selection'
+                            ? 'secondary'
+                            : 'tertiary'
+                        }
                         size="sm"
                         href={expertHubPaths.applicationDetail(
                           home.upcomingInterview.applicationId
                         )}
                       >
-                        {content.interview.open}
+                        {home.upcomingInterview.state === 'awaiting-selection'
+                          ? content.interview.choose
+                          : content.interview.open}
                       </Button>
                     </div>
                   </Card>

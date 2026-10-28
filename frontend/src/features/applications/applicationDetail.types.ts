@@ -102,7 +102,16 @@ export interface RescheduleRequestDto {
  * reschedules is undefined**, so no limit is invented here; when one is decided
  * it changes this boolean and nothing else.
  */
+/**
+ * BUG-052 — the interview as the applicant reads it, derived on the server from
+ * its status and the clock. `ended` covers both a confirmed time that is over
+ * and proposals that all lapsed before one was picked.
+ */
+export type ApplicantInterviewPhase = 'awaiting-selection' | 'scheduled' | 'in-progress' | 'ended';
+
 export interface ApplicantInterviewDto {
+  /** BUG-052/053 — once `ended`, the panel says so: no time to confirm, no link. */
+  readonly phase: ApplicantInterviewPhase;
   /** F1/AC-1 — the slots prepared at screening, for the applicant to choose from. */
   readonly proposedSlots: readonly InterviewSlotDto[];
   /** `null` until they confirm one (F1/AC-5). */

@@ -444,20 +444,12 @@ public static class InterviewEndpoints
                 return Results.Problem(statusCode: 400, detail: "slots-missing");
             }
             var now = DateTime.UtcNow;
-            var proposed = new List<DateTime>();
-            foreach (var slot in slots)
+            // A malformed time, a past one, or one inside the next hour
+            // (BUG-056) is the caller's mistake: 400, with the rule's code.
+            var (proposed, slotError) = InterviewSlotRules.Check(slots, now);
+            if (slotError is not null)
             {
-                if (ParseSlot(slot) is not { } parsed)
-                {
-                    // A malformed time is the caller's mistake (400), not a 500.
-                    return Results.Problem(statusCode: 400, detail: "slot-invalid");
-                }
-                if (parsed <= now)
-                {
-                    // Nobody can attend an interview in the past.
-                    return Results.Problem(statusCode: 400, detail: "slot-in-past");
-                }
-                proposed.Add(parsed);
+                return Results.Problem(statusCode: 400, detail: slotError);
             }
 
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -540,22 +532,6 @@ public static class InterviewEndpoints
 
     /* ── shared assembly ───────────────────────────────────────────────────── */
 
-    /// <summary>
-    /// A proposed time as the UTC instant it names. RUN-021: the reschedule
-    /// parsed with <c>RoundtripKind</c>, so an offset-less value stayed
-    /// <c>Unspecified</c>, was stored as written and served back as UTC —
-    /// 09:00 entered, 12:00 shown in Riyadh. An offset is honoured; a value
-    /// without one is taken as UTC, which is what the client sends.
-    /// </summary>
-    internal static DateTime? ParseSlot(string value) =>
-        DateTimeOffset.TryParse(
-            value,
-            System.Globalization.CultureInfo.InvariantCulture,
-            System.Globalization.DateTimeStyles.AssumeUniversal,
-            out var parsed)
-            ? parsed.UtcDateTime
-            : null;
-
     private static async Task<DateTime?> ConfirmedStartAsync(
         ExpertHubDbContext db, Interview interviewRow, CancellationToken ct) =>
         interviewRow.ConfirmedSlotId is { } slotId
@@ -572,6 +548,36 @@ public static class InterviewEndpoints
         : now < start ? InterviewPhases.Scheduled
         : now < start + length ? InterviewPhases.InProgress
         : InterviewPhases.Ended;
+
+    /// <summary>
+    /// The phase as the APPLICANT reads it. The same as <see cref="PhaseOf"/>,
+    /// plus one case only the applicant has: they never picked, asked for no
+    /// other time, and every proposed time has gone (BUG-052). That interview
+    /// is over for them — asking them to confirm a time in the past was the
+    /// defect. Staff keep <see cref="PhaseOf"/>: for them the stored status
+    /// still decides what may be evaluated.
+    /// </summary>
+    /// <param name="interviewRow">The interview.</param>
+    /// <param name="openSlots">Its proposals that are not superseded.</param>
+    /// <param name="length">How long an interview lasts.</param>
+    /// <param name="now">The current instant, in UTC.</param>
+    /// <returns>One of <see cref="InterviewPhases"/>.</returns>
+    internal static string ApplicantPhaseOf(
+        Interview interviewRow, IReadOnlyCollection<InterviewSlot> openSlots, TimeSpan length, DateTime now)
+    {
+        ArgumentNullException.ThrowIfNull(interviewRow);
+        ArgumentNullException.ThrowIfNull(openSlots);
+        var confirmedStart = openSlots
+            .Where(s => s.SlotId == interviewRow.ConfirmedSlotId)
+            .Select(s => (DateTime?)s.StartsAt)
+            .FirstOrDefault();
+        var phase = PhaseOf(interviewRow, confirmedStart, length, now);
+        var lapsedUnpicked = phase == InterviewPhases.AwaitingSelection
+            && interviewRow.RescheduleRequestedAt is null
+            && openSlots.Count > 0
+            && openSlots.All(s => s.StartsAt <= now);
+        return lapsedUnpicked ? InterviewPhases.Ended : phase;
+    }
 
     private static async Task<(Application Application, Interview Interview)?> LoadAsync(
         string id, ExpertHubDbContext db, CancellationToken ct)

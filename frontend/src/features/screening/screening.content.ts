@@ -121,6 +121,8 @@ export interface ScreeningContent {
     readonly slotLabel: (index: number) => string;
     readonly addSlot: string;
     readonly removeSlot: string;
+    /** BUG-056 — under a slot inside the next hour. */
+    readonly slotTooSoon: string;
     readonly committeeHeading: string;
     readonly committeeHint: string;
     readonly exemptionReasonLabel: string;
@@ -179,6 +181,8 @@ export interface ScreeningContent {
     readonly unauthorizedBody: string;
     readonly submitTitle: string;
     readonly submitBody: string;
+    /** BUG-056 — the API refused a slot inside the next hour. */
+    readonly slotTooSoonBody: string;
     readonly retry: string;
   };
   readonly rejectionReasons: Readonly<Record<RejectionReasonId, string>>;
@@ -284,6 +288,7 @@ const ar: ScreeningContent = {
     slotLabel: (index) => `الموعد ${arNumber(index)}`,
     addSlot: 'إضافة موعد',
     removeSlot: 'حذف الموعد',
+    slotTooSoon: 'يجب أن يبدأ موعد المقابلة بعد ساعة على الأقل من الوقت الحالي.',
     committeeHeading: 'أعضاء لجنة المقابلة',
     committeeHint: 'اختر عضوًا واحدًا على الأقل. يُرسل الموعد واللجنة معًا في الخطوة نفسها.',
     exemptionReasonLabel: 'سبب الاستثناء',
@@ -295,6 +300,8 @@ const ar: ScreeningContent = {
     errors: {
       'no-service-selected': () => 'اختر خدمة واحدة على الأقل لقبولها.',
       'slots-missing': (service) => `أضف موعد مقابلة واحدًا على الأقل لخدمة ${service}.`,
+      'slot-too-soon': (service) =>
+        `يجب أن تبدأ مواعيد مقابلة خدمة ${service} بعد ساعة على الأقل من الوقت الحالي.`,
       'committee-missing': (service) => `اختر عضو لجنة واحدًا على الأقل لخدمة ${service}.`,
       'exemption-reason-missing': (service) => `اختر سبب الاستثناء لخدمة ${service}.`,
       'exemption-reason-other-missing': (service) => `اذكر سبب الاستثناء لخدمة ${service}.`,
@@ -349,6 +356,8 @@ const ar: ScreeningContent = {
     unauthorizedBody: 'ليست لديك الصلاحية اللازمة لفرز هذا الطلب.',
     submitTitle: 'تعذّر تسجيل القرار',
     submitBody: 'حدث خطأ أثناء تسجيل القرار ولم يُحفظ. يُرجى المحاولة مرة أخرى.',
+    slotTooSoonBody:
+      'لم يُحفظ القرار: يجب أن يبدأ كل موعد مقابلة بعد ساعة على الأقل من الوقت الحالي. عدّل المواعيد ثم أعد الإرسال.',
     retry: 'إعادة المحاولة',
   },
   // PENDING_APPROVED_REJECTION_REASON_MATRIX — no approved wording exists, so
@@ -470,6 +479,7 @@ const en: ScreeningContent = {
     slotLabel: (index) => `Slot ${formatNumber(index, 'en')}`,
     addSlot: 'Add a slot',
     removeSlot: 'Remove slot',
+    slotTooSoon: 'An interview slot must start at least one hour from now.',
     committeeHeading: 'Interview committee members',
     committeeHint:
       'Select at least one member. Slots and committee are sent together in the same step.',
@@ -482,6 +492,8 @@ const en: ScreeningContent = {
     errors: {
       'no-service-selected': () => 'Select at least one service to accept.',
       'slots-missing': (service) => `Add at least one interview slot for ${service}.`,
+      'slot-too-soon': (service) =>
+        `Every interview slot for ${service} must start at least one hour from now.`,
       'committee-missing': (service) => `Select at least one committee member for ${service}.`,
       'exemption-reason-missing': (service) => `Select the exemption reason for ${service}.`,
       'exemption-reason-other-missing': (service) => `State the exemption reason for ${service}.`,
@@ -536,6 +548,8 @@ const en: ScreeningContent = {
     unauthorizedBody: 'You do not have permission to screen this application.',
     submitTitle: 'Could not record the decision',
     submitBody: 'Something went wrong and the decision was not saved. Please try again.',
+    slotTooSoonBody:
+      'The decision was not saved: every interview slot must start at least one hour from now. Adjust the slots and send again.',
     retry: 'Try again',
   },
   rejectionReasons: {

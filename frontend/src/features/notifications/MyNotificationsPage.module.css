@@ -29,3 +29,9 @@
   justify-content: space-between;
   gap: var(--fads-sys-space-inline-sm);
 }
+
+/* BUG-054 — a meeting link is one long unbroken word; let it wrap rather than
+   push the card wider than the screen. */
+.body {
+  overflow-wrap: anywhere;
+}

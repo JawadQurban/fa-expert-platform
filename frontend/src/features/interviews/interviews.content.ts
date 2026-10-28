@@ -43,6 +43,9 @@ export interface InterviewsContent {
     readonly awaitingSelection: (proposed: string) => string;
     /** BUG-032 — the derived interview state, shown on the head. */
     readonly phases: Readonly<Record<InterviewPhase, string>>;
+    /** BUG-053 — shown instead of the meeting link once the interview is over. */
+    readonly endedTitle: string;
+    readonly endedBody: string;
   };
   readonly committee: {
     readonly heading: string;
@@ -158,6 +161,8 @@ export interface InterviewsContent {
     readonly removeSlot: string;
     readonly noteLabel: string;
     readonly slotRequired: string;
+    /** BUG-056 — a slot must start at least an hour from now. */
+    readonly slotTooSoon: string;
     readonly ticketRetained: string;
     readonly confirm: string;
     readonly cancel: string;
@@ -217,6 +222,8 @@ const ar: InterviewsContent = {
       ended: 'منتهية',
       completed: 'مكتملة التقييم',
     },
+    endedTitle: 'انتهت هذه المقابلة',
+    endedBody: 'انتهى موعد المقابلة، فلم يعد رابط الاجتماع متاحًا للانضمام.',
   },
   committee: {
     heading: 'ردود أعضاء اللجنة',
@@ -354,6 +361,7 @@ const ar: InterviewsContent = {
     removeSlot: 'حذف الموعد',
     noteLabel: 'ملاحظة (اختيارية)',
     slotRequired: 'يجب تحديد موعد واحد على الأقل قبل الإرسال.',
+    slotTooSoon: 'يجب أن يبدأ موعد المقابلة بعد ساعة على الأقل من الوقت الحالي.',
     ticketRetained: 'يُحتفظ برقم المقابلة نفسه — إعادة الجدولة لا تُصدر رقمًا جديدًا.',
     confirm: 'إرسال المواعيد الجديدة',
     cancel: 'إلغاء',
@@ -414,6 +422,8 @@ const en: InterviewsContent = {
       ended: 'Ended',
       completed: 'Evaluation complete',
     },
+    endedTitle: 'This interview has ended',
+    endedBody: 'The interview time is over, so the meeting link is no longer offered.',
   },
   committee: {
     heading: 'Committee responses',
@@ -561,6 +571,7 @@ const en: InterviewsContent = {
     removeSlot: 'Remove slot',
     noteLabel: 'Note (optional)',
     slotRequired: 'At least one slot must be set before sending.',
+    slotTooSoon: 'An interview slot must start at least one hour from now.',
     ticketRetained: 'The same interview number is retained — a reschedule never issues a new one.',
     confirm: 'Send the new slots',
     cancel: 'Cancel',

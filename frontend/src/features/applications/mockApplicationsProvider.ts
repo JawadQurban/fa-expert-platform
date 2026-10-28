@@ -319,6 +319,7 @@ function buildInterview(summary: ApplicationSummaryDto): ApplicantInterviewDto |
     return null;
   }
   return {
+    phase: 'awaiting-selection',
     proposedSlots: MOCK_SLOTS,
     selectedSlotId: null,
     selectionSla: MOCK_SELECTION_SLA,
@@ -830,6 +831,7 @@ export function createMockApplicationsProvider(
         action: 'manage-interview',
         interview: {
           ...detail.interview,
+          phase: 'scheduled',
           selectedSlotId: slotId,
           // Nothing left to decide against a clock.
           selectionSla: null,
@@ -866,6 +868,7 @@ export function createMockApplicationsProvider(
         action: 'manage-interview',
         interview: {
           ...detail.interview,
+          phase: 'awaiting-selection',
           proposedSlots: [],
           selectedSlotId: null,
           selectionSla: null,

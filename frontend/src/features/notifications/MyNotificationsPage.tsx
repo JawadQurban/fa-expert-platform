@@ -9,6 +9,7 @@ import { formatDate } from '../../shared/formatting';
 import { getNotificationService } from './notificationService';
 import { getNotificationsContent } from './notifications.content';
 import { countUnread, markSeen, readLastSeen } from './notificationInbox';
+import { LinkifiedText } from './LinkifiedText';
 import type { MyNotificationDto } from './notification.types';
 import styles from './MyNotificationsPage.module.css';
 
@@ -99,8 +100,11 @@ export default function MyNotificationsPage() {
                 )}
               </div>
               {item.body != null && (
-                <Typography as="p" variant="text-md">
-                  <bdi>{item.body}</bdi>
+                <Typography as="p" variant="text-md" className={styles.body}>
+                  {/* BUG-054 — links in the body are links, not text to copy. */}
+                  <bdi>
+                    <LinkifiedText text={item.body} />
+                  </bdi>
                 </Typography>
               )}
               <Typography as="p" variant="text-xs" color="muted">

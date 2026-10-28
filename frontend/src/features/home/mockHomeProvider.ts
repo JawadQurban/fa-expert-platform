@@ -52,6 +52,7 @@ export const MOCK_HOME: PortalHomeDto = {
     startsAt: '2026-08-03T07:00:00Z',
     ticketNumber: 'INT-2026-0042',
     reschedulePending: false,
+    state: 'scheduled',
   },
 };
 

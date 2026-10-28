@@ -25,8 +25,24 @@
   existing.
 - `MeetingBooking` carries the join URL and the Graph event id, so a reschedule
   updates the same event instead of creating a second one.
+- After every booking and reschedule the event's online meeting is looked up by
+  its join URL (`GET /users/{organiser}/onlineMeetings?$filter=JoinWebUrl eq …`)
+  and PATCHed: `lobbyBypassSettings { scope: everyone, isDialInBypassEnabled:
+  true }`, `allowedPresenters: organization` (BUG-050). Best effort — it never
+  fails the booking — and logged as events 5501–5504.
 
 ## Gotchas
+
+- ⚠️ **The organiser never joins, so the lobby must be opened.** Without
+  `OnlineMeetings.ReadWrite.All` (Application, admin consent) **and** a Teams
+  `New-CsApplicationAccessPolicy` granted to the organiser
+  (`Grant-CsApplicationAccessPolicy`), the lobby PATCH answers 403 (event 5502)
+  and everyone waits «until someone lets you in» — nobody can, because the
+  host is a service mailbox. Steps: `docs/operations/DEPLOYMENT.md`, «Teams
+  interview meetings — lobby bypass».
+- `allowedPresenters` is `organization`, not `everyone`: the committee presents
+  and can promote the applicant; a forwarded link does not carry presenter
+  rights.
 
 - ⚠️ **`Calendars.ReadWrite` (Application) reaches every mailbox in the tenant**
   unless an Exchange administrator scopes it to the organiser with

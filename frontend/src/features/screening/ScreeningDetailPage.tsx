@@ -17,6 +17,7 @@ import type {
 import { ApplicationSectionsReview } from './components/ApplicationSectionsReview';
 import { QualitativeInsightPanel } from './components/QualitativeInsightPanel';
 import { slotInputToInstant } from '../interviews/components/InterviewSlotsField';
+import { SLOT_TOO_SOON } from '../interviews/interview.types';
 import { RecordedDecision } from './components/RecordedDecision';
 import { ScreeningAttachments } from './components/ScreeningAttachments';
 import { ScreeningDecisionPanel } from './components/ScreeningDecisionPanel';
@@ -70,7 +71,8 @@ export default function ScreeningDetailPage() {
   const [detail, setDetail] = useState<ScreeningDetailDto | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(false);
+  // `slot-too-soon` (BUG-056) is named; anything else is the generic failure.
+  const [submitError, setSubmitError] = useState<false | 'generic' | 'slot-too-soon'>(false);
   /** Set once a decision is recorded in this session — replaces the panel. */
   const [recorded, setRecorded] = useState<ScreeningDecisionSummaryDto | null>(null);
 
@@ -139,7 +141,7 @@ export default function ScreeningDetailPage() {
       .then((response) => {
         setSubmitting(false);
         if (!response.ok) {
-          setSubmitError(true);
+          setSubmitError(response.error.message === SLOT_TOO_SOON ? 'slot-too-soon' : 'generic');
           return;
         }
         const result = response.value;
@@ -317,9 +319,11 @@ export default function ScreeningDetailPage() {
         evidence. The evidence is still one tab-click away beneath it.
       */}
       <div className={styles.decision}>
-        {submitError && (
+        {submitError !== false && (
           <Alert tone="error" surface="tinted" title={content.errors.submitTitle} role="alert">
-            {content.errors.submitBody}
+            {submitError === 'slot-too-soon'
+              ? content.errors.slotTooSoonBody
+              : content.errors.submitBody}
           </Alert>
         )}
 

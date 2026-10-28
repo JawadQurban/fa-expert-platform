@@ -1,3 +1,4 @@
+import { isSlotTooSoon } from '../interviews/interview.types';
 import type { SlaDto } from '../../shared/types/sla';
 import type { LocalizedText } from '../../shared/types/localizedText';
 import type {
@@ -289,6 +290,7 @@ export interface ScreeningDetailDto {
 export type AcceptValidationCode =
   | 'no-service-selected'
   | 'slots-missing'
+  | 'slot-too-soon'
   | 'committee-missing'
   | 'exemption-reason-missing'
   | 'exemption-reason-other-missing';
@@ -312,7 +314,8 @@ export interface RejectValidationIssue {
  * once rather than revealing them one at a time.
  */
 export function validateAcceptDecision(
-  input: AcceptDecisionInput
+  input: AcceptDecisionInput,
+  now: Date = new Date()
 ): readonly AcceptValidationIssue[] {
   const issues: AcceptValidationIssue[] = [];
 
@@ -325,6 +328,10 @@ export function validateAcceptDecision(
     if (decision.path === 'interview') {
       if (decision.slots.length === 0) {
         issues.push({ code: 'slots-missing', service: decision.service });
+      }
+      // BUG-056 — every slot at least an hour from now; the API refuses it too.
+      if (decision.slots.some((slot) => isSlotTooSoon(slot, now))) {
+        issues.push({ code: 'slot-too-soon', service: decision.service });
       }
       if (decision.committeeMemberIds.length === 0) {
         issues.push({ code: 'committee-missing', service: decision.service });

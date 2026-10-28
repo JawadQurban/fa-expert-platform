@@ -36,6 +36,22 @@ namespace ExpertHub.Infrastructure.Meetings;
 /// access to the calendar of every employee. <b>It is not optional.</b>
 /// </para>
 /// <para>
+/// ⚠️ <b>The lobby needs a second permission (BUG-050).</b> The organiser is a
+/// service mailbox that never joins, so after booking, the meeting's lobby is
+/// opened to everyone through <c>/users/{organiser}/onlineMeetings</c>. That
+/// needs <c>OnlineMeetings.ReadWrite.All</c> (Application) with admin consent,
+/// <b>and</b> a Teams application access policy granted to the organiser —
+/// without the policy Graph answers 403 even with the permission:
+/// <code>
+/// New-CsApplicationAccessPolicy -Identity ExpertHub-Interviews `
+///   -AppIds &lt;client-id&gt; -Description "Expert Hub — interview meetings"
+/// Grant-CsApplicationAccessPolicy -PolicyName ExpertHub-Interviews `
+///   -Identity service-teams@fa.gov.sa
+/// </code>
+/// Missing either, the booking still succeeds and the link still works, but
+/// people wait in the lobby — logged as event 5502.
+/// </para>
+/// <para>
 /// <b>Ships dark.</b> No <c>Teams:ClientSecret</c> and the provider reports
 /// itself unconfigured; nothing is called and the interview panel behaves as it
 /// always has.
@@ -75,6 +91,26 @@ public sealed partial class TeamsMeetingProvider : IMeetingProvider
     [LoggerMessage(Level = LogLevel.Warning,
         Message = "Teams booking failed for {Subject}.")]
     private static partial void LogFailed(ILogger logger, string subject, Exception exception);
+
+    // BUG-050 — opening the lobby, after the event exists. Stable ids, so an
+    // operator can filter for "the meeting was booked but people wait in the
+    // lobby" without reading message text. Subject only, never an address.
+    [LoggerMessage(EventId = 5501, Level = LogLevel.Information,
+        Message = "Teams lobby opened to everyone for: {Subject}")]
+    private static partial void LogLobbyOpened(ILogger logger, string subject);
+
+    [LoggerMessage(EventId = 5502, Level = LogLevel.Warning,
+        Message = "Teams lobby could not be opened ({Status}) for {Subject}: {Detail}")]
+    private static partial void LogLobbyRefused(
+        ILogger logger, int status, string subject, string detail);
+
+    [LoggerMessage(EventId = 5503, Level = LogLevel.Warning,
+        Message = "Teams lobby not opened for {Subject}: no online meeting matches the event's join link.")]
+    private static partial void LogLobbyNotFound(ILogger logger, string subject);
+
+    [LoggerMessage(EventId = 5504, Level = LogLevel.Warning,
+        Message = "Teams lobby could not be opened for {Subject}.")]
+    private static partial void LogLobbyFailed(ILogger logger, string subject, Exception exception);
 
     private const string Graph = "https://graph.microsoft.com/v1.0";
 
@@ -193,6 +229,10 @@ public sealed partial class TeamsMeetingProvider : IMeetingProvider
                 return null;
             }
             LogBooked(_logger, request.Subject);
+            // BUG-050 — the organiser is a service mailbox that never joins,
+            // so without this every participant waits in the lobby for a host
+            // who is not coming. Best effort: the booking already stands.
+            await OpenLobbyAsync(token, joinUrl, request.Subject, ct).ConfigureAwait(false);
             return new MeetingBooking(joinUrl, eventId);
         }
         catch (Exception exception) when (exception is not OperationCanceledException
@@ -200,6 +240,86 @@ public sealed partial class TeamsMeetingProvider : IMeetingProvider
         {
             LogFailed(_logger, request.Subject, exception);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Lets everybody holding the link straight into the meeting, and lets the
+    /// Academy's own people present (BUG-050).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The event's Teams meeting belongs to the organiser mailbox, which is a
+    /// service account nobody signs into. With Teams' default lobby, people
+    /// outside the organiser's circle — the applicant, always — wait «until
+    /// someone lets you in», and nobody ever does. So the meeting behind the
+    /// event is found by its join URL and PATCHed:
+    /// <c>lobbyBypassSettings.scope = everyone</c> (dial-in too), so the first
+    /// person to arrive starts it.
+    /// </para>
+    /// <para>
+    /// <c>allowedPresenters = organization</c>, not <c>everyone</c>: the lobby
+    /// was the defect, and presenting is a separate power. The committee
+    /// members are inside the tenant and present; an applicant who needs to
+    /// share a screen is promoted by a member in one click. Granting every
+    /// guest presenter rights would let anybody with a forwarded link remove
+    /// or mute the panel.
+    /// </para>
+    /// <para>
+    /// Never throws and never undoes the booking: a meeting with a lobby is
+    /// still a meeting, and the outcome is logged either way.
+    /// </para>
+    /// </remarks>
+    private async Task OpenLobbyAsync(string token, string joinUrl, string subject, CancellationToken ct)
+    {
+        try
+        {
+            var organizer = Uri.EscapeDataString(_organizer);
+            var filter = Uri.EscapeDataString($"JoinWebUrl eq '{joinUrl.Replace("'", "''", StringComparison.Ordinal)}'");
+            using var find = new HttpRequestMessage(
+                HttpMethod.Get, $"{Graph}/users/{organizer}/onlineMeetings?$filter={filter}");
+            find.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var found = await _http.SendAsync(find, ct).ConfigureAwait(false);
+            var raw = await found.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            if (!found.IsSuccessStatusCode)
+            {
+                // A 403 here is the missing `OnlineMeetings.ReadWrite.All` or
+                // the Teams application access policy — see the class remarks.
+                LogLobbyRefused(_logger, (int)found.StatusCode, subject, Describe(raw));
+                return;
+            }
+            using var document = JsonDocument.Parse(raw);
+            if (!document.RootElement.TryGetProperty("value", out var meetings)
+                || meetings.ValueKind != JsonValueKind.Array
+                || meetings.GetArrayLength() == 0
+                || !meetings[0].TryGetProperty("id", out var id)
+                || id.GetString() is not { Length: > 0 } meetingId)
+            {
+                LogLobbyNotFound(_logger, subject);
+                return;
+            }
+
+            using var patch = new HttpRequestMessage(
+                HttpMethod.Patch, $"{Graph}/users/{organizer}/onlineMeetings/{Uri.EscapeDataString(meetingId)}");
+            patch.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            patch.Content = JsonContent.Create(new
+            {
+                lobbyBypassSettings = new { scope = "everyone", isDialInBypassEnabled = true },
+                allowedPresenters = "organization",
+            }, options: Json);
+            using var patched = await _http.SendAsync(patch, ct).ConfigureAwait(false);
+            if (!patched.IsSuccessStatusCode)
+            {
+                LogLobbyRefused(_logger, (int)patched.StatusCode, subject,
+                    Describe(await patched.Content.ReadAsStringAsync(ct).ConfigureAwait(false)));
+                return;
+            }
+            LogLobbyOpened(_logger, subject);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException
+            || !ct.IsCancellationRequested)
+        {
+            LogLobbyFailed(_logger, subject, exception);
         }
     }
 

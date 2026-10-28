@@ -15,6 +15,7 @@ import type {
   PostInterviewDecisionInput,
   RescheduleInput,
 } from './interview.types';
+import { SLOT_TOO_SOON } from './interview.types';
 import { CommitteeResponseList } from './components/CommitteeResponseList';
 import { InterviewEvaluationForm } from './components/InterviewEvaluationForm';
 import { InterviewResultPanel } from './components/InterviewResultPanel';
@@ -78,6 +79,7 @@ export default function InterviewEvaluationPage() {
   const [submitError, setSubmitError] = useState(false);
   const [ack, setAck] = useState<Ack>(null);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,12 +159,19 @@ export default function InterviewEvaluationPage() {
   const handleReschedule = (input: RescheduleInput) => {
     setSubmitting(true);
     setSubmitError(false);
+    setRescheduleError(null);
     void getInterviewService()
       .requestReschedule(id, input)
       .then((response) => {
         setSubmitting(false);
         if (!response.ok) {
-          setSubmitError(true);
+          // Said inside the dialog the person is still looking at — the page
+          // alert sits behind the modal. BUG-056's refusal is named exactly.
+          setRescheduleError(
+            response.error.message === SLOT_TOO_SOON
+              ? content.rescheduleDialog.slotTooSoon
+              : content.errors.submitBody
+          );
           return;
         }
         setDetail(response.value);
@@ -214,6 +223,10 @@ export default function InterviewEvaluationPage() {
       : content.ticket.awaitingSelection(
           ticket.proposedSlots.map(formatSlot).join(locale === 'ar' ? '، ' : ', ')
         );
+  // BUG-053 — once the time is over, nobody is offered a way into the
+  // meeting: the link goes for every viewer, and the head says why.
+  const meetingOver = detail.status === 'ended' || detail.status === 'completed';
+  const joinUrl = meetingOver ? null : ticket.meetingUrl;
   const blocked =
     viewer.evaluationBlockedReason == null || viewer.evaluationBlockedReason === 'not-member'
       ? null
@@ -250,7 +263,7 @@ export default function InterviewEvaluationPage() {
             detail.acceptedServices
               .map((service) => content.services[service])
               .join(locale === 'ar' ? '، ' : ', '),
-            ticket.meetingUrl == null ? content.ticket.meetingPending : undefined,
+            ticket.meetingUrl == null && !meetingOver ? content.ticket.meetingPending : undefined,
           ]}
           tags={
             <>
@@ -265,10 +278,10 @@ export default function InterviewEvaluationPage() {
             </>
           }
           actions={
-            ticket.meetingUrl != null || viewer.canReschedule ? (
+            joinUrl != null || viewer.canReschedule ? (
               <>
-                {ticket.meetingUrl != null && (
-                  <Button variant="secondary" size="md" href={ticket.meetingUrl}>
+                {joinUrl != null && (
+                  <Button variant="secondary" size="md" href={joinUrl}>
                     {content.ticket.join}
                   </Button>
                 )}
@@ -281,6 +294,12 @@ export default function InterviewEvaluationPage() {
             ) : undefined
           }
         />
+
+        {meetingOver && (
+          <Alert tone="info" surface="tinted" role="note" title={content.ticket.endedTitle}>
+            {content.ticket.endedBody}
+          </Alert>
+        )}
 
         {detail.rescheduleRequest != null && (
           <Alert
@@ -397,7 +416,11 @@ export default function InterviewEvaluationPage() {
         open={rescheduleOpen}
         content={content}
         submitting={submitting}
-        onClose={() => setRescheduleOpen(false)}
+        serverError={rescheduleError}
+        onClose={() => {
+          setRescheduleOpen(false);
+          setRescheduleError(null);
+        }}
         onSubmit={handleReschedule}
       />
     </>

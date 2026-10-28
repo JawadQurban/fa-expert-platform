@@ -11,6 +11,8 @@ import {
 import type { InterviewService } from './interviewService';
 import {
   allMembersResponded,
+  isSlotTooSoon,
+  SLOT_TOO_SOON,
   type CommitteeMemberResponseDto,
   type EvaluationBlockedReason,
   type InterviewDetailDto,
@@ -126,6 +128,8 @@ export interface MockInterviewProviderOptions {
   readonly allResponded?: boolean;
   /** Overrides the last member's per-service totals when `allResponded` is set. */
   readonly lastScores?: Readonly<Record<string, number>>;
+  /** The Teams link the server would serve; `null` (no integration) by default. */
+  readonly meetingUrl?: string | null;
 }
 
 function delay(ms: number): Promise<void> {
@@ -142,6 +146,7 @@ export function createMockInterviewProvider(
     viewer: viewerOverride,
     allResponded = false,
     lastScores,
+    meetingUrl = null,
   } = options;
 
   /** Mutable per-instance state, so a submission visibly advances the committee. */
@@ -200,8 +205,8 @@ export function createMockInterviewProvider(
         number: `INT-${row.reference.slice(-5)}`,
         scheduledAt,
         proposedSlots,
-        // Teams is not in the CAP-12 integration table yet (J-06 open item 1).
-        meetingUrl: null,
+        // Null unless a test supplies one — the Teams integration ships dark.
+        meetingUrl,
         rescheduleCount,
       },
       status,
@@ -284,6 +289,10 @@ export function createMockInterviewProvider(
       await delay(latencyMs);
       if (failWith != null) {
         return { ok: false, error: failWith };
+      }
+      // BUG-056 — the server's rule, held by the mock too (`slot-too-soon`).
+      if (input.slots.some((slot) => isSlotTooSoon(slot, new Date(now)))) {
+        return { ok: false, error: { status: 400, message: SLOT_TOO_SOON } };
       }
       // RUN-021 — proposals wait for the applicant; nothing is fixed here.
       proposedSlots = input.slots.filter((slot) => slot.trim() !== '');

@@ -64,7 +64,13 @@ export interface HomeContent {
     readonly reference: (reference: string) => string;
     readonly ticket: (ticket: string) => string;
     readonly reschedulePending: string;
+    /** Times proposed, none picked yet — the call to act. */
+    readonly awaitingSelection: string;
+    /** The confirmed time has started. */
+    readonly inProgress: string;
     readonly open: string;
+    /** The action when a time is waiting to be picked. */
+    readonly choose: string;
   };
   readonly empty: {
     readonly title: string;
@@ -161,7 +167,10 @@ const ar: HomeContent = {
     reference: (reference) => `الطلب ${reference}`,
     ticket: (ticket) => `رقم التذكرة: ${ticket}`,
     reschedulePending: 'طلبت إعادة جدولة المقابلة، وستُقترح عليك مواعيد جديدة.',
+    awaitingSelection: 'اقتُرحت عليك مواعيد للمقابلة. اختر الموعد المناسب لك لتأكيده.',
+    inProgress: 'مقابلتك جارية الآن.',
     open: 'تفاصيل المقابلة',
+    choose: 'اختيار موعد المقابلة',
   },
   empty: {
     title: 'لا يوجد نشاط بعد',
@@ -253,7 +262,11 @@ const en: HomeContent = {
     reference: (reference) => `Application ${reference}`,
     ticket: (ticket) => `Ticket: ${ticket}`,
     reschedulePending: 'You asked to reschedule; new times will be proposed to you.',
+    awaitingSelection:
+      'Interview times have been proposed to you. Choose the one that suits you to confirm it.',
+    inProgress: 'Your interview is under way now.',
     open: 'Interview details',
+    choose: 'Choose an interview time',
   },
 
   empty: {

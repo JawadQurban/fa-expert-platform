@@ -1,4 +1,5 @@
 import { Button, Icon, TextInput, Typography } from '@ds/primitives';
+import { MIN_SLOT_LEAD_MINUTES, isSlotTooSoon } from '../interview.types';
 import styles from './InterviewSlotsField.module.css';
 
 /**
@@ -20,16 +21,18 @@ export interface InterviewSlotsFieldCopy {
   readonly slotLabel: (index: number) => string;
   readonly add: string;
   readonly remove: string;
+  /** BUG-056 — shown under a slot that starts less than an hour from now. */
+  readonly tooSoon: string;
 }
 
 /**
  * `datetime-local` speaks LOCAL wall-clock with no offset, which is right for
  * a person typing a time — they mean the time in the room. The floor it is
- * given must be in the same shape.
+ * given must be in the same shape: now plus the one-hour lead (BUG-056).
  */
-function nowForInput(): string {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+function earliestForInput(): string {
+  const earliest = new Date(Date.now() + MIN_SLOT_LEAD_MINUTES * 60_000);
+  const local = new Date(earliest.getTime() - earliest.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
 }
 
@@ -74,12 +77,13 @@ export function InterviewSlotsField({
         <div key={`${idPrefix}-slot-${index}`} className={styles.row}>
           <TextInput
             type="datetime-local"
-            // D-04 — an interview cannot be scheduled in the past. The browser
-            // stops it here; the server refuses it too, because a `min` is a
-            // convenience and not a rule.
-            min={nowForInput()}
+            // D-04 + BUG-056 — no slot in the past, nor inside the next hour.
+            // The picker's floor and the message below are conveniences; the
+            // server refuses it too (`slot-too-soon`), because that is the rule.
+            min={earliestForInput()}
             label={copy.slotLabel(index + 1)}
             value={slot}
+            errorText={isSlotTooSoon(slot) ? copy.tooSoon : undefined}
             onChange={(event) => updateSlot(index, event.target.value)}
             fieldClassName={styles.field}
           />

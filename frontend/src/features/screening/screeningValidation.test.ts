@@ -30,7 +30,7 @@ describe('validateAcceptDecision (J-05/F5/AC-4)', () => {
   it('still blocks when only one half of the interview path is provided', () => {
     const withSlotsOnly = {
       ...createServiceDecision('trainer'),
-      slots: ['2026-08-01T09:00'],
+      slots: ['2030-08-01T09:00'],
     };
     expect(validateAcceptDecision(acceptWith(withSlotsOnly)).map((issue) => issue.code)).toEqual([
       'committee-missing',
@@ -48,7 +48,7 @@ describe('validateAcceptDecision (J-05/F5/AC-4)', () => {
   it('passes when slots and committee are both present', () => {
     const complete = {
       ...createServiceDecision('trainer'),
-      slots: ['2026-08-01T09:00'],
+      slots: ['2030-08-01T09:00'],
       committeeMemberIds: ['stf-01'],
     };
     expect(validateAcceptDecision(acceptWith(complete))).toEqual([]);
@@ -75,7 +75,7 @@ describe('validateAcceptDecision (J-05/F5/AC-4)', () => {
   it('allows one service to be exempted while another goes to interview (J-08/F1/AC-3)', () => {
     const interview = {
       ...createServiceDecision('trainer'),
-      slots: ['2026-08-01T09:00'],
+      slots: ['2030-08-01T09:00'],
       committeeMemberIds: ['stf-01'],
     };
     const exempt = {
@@ -112,5 +112,30 @@ describe('validateRejectDecision (J-05/F5/AC-8, BR-0219)', () => {
     expect(validateRejectDecision({ kind: 'reject', reason: 'other', reasonOther: '   ' })).toEqual(
       [{ code: 'reason-other-missing' }]
     );
+  });
+});
+
+describe('BUG-056 — screening slots start at least an hour from now', () => {
+  it('flags a slot inside the next hour, for its service', () => {
+    const now = new Date('2026-10-28T09:00:00Z');
+    const issues = validateAcceptDecision(
+      acceptWith({
+        ...createServiceDecision('trainer'),
+        slots: ['2026-10-28T09:20:00Z'],
+        committeeMemberIds: ['stf-01'],
+      }),
+      now
+    );
+    expect(issues).toEqual([{ code: 'slot-too-soon', service: 'trainer' }]);
+    expect(
+      validateAcceptDecision(
+        acceptWith({
+          ...createServiceDecision('trainer'),
+          slots: ['2026-10-28T10:20:00Z'],
+          committeeMemberIds: ['stf-01'],
+        }),
+        now
+      )
+    ).toEqual([]);
   });
 });

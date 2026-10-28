@@ -8,6 +8,8 @@ import {
   validateEvaluation,
   validatePostInterviewDecision,
   validateReschedule,
+  isSlotTooSoon,
+  rescheduleIssue,
 } from './interview.types';
 import type { CommitteeMemberResponseDto, ServiceEvaluationInput } from './interview.types';
 
@@ -218,5 +220,29 @@ describe('validateReschedule (J-06/F4)', () => {
   it('requires at least one non-blank slot', () => {
     expect(validateReschedule({ slots: ['', '   '], note: '' })).toBe(false);
     expect(validateReschedule({ slots: ['2026-08-05T09:00'], note: '' })).toBe(true);
+  });
+});
+
+describe('BUG-056 — a slot starts at least an hour from now', () => {
+  const now = new Date('2026-10-28T09:00:00Z');
+
+  it('refuses the current hour, and accepts an hour ahead or more', () => {
+    expect(isSlotTooSoon('2026-10-28T09:30:00Z', now)).toBe(true);
+    expect(isSlotTooSoon('2026-10-28T09:59:00Z', now)).toBe(true);
+    expect(isSlotTooSoon('2026-10-28T10:00:00Z', now)).toBe(false);
+    expect(isSlotTooSoon('2026-10-29T09:00:00Z', now)).toBe(false);
+  });
+
+  it('a past time is too soon as well; a blank one is a different error', () => {
+    expect(isSlotTooSoon('2026-10-27T09:00:00Z', now)).toBe(true);
+    expect(isSlotTooSoon('', now)).toBe(false);
+  });
+
+  it('a reschedule names which rule it broke', () => {
+    expect(rescheduleIssue({ slots: [''], note: '' }, now)).toBe('slot-required');
+    expect(
+      rescheduleIssue({ slots: ['2026-10-29T09:00:00Z', '2026-10-28T09:15:00Z'], note: '' }, now)
+    ).toBe('slot-too-soon');
+    expect(rescheduleIssue({ slots: ['2026-10-28T10:30:00Z'], note: '' }, now)).toBeNull();
   });
 });

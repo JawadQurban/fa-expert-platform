@@ -429,6 +429,7 @@ public static class ApplicationEndpoints
             string id,
             HttpContext http,
             ExpertHubDbContext db,
+            IConfiguration configuration,
             CancellationToken ct) =>
         {
             var (application, notFound) = await FindOwnedAsync(id, http, db, ct);
@@ -436,7 +437,8 @@ public static class ApplicationEndpoints
             {
                 return notFound!;
             }
-            return Results.Ok(await DetailWireAsync(db, application, ct));
+            return Results.Ok(await DetailWireAsync(
+                db, application, ct, Interviews.InterviewMeeting.Length(configuration)));
         }).WithName("MyApplicationDetail");
 
         /*
@@ -477,6 +479,13 @@ public static class ApplicationEndpoints
                 return Results.Problem(statusCode: 400, detail: "Unknown slot.");
             }
             var now = DateTime.UtcNow;
+            // BUG-052 — a proposal whose time has gone cannot be attended, so
+            // it cannot be confirmed: that is how an interview in the past
+            // came to be «scheduled».
+            if (await db.InterviewSlots.AnyAsync(s => s.SlotId == slotId && s.StartsAt <= now, ct))
+            {
+                return Results.Problem(statusCode: 409, detail: "slot-passed");
+            }
             interview.ConfirmedSlotId = slotId;
             interview.Status = InterviewStatuses.Scheduled;
             interview.RescheduleRequestedAt = null;
@@ -538,7 +547,8 @@ public static class ApplicationEndpoints
                 interviewValues,
                 ct);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(await DetailWireAsync(db, application, ct));
+            return Results.Ok(await DetailWireAsync(
+                db, application, ct, Interviews.InterviewMeeting.Length(configuration)));
         }).WithName("SelectInterviewSlot");
 
         /*
@@ -552,6 +562,7 @@ public static class ApplicationEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             NotificationDispatcher dispatcher,
+            IConfiguration configuration,
             CancellationToken ct) =>
         {
             var (application, notFound) = await FindOwnedAsync(id, http, db, ct);
@@ -566,6 +577,19 @@ public static class ApplicationEndpoints
             {
                 return Results.Problem(
                     statusCode: 409, detail: "The application has no interview to manage at this stage.");
+            }
+            // BUG-052 — a confirmed interview that is under way or over cannot
+            // be moved by the applicant; a full no-show is staff's call
+            // (J-07/F3). The same rule the panel's `canRequestReschedule` shows.
+            var openSlots = await db.InterviewSlots
+                .Where(s => s.InterviewId == interview.InterviewId && !s.IsSuperseded)
+                .ToListAsync(ct);
+            var phase = Interviews.InterviewEndpoints.ApplicantPhaseOf(
+                interview, openSlots, Interviews.InterviewMeeting.Length(configuration), DateTime.UtcNow);
+            if (interview.ConfirmedSlotId is not null
+                && phase is Interviews.InterviewPhases.InProgress or Interviews.InterviewPhases.Ended)
+            {
+                return Results.Problem(statusCode: 409, detail: "interview-ended");
             }
             interview.RescheduleRequestedAt = DateTime.UtcNow;
             interview.RescheduleNote = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note;
@@ -582,7 +606,8 @@ public static class ApplicationEndpoints
                 new Dictionary<string, string> { ["referenceNumber"] = application.Reference ?? string.Empty },
                 ct);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(await DetailWireAsync(db, application, ct));
+            return Results.Ok(await DetailWireAsync(
+                db, application, ct, Interviews.InterviewMeeting.Length(configuration)));
         }).WithName("RequestInterviewReschedule");
 
         // J-11/F1 — e-sign, reject, or request a modification: three
@@ -1438,10 +1463,13 @@ public static class ApplicationEndpoints
         ExpertHubDbContext db, Application application, CancellationToken ct) =>
         await DetailWireAsync(db, application, ct);
 
+    /// <param name="interviewLength">How long an interview lasts
+    /// (<c>Teams:InterviewMinutes</c>); the default when not given.</param>
     private static async Task<ApplicationDetailWire> DetailWireAsync(
         ExpertHubDbContext db,
         Application application,
-        CancellationToken ct)
+        CancellationToken ct,
+        TimeSpan? interviewLength = null)
     {
         var serviceRows = await db.ApplicationServices
             .Where(s => s.ApplicationId == application.ApplicationId)
@@ -1452,7 +1480,8 @@ public static class ApplicationEndpoints
         var attachmentRules = await db.AttachmentRules
             .Where(r => r.SchemaVersion == application.SchemaVersion)
             .ToListAsync(ct);
-        var interviewBlock = await BuildInterviewBlockAsync(db, application, ct);
+        var interviewBlock = await BuildInterviewBlockAsync(
+            db, application, interviewLength ?? Interviews.InterviewMeeting.Length(null), ct);
         // The same state the committee's own gate card reads (`J-09/F6`), so
         // the applicant and the staff never disagree about whether the data
         // has been asked for.
@@ -1520,9 +1549,17 @@ public static class ApplicationEndpoints
     /// application never had an interview row, so this block is null; the
     /// timeline marks the stage `exempted` (BUG-034), never the reason.
     /// </summary>
+    /// <remarks>
+    /// <c>phase</c> (BUG-052/053) is the interview as the applicant reads it,
+    /// derived from the stored status and the clock: once it is <c>ended</c>
+    /// the page shows that it ended, never a request to confirm a time and
+    /// never a link into a meeting that is over. A proposal whose time has
+    /// passed is not served for choosing — it cannot be attended.
+    /// </remarks>
     private static async Task<object?> BuildInterviewBlockAsync(
         ExpertHubDbContext db,
         Application application,
+        TimeSpan interviewLength,
         CancellationToken ct)
     {
         var interview = await db.Interviews.FirstOrDefaultAsync(
@@ -1533,36 +1570,48 @@ public static class ApplicationEndpoints
         {
             return null;
         }
+        var now = DateTime.UtcNow;
         var slots = await db.InterviewSlots
             .Where(s => s.InterviewId == interview.InterviewId && !s.IsSuperseded)
             .OrderBy(s => s.StartsAt)
             .ToListAsync(ct);
+        var phase = Interviews.InterviewEndpoints.ApplicantPhaseOf(interview, slots, interviewLength, now);
         var pendingReschedule = interview.RescheduleRequestedAt is { } requestedAt
             ? new { requestedAt = Iso(requestedAt), note = interview.RescheduleNote }
             : null;
         // F1/AC-4 — no deadline to show when there is nothing to decide.
         object? selectionSla = null;
-        if (interview.Status == InterviewStatuses.AwaitingSelection
+        if (phase == Interviews.InterviewPhases.AwaitingSelection
             && pendingReschedule is null
             && interview.SelectionDueAt is { } dueAt)
         {
             var (state, daysRemaining) = Infrastructure.Applications.BusinessCalendar
-                .Countdown(dueAt, DateTime.UtcNow);
+                .Countdown(dueAt, now);
             selectionSla = new { slaId = "SLA-0201", state, dueAt = Iso(dueAt), daysRemaining };
         }
         return new
         {
-            proposedSlots = slots.Select(s => new
-            {
-                id = s.SlotId.ToString(),
-                startsAt = Iso(s.StartsAt),
-            }),
+            proposedSlots = slots
+                .Where(s => s.SlotId == interview.ConfirmedSlotId || s.StartsAt > now)
+                .Select(s => new
+                {
+                    id = s.SlotId.ToString(),
+                    startsAt = Iso(s.StartsAt),
+                }),
             selectedSlotId = interview.ConfirmedSlotId?.ToString(),
             selectionSla,
-            canRequestReschedule = interview.RescheduleRequestedAt is null,
+            // F4 — before picking and after confirming, but not once the
+            // interview is under way or over: a past interview cannot be
+            // moved (a full no-show is staff's call, J-07/F3). The one ended
+            // case that keeps it is the lapsed proposal — nothing was ever
+            // held, and asking for another time is the way forward.
+            canRequestReschedule = interview.RescheduleRequestedAt is null
+                && (phase is Interviews.InterviewPhases.AwaitingSelection or Interviews.InterviewPhases.Scheduled
+                    || (phase == Interviews.InterviewPhases.Ended && interview.ConfirmedSlotId is null)),
             pendingReschedule,
             ticketNumber = interview.TicketNumber,
             meetingUrl = interview.MeetingUrl,
+            phase,
         };
     }
 

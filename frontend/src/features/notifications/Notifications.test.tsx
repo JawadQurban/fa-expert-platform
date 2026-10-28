@@ -491,6 +491,31 @@ describe('CAP-07 — communication & notifications', () => {
     expect(bell).toHaveAttribute('href', expertHubPaths.internalMyNotifications);
   });
 
+  it('BUG-054: a link in a notification body is a clickable link, opened safely in a new tab', async () => {
+    const meeting = 'https://teams.microsoft.com/l/meetup-join/19%3ameeting_x%40thread.v2/0';
+    injectProvider({
+      inbox: [
+        {
+          logId: 'log-e015',
+          eventCode: 'EV-0203',
+          subject: 'تأكيد موعد المقابلة',
+          body: `تم تأكيد موعد مقابلتك. الرابط: ${meeting}.`,
+          sentAt: '2026-10-28T08:00:00Z',
+          sourceEntityId: null,
+        },
+      ],
+    });
+    seedExpertHubSession(['trainer']);
+    const { container } = renderExpertHubAt(expertHubPaths.notifications);
+    const link = await screen.findByRole('link', { name: meeting });
+    expect(link).toHaveAttribute('href', meeting);
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    // The sentence around it is still there, as text.
+    expect(link.closest('p')?.textContent).toContain('تم تأكيد موعد مقابلتك. الرابط:');
+    await expectNoA11yViolations(container);
+  });
+
   it('«إشعاراتي» with nothing sent yet is an empty state, not a blank page', async () => {
     injectProvider({ inbox: [] });
     seedExpertHubSession(['trainer']);

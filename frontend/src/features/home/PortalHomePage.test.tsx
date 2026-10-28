@@ -114,11 +114,36 @@ describe('EH-TP-01 — Portal Home', () => {
           startsAt: null,
           ticketNumber: null,
           reschedulePending: true,
+          state: 'reschedule-pending',
         },
       },
     });
     await renderHome();
     expect(await screen.findByText(content.interview.reschedulePending)).toBeInTheDocument();
+  });
+
+  it('BUG-028: times proposed and not yet picked still show, with picking one as the action', async () => {
+    injectProvider({
+      seed: {
+        ...MOCK_HOME,
+        upcomingInterview: {
+          applicationId: 'app-7',
+          reference: 'EH-2026-00007',
+          startsAt: null,
+          ticketNumber: null,
+          reschedulePending: false,
+          state: 'awaiting-selection',
+        },
+      },
+    });
+    await renderHome();
+    expect(await screen.findByText(content.interview.heading)).toBeInTheDocument();
+    expect(screen.getByText(content.interview.awaitingSelection)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: content.interview.choose })).toHaveAttribute(
+      'href',
+      expertHubPaths.applicationDetail('app-7')
+    );
+    expect(screen.queryByText(content.interview.reschedulePending)).not.toBeInTheDocument();
   });
 
   it('offers quick links to the trainer sub-areas', async () => {

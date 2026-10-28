@@ -83,6 +83,9 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
   });
 
   it('does not fabricate a Teams link while the integration is undefined (J-06 open item)', async () => {
+    // Before the interview: once it is over there is no link to wait for
+    // (BUG-053), so the pending note is not shown either.
+    injectProvider({ now: new Date('2026-07-20T09:00:00Z').getTime() });
     await renderInterview();
     expect(await screen.findByText(content.ticket.meetingPending)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: content.ticket.join })).not.toBeInTheDocument();
@@ -299,7 +302,7 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
 
     await user.type(
       within(dialog).getByLabelText(content.rescheduleDialog.slotLabel(1)),
-      '2026-08-05T09:00'
+      '2030-08-05T09:00'
     );
     await user.click(
       within(dialog).getByRole('button', { name: content.rescheduleDialog.confirm })
@@ -324,7 +327,7 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     const dialog = await screen.findByRole('dialog', { name: content.rescheduleDialog.title });
     await user.type(
       within(dialog).getByLabelText(content.rescheduleDialog.slotLabel(1)),
-      '2026-08-05T09:00'
+      '2030-08-05T09:00'
     );
     await user.click(
       within(dialog).getByRole('button', { name: content.rescheduleDialog.confirm })
@@ -333,7 +336,7 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
     // The wall-clock 09:00 the person typed, as the instant they meant —
     // never the bare value the server would read as 09:00 UTC.
     await screen.findByText(content.ticket.phases['awaiting-selection']);
-    expect(sent).toEqual([[new Date('2026-08-05T09:00').toISOString()]]);
+    expect(sent).toEqual([[new Date('2030-08-05T09:00').toISOString()]]);
     // Proposed, not fixed: the head says the applicant has yet to pick.
     expect(
       screen.getByText((text) => text.startsWith(content.ticket.awaitingSelection('')))
@@ -370,6 +373,79 @@ describe('EH-INT-04 — Interview Evaluation & Post-Interview Decision', () => {
   it('BUG-032: an interview whose time has passed reads as ended', async () => {
     await renderInterview();
     expect(await screen.findByText(content.ticket.phases.ended)).toBeInTheDocument();
+  });
+
+  it('BUG-053: an ended interview offers no way into the meeting, and says it ended', async () => {
+    injectProvider({ meetingUrl: 'https://teams.microsoft.com/l/meetup-join/ended' });
+    await renderInterview();
+    expect(await screen.findByText(content.ticket.endedTitle)).toBeInTheDocument();
+    expect(screen.getByText(content.ticket.endedBody)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: content.ticket.join })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: content.ticket.join })).not.toBeInTheDocument();
+  });
+
+  it('BUG-053: before the interview the meeting link is offered as usual', async () => {
+    injectProvider({
+      now: new Date('2026-07-20T09:00:00Z').getTime(),
+      meetingUrl: 'https://teams.microsoft.com/l/meetup-join/ahead',
+    });
+    await renderInterview();
+    expect(await screen.findByRole('link', { name: content.ticket.join })).toHaveAttribute(
+      'href',
+      'https://teams.microsoft.com/l/meetup-join/ahead'
+    );
+    expect(screen.queryByText(content.ticket.endedTitle)).not.toBeInTheDocument();
+  });
+
+  it('BUG-056: a reschedule slot inside the next hour is refused with a clear message', async () => {
+    const sent: string[][] = [];
+    const base = createMockInterviewProvider({ latencyMs: 0 });
+    setInterviewServiceForTesting({
+      ...base,
+      requestReschedule: (applicationId, input) => {
+        sent.push([...input.slots]);
+        return base.requestReschedule(applicationId, input);
+      },
+    });
+    const { user } = await renderInterview();
+    await user.click(await screen.findByRole('button', { name: content.ticket.reschedule }));
+    const dialog = await screen.findByRole('dialog', { name: content.rescheduleDialog.title });
+    // Twenty minutes from now, as the picker's local wall-clock value.
+    const soon = new Date(Date.now() + 20 * 60_000);
+    const local = new Date(soon.getTime() - soon.getTimezoneOffset() * 60_000)
+      .toISOString()
+      .slice(0, 16);
+    await user.type(within(dialog).getByLabelText(content.rescheduleDialog.slotLabel(1)), local);
+    // Said next to the slot as soon as it is entered…
+    expect(within(dialog).getAllByText(content.rescheduleDialog.slotTooSoon)).toHaveLength(1);
+    await user.click(
+      within(dialog).getByRole('button', { name: content.rescheduleDialog.confirm })
+    );
+    // …again in the dialog's own error on sending, and the request never leaves.
+    expect(within(dialog).getAllByText(content.rescheduleDialog.slotTooSoon)).toHaveLength(2);
+    expect(sent).toEqual([]);
+  });
+
+  it('BUG-056: the server refusing a slot as too soon is named in the dialog', async () => {
+    const base = createMockInterviewProvider({ latencyMs: 0 });
+    setInterviewServiceForTesting({
+      ...base,
+      requestReschedule: () =>
+        Promise.resolve({ ok: false, error: { status: 400, message: 'slot-too-soon' } }),
+    });
+    const { user } = await renderInterview();
+    await user.click(await screen.findByRole('button', { name: content.ticket.reschedule }));
+    const dialog = await screen.findByRole('dialog', { name: content.rescheduleDialog.title });
+    await user.type(
+      within(dialog).getByLabelText(content.rescheduleDialog.slotLabel(1)),
+      '2030-08-05T09:00'
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: content.rescheduleDialog.confirm })
+    );
+    expect(
+      await within(dialog).findByText(content.rescheduleDialog.slotTooSoon)
+    ).toBeInTheDocument();
   });
 
   it('RUN-036: shows each member’s response without having to open anything', async () => {

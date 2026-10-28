@@ -265,6 +265,7 @@ export function ScreeningDecisionPanel({
                     slotLabel: copy.slotLabel,
                     add: copy.addSlot,
                     remove: copy.removeSlot,
+                    tooSoon: copy.slotTooSoon,
                   }}
                   onChange={(slots) => updateDecision(service, { slots })}
                 />

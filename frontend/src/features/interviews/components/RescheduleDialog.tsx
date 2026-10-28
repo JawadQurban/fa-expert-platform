@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, Modal } from '@ds/composite';
 import { Button, Textarea, Typography } from '@ds/primitives';
 import type { InterviewsContent } from '../interviews.content';
-import { validateReschedule } from '../interview.types';
+import { rescheduleIssue } from '../interview.types';
 import type { RescheduleInput } from '../interview.types';
 import { InterviewSlotsField, slotInputToInstant } from './InterviewSlotsField';
 import styles from './RescheduleDialog.module.css';
@@ -23,12 +23,16 @@ export function RescheduleDialog({
   open,
   content,
   submitting,
+  serverError = null,
   onClose,
   onSubmit,
 }: {
   readonly open: boolean;
   readonly content: InterviewsContent;
   readonly submitting: boolean;
+  /** The server's refusal, already worded — e.g. BUG-056's `slot-too-soon`
+   *  when the hour ran out while the dialog was open. */
+  readonly serverError?: string | null;
   readonly onClose: () => void;
   readonly onSubmit: (input: RescheduleInput) => void;
 }) {
@@ -44,8 +48,10 @@ export function RescheduleDialog({
       slots: slots.filter((slot) => slot.trim() !== '').map(slotInputToInstant),
       note,
     };
-    if (!validateReschedule(input)) {
-      setError(copy.slotRequired);
+    // BUG-056 — empty, or inside the next hour: said here, before sending.
+    const issue = rescheduleIssue(input);
+    if (issue != null) {
+      setError(issue === 'slot-too-soon' ? copy.slotTooSoon : copy.slotRequired);
       return;
     }
     setError(null);
@@ -83,6 +89,7 @@ export function RescheduleDialog({
             slotLabel: copy.slotLabel,
             add: copy.addSlot,
             remove: copy.removeSlot,
+            tooSoon: copy.slotTooSoon,
           }}
           onChange={(next) => {
             setSlots(next);
@@ -100,10 +107,10 @@ export function RescheduleDialog({
         />
       </div>
 
-      {error != null && (
+      {(error ?? serverError) != null && (
         <div className={styles.field}>
           <Alert tone="error" role="alert">
-            {error}
+            {error ?? serverError}
           </Alert>
         </div>
       )}

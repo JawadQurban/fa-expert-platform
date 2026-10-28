@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
+using ExpertHub.Api.Interviews;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Applications;
 using ExpertHub.Infrastructure.Notifications;
@@ -293,23 +294,25 @@ public static class ScreeningEndpoints
             // D-04 — a slot in the past was accepted, offered to the applicant,
             // and issued an interview ticket for a date that had already gone.
             // The picker's `min` is a convenience; this is the rule.
-            foreach (var slot in interviewDecisions.SelectMany(d => d.Slots ?? []))
+            // BUG-056 — and at least an hour ahead: the same rule, and the same
+            // parser, as the staff reschedule (`InterviewSlotRules`).
+            var (_, slotError) = InterviewSlotRules.Check(
+                interviewDecisions.SelectMany(d => d.Slots ?? []), now);
+            switch (slotError)
             {
-                if (!DateTime.TryParse(
-                        slot, null,
-                        System.Globalization.DateTimeStyles.AdjustToUniversal,
-                        out var parsed))
-                {
+                case InterviewSlotRules.Invalid:
                     return Results.Problem(
                         statusCode: 400, detail: "An interview time could not be read.");
-                }
-                if (parsed <= now)
-                {
+                case InterviewSlotRules.InPast:
                     return Results.Problem(
                         statusCode: 422,
                         detail: "An interview time must be in the future.",
-                        extensions: new Dictionary<string, object?> { ["reason"] = "slot-in-past" });
-                }
+                        extensions: new Dictionary<string, object?> { ["reason"] = InterviewSlotRules.InPast });
+                case InterviewSlotRules.TooSoon:
+                    return Results.Problem(
+                        statusCode: 400,
+                        detail: InterviewSlotRules.TooSoon,
+                        extensions: new Dictionary<string, object?> { ["reason"] = InterviewSlotRules.TooSoon });
             }
 
             if (interviewDecisions.Count > 0)
@@ -562,16 +565,10 @@ public static class ScreeningEndpoints
         db.Interviews.Add(interview);
         foreach (var startsAt in interviewDecisions
             .SelectMany(d => d.Slots ?? [])
-            .Select(s => DateTime.Parse(
-                s, null,
-                // The client sends an instant; keep it one. `RoundtripKind`
-                // alone left an offset-less value `Unspecified`, which was then
-                // re-labelled UTC on the way out — the three-hour shift QA
-                // found (`D-03`). `AdjustToUniversal` makes the intent explicit.
-                // ⚠️ `RoundtripKind` cannot be combined with
-                // `AdjustToUniversal` — together they throw. The client sends
-                // Z-suffixed instants, so this alone is both correct and enough.
-                System.Globalization.DateTimeStyles.AdjustToUniversal))
+            // The client sends an instant; keep it one (`D-03`). Read by the
+            // same parser that validated it, so what was checked is what is
+            // stored — every value here already passed `InterviewSlotRules`.
+            .Select(s => InterviewSlotRules.Parse(s) ?? throw new FormatException("Unvalidated interview slot."))
             .Distinct())
         {
             db.InterviewSlots.Add(new InterviewSlot

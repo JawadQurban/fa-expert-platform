@@ -777,6 +777,151 @@ public sealed class Cap02Tests
         await db.SaveChangesAsync();
     }
 
+    /* ── UAT round 3: BUG-056, BUG-052, BUG-028 ────────────────────────────── */
+
+    private static string In(TimeSpan offset) =>
+        (DateTime.UtcNow + offset).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+
+    private static object ScreeningWithSlot(string slot, string memberId) => new
+    {
+        kind = "accept",
+        services = new[]
+        {
+            new
+            {
+                service = "trainer",
+                path = "interview",
+                slots = new[] { slot },
+                committeeMemberIds = new[] { memberId },
+                exemptionReason = (string?)null,
+                exemptionReasonOther = "",
+            },
+        },
+    };
+
+    [Fact]
+    public async Task An_interview_slot_must_start_at_least_an_hour_from_now()
+    {
+        // BUG-056 — «يجب ألا يُسمح بذلك … بعد ساعة من الوقت الحالي». Held at
+        // BOTH places a time is chosen: screening and the staff reschedule.
+        using var applicant = await SignInAsync("applicant-lead", "unmapped", "متقدم");
+        var applicationId = await SubmitCompleteApplicationAsync(applicant);
+        using var decider = await SignInAsync("decider-lead", "fa-staff", "مدير الفرز", RoleCode.Manager);
+        await SignInAsync("member-lead", "fa-staff", "عضو اللجنة", RoleCode.Manager);
+        var memberId = await UserIdOfAsync("member-lead");
+        var screeningPath = $"/api/v1/internal/applications/{applicationId}/screening/decision";
+
+        var tooSoon = await decider.PostAsJsonAsync(
+            screeningPath, ScreeningWithSlot(In(TimeSpan.FromMinutes(30)), memberId));
+        Assert.Equal(HttpStatusCode.BadRequest, tooSoon.StatusCode);
+        Assert.Equal("slot-too-soon",
+            (await tooSoon.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+
+        await PostAsync(decider, screeningPath, ScreeningWithSlot(In(TimeSpan.FromHours(2)), memberId));
+
+        var reschedulePath = $"/api/v1/internal/applications/{applicationId}/interview/reschedule";
+        var soonAgain = await decider.PostAsJsonAsync(reschedulePath,
+            new { slots = new[] { In(TimeSpan.FromMinutes(59)) }, note = "" });
+        Assert.Equal(HttpStatusCode.BadRequest, soonAgain.StatusCode);
+        Assert.Equal("slot-too-soon",
+            (await soonAgain.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString());
+        await PostAsync(decider, reschedulePath,
+            new { slots = new[] { In(TimeSpan.FromMinutes(70)) }, note = "" });
+    }
+
+    [Fact]
+    public async Task An_interview_whose_times_have_passed_shows_as_ended_to_the_applicant()
+    {
+        // BUG-052 — the applicant never picked, every proposed time went by,
+        // and the page still asked them to confirm one.
+        using var applicant = await SignInAsync("applicant-lapsed", "unmapped", "متقدم");
+        var applicationId = await SubmitCompleteApplicationAsync(applicant);
+        using var decider = await SignInAsync("decider-lapsed", "fa-staff", "مدير الفرز", RoleCode.Manager);
+        await SignInAsync("member-lapsed", "fa-staff", "عضو اللجنة", RoleCode.Manager);
+        await MixedScreeningAsync(decider, applicationId, await UserIdOfAsync("member-lapsed"), ["trainer"], []);
+        var detailPath = $"/api/v1/me/applications/{applicationId}";
+        var proposed = (await GetAsync(applicant, detailPath)).GetProperty("interview");
+        Assert.Equal("awaiting-selection", proposed.GetProperty("phase").GetString());
+        var slotId = proposed.GetProperty("proposedSlots").EnumerateArray().Single().GetProperty("id").GetString();
+
+        await using (var db = _database.CreateContext())
+        {
+            var slot = await db.InterviewSlots.SingleAsync(s => s.SlotId == Guid.Parse(slotId!));
+            slot.StartsAt = DateTime.UtcNow.AddHours(-3);
+            await db.SaveChangesAsync();
+        }
+
+        var lapsed = (await GetAsync(applicant, detailPath)).GetProperty("interview");
+        Assert.Equal("ended", lapsed.GetProperty("phase").GetString());
+        // Nothing left to choose, and no selection clock for a choice that is gone.
+        Assert.Equal(0, lapsed.GetProperty("proposedSlots").GetArrayLength());
+        Assert.Equal(JsonValueKind.Null, lapsed.GetProperty("selectionSla").ValueKind);
+        // The rule, not just the page: a time in the past cannot be confirmed.
+        var picked = await applicant.PostAsJsonAsync($"{detailPath}/interview-slot", new { slotId });
+        Assert.Equal(HttpStatusCode.Conflict, picked.StatusCode);
+        // Nothing was ever held, so asking for another time is the way forward.
+        Assert.True(lapsed.GetProperty("canRequestReschedule").GetBoolean());
+    }
+
+    [Fact]
+    public async Task A_confirmed_interview_that_is_over_shows_as_ended_and_cannot_be_moved()
+    {
+        // BUG-052 / BUG-053 — the confirmed time has come and gone.
+        using var applicant = await SignInAsync("applicant-over", "unmapped", "متقدم");
+        var applicationId = await SubmitCompleteApplicationAsync(applicant);
+        using var decider = await SignInAsync("decider-over", "fa-staff", "مدير الفرز", RoleCode.Manager);
+        using var member = await SignInAsync("member-over", "fa-staff", "عضو اللجنة", RoleCode.Manager);
+        await AcceptToInterviewAsync(decider, applicant, applicationId, await UserIdOfAsync("member-over"));
+        var detailPath = $"/api/v1/me/applications/{applicationId}";
+
+        // StartInterviewAsync moved it to a minute ago: under way, not over.
+        var running = (await GetAsync(applicant, detailPath)).GetProperty("interview");
+        Assert.Equal("in-progress", running.GetProperty("phase").GetString());
+        Assert.False(running.GetProperty("canRequestReschedule").GetBoolean());
+
+        await StartInterviewAsync(applicationId, TimeSpan.FromHours(3));
+        var over = (await GetAsync(applicant, detailPath)).GetProperty("interview");
+        Assert.Equal("ended", over.GetProperty("phase").GetString());
+        Assert.False(over.GetProperty("canRequestReschedule").GetBoolean());
+        var moved = await applicant.PostAsJsonAsync($"{detailPath}/interview-reschedule", new { note = "" });
+        Assert.Equal(HttpStatusCode.Conflict, moved.StatusCode);
+        // Staff read the same clock (BUG-053's other half).
+        Assert.Equal("ended", (await GetAsync(member, $"/api/v1/internal/applications/{applicationId}/interview"))
+            .GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task The_applicant_home_shows_the_interview_from_the_moment_times_are_proposed()
+    {
+        // BUG-028, through the real path: an applicant who is not a trainer,
+        // screening proposes times, and nothing is picked yet. The first fix
+        // read only a CONFIRMED slot, so this home showed no interview at all.
+        using var applicant = await SignInAsync("applicant-home", "unmapped", "متقدم");
+        var applicationId = await SubmitCompleteApplicationAsync(applicant);
+        using var decider = await SignInAsync("decider-home", "fa-staff", "مدير الفرز", RoleCode.Manager);
+        await SignInAsync("member-home", "fa-staff", "عضو اللجنة", RoleCode.Manager);
+        await MixedScreeningAsync(decider, applicationId, await UserIdOfAsync("member-home"), ["trainer"], []);
+
+        var proposed = (await GetAsync(applicant, "/api/v1/me/home")).GetProperty("upcomingInterview");
+        Assert.Equal(applicationId, proposed.GetProperty("applicationId").GetString());
+        Assert.Equal("awaiting-selection", proposed.GetProperty("state").GetString());
+        Assert.Equal(JsonValueKind.Null, proposed.GetProperty("startsAt").ValueKind);
+
+        await PickFirstSlotAsync(applicant, applicationId);
+        var confirmed = (await GetAsync(applicant, "/api/v1/me/home")).GetProperty("upcomingInterview");
+        Assert.Equal("scheduled", confirmed.GetProperty("state").GetString());
+        Assert.NotEqual(JsonValueKind.Null, confirmed.GetProperty("startsAt").ValueKind);
+        Assert.NotEqual(JsonValueKind.Null, confirmed.GetProperty("ticketNumber").ValueKind);
+
+        // Under way is still the next thing on their file; over is not.
+        await StartInterviewAsync(applicationId);
+        Assert.Equal("in-progress", (await GetAsync(applicant, "/api/v1/me/home"))
+            .GetProperty("upcomingInterview").GetProperty("state").GetString());
+        await StartInterviewAsync(applicationId, TimeSpan.FromHours(3));
+        Assert.Equal(JsonValueKind.Null, (await GetAsync(applicant, "/api/v1/me/home"))
+            .GetProperty("upcomingInterview").ValueKind);
+    }
+
     [Fact]
     public async Task Only_the_applications_creator_forms_its_approval_committee()
     {

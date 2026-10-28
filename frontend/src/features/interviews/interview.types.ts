@@ -361,6 +361,41 @@ export function validateReschedule(input: RescheduleInput): boolean {
   return input.slots.some((slot) => slot.trim() !== '');
 }
 
+/**
+ * BUG-056 — an interview slot starts at least this long after now («بعد ساعة من
+ * الوقت الحالي»). The API holds the same rule (`InterviewSlotRules`) and answers
+ * `slot-too-soon`; the form says so first, next to the slot.
+ */
+export const MIN_SLOT_LEAD_MINUTES = 60;
+
+/** The problem code the API answers for a slot inside the lead time. */
+export const SLOT_TOO_SOON = 'slot-too-soon';
+
+/**
+ * `true` when a filled slot starts before now + {@link MIN_SLOT_LEAD_MINUTES}.
+ * Accepts the picker's local wall-clock value or an ISO instant — both parse
+ * to the instant the person meant. A blank or unreadable value is not "too
+ * soon"; it is someone else's error.
+ */
+export function isSlotTooSoon(value: string, now: Date = new Date()): boolean {
+  if (value.trim() === '') {
+    return false;
+  }
+  const startsAt = new Date(value).getTime();
+  return !Number.isNaN(startsAt) && startsAt < now.getTime() + MIN_SLOT_LEAD_MINUTES * 60_000;
+}
+
+/** What is wrong with a reschedule, or `null` when it may be sent. */
+export function rescheduleIssue(
+  input: RescheduleInput,
+  now: Date = new Date()
+): 'slot-required' | 'slot-too-soon' | null {
+  if (!validateReschedule(input)) {
+    return 'slot-required';
+  }
+  return input.slots.some((slot) => isSlotTooSoon(slot, now)) ? 'slot-too-soon' : null;
+}
+
 /** A blank per-service evaluation for the given model. */
 export function createServiceEvaluation(
   service: ApplicationService,

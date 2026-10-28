@@ -59,9 +59,18 @@ export interface PortalHomeDto {
 }
 
 /**
- * The caller's next interview, read from J-06's own record. `startsAt` is
- * `null` while a reschedule they asked for is pending — there is no time to
- * show, but the interview is still the next thing on their file.
+ * Where the caller's next interview stands (BUG-028, second pass). The first
+ * fix showed only a confirmed time, so an applicant whose times had just been
+ * proposed — the most common state — saw no interview on their home at all.
+ */
+export type HomeInterviewState =
+  'awaiting-selection' | 'reschedule-pending' | 'scheduled' | 'in-progress';
+
+/**
+ * The caller's next interview, read from J-06's own record. `startsAt` is set
+ * only once a time is confirmed (`scheduled`, `in-progress`); a proposal not
+ * yet picked and a pending reschedule have no time to show, but the interview
+ * is still the next thing on their file.
  */
 export interface HomeInterviewDto {
   readonly applicationId: string;
@@ -69,4 +78,5 @@ export interface HomeInterviewDto {
   readonly startsAt: string | null;
   readonly ticketNumber: string | null;
   readonly reschedulePending: boolean;
+  readonly state: HomeInterviewState;
 }

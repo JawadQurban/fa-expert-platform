@@ -1,5 +1,6 @@
 using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
+using ExpertHub.Api.Interviews;
 using ExpertHub.Api.Profiles;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Persistence;
@@ -50,9 +51,27 @@ internal sealed record PortalHomeWire(
 
 /// <summary>The caller's next confirmed interview (BUG-028), or a reschedule
 /// they asked for and are waiting on — read from J-06's record, own scope.</summary>
+/// <remarks><c>State</c> — one of <see cref="HomeInterviewStates"/>; <c>StartsAt</c>
+/// is set only once a time is confirmed.</remarks>
 internal sealed record HomeInterviewWire(
     string ApplicationId, string Reference, string? StartsAt, string? TicketNumber,
-    bool ReschedulePending);
+    bool ReschedulePending, string State = HomeInterviewStates.Scheduled);
+
+/// <summary>Where the caller's next interview stands, as the home card says it.</summary>
+internal static class HomeInterviewStates
+{
+    /// <summary>Times are proposed; the applicant has not picked one.</summary>
+    public const string AwaitingSelection = "awaiting-selection";
+
+    /// <summary>The applicant asked for another time and waits for it.</summary>
+    public const string ReschedulePending = "reschedule-pending";
+
+    /// <summary>A confirmed time, still ahead.</summary>
+    public const string Scheduled = "scheduled";
+
+    /// <summary>The confirmed time has started and the interview is under way.</summary>
+    public const string InProgress = "in-progress";
+}
 
 /// <summary>The trainer's own overview — `F-0906`, own scope.</summary>
 public static class HomeEndpoints
@@ -89,7 +108,8 @@ public static class HomeEndpoints
         // who has applied but holds no role yet still has a portal home, and
         // it is the first screen they see.
         v1.MapGet("/me/home", async (
-            HttpContext http, ExpertHubDbContext db, CancellationToken ct) =>
+            HttpContext http, ExpertHubDbContext db, IConfiguration configuration,
+            CancellationToken ct) =>
         {
             var actor = await ActorResolution.ResolveActorAsync(http, db, ct);
             var profile = await db.TrainerProfiles
@@ -150,7 +170,8 @@ public static class HomeEndpoints
                             .Where(s => s.TrainerId == profile.TrainerId).ToListAsync(ct));
 
             var notifications = await RecentNotificationsAsync(db, actor.UserId, ct);
-            var upcomingInterview = await UpcomingInterviewAsync(db, actor.UserId, ct);
+            var upcomingInterview = await UpcomingInterviewAsync(
+                db, actor.UserId, InterviewMeeting.Length(configuration), ct);
 
             return Results.Ok(new PortalHomeWire(
                 actor.FullNameAr,
@@ -174,44 +195,79 @@ public static class HomeEndpoints
     }
 
     /// <summary>
-    /// The caller's interview that is still ahead: a confirmed slot not yet
-    /// started, or a pending reschedule (no time to show, but still the next
-    /// thing on their interview). Null when there is none.
+    /// The caller's interview that is still ahead of them, in whichever J-06
+    /// state it is in: times proposed and waiting for their pick, a reschedule
+    /// they asked for, a confirmed time, or one under way now. Null when there
+    /// is none — an ended interview is behind them and is not «upcoming».
     /// </summary>
+    /// <remarks>
+    /// BUG-028, second pass. The first fix read only a CONFIRMED slot (or a
+    /// pending reschedule), so the most common state an applicant opens their
+    /// home in — screening has just proposed times and nothing is picked yet —
+    /// showed no interview at all, which is exactly what UAT reported. It also
+    /// dropped an interview the minute it started, and still showed one on an
+    /// application that had since been decided. The state is now the applicant
+    /// phase the application page itself shows (`ApplicantPhaseOf`), so the two
+    /// screens cannot disagree.
+    /// </remarks>
     private static async Task<HomeInterviewWire?> UpcomingInterviewAsync(
-        ExpertHubDbContext db, Guid userId, CancellationToken ct)
+        ExpertHubDbContext db, Guid userId, TimeSpan interviewLength, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
         var candidates = await (
             from interview in db.Interviews
             join application in db.Applications on interview.ApplicationId equals application.ApplicationId
             where application.ApplicantUserId == userId
+                && ApplicationStatuses.Undecided.Contains(application.Status)
                 && interview.Status != InterviewStatuses.Completed
-            select new
-            {
-                application.ApplicationId,
-                application.Reference,
-                interview.TicketNumber,
-                interview.RescheduleRequestedAt,
-                StartsAt = db.InterviewSlots
-                    .Where(s => s.SlotId == interview.ConfirmedSlotId)
-                    .Select(s => (DateTime?)s.StartsAt)
-                    .FirstOrDefault(),
-            }).ToListAsync(ct);
+                && interview.DecisionKind == null
+            select new { Interview = interview, application.Reference })
+            .AsNoTracking()
+            .ToListAsync(ct);
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+        var interviewIds = candidates.Select(c => c.Interview.InterviewId).ToList();
+        var slots = await db.InterviewSlots.AsNoTracking()
+            .Where(s => interviewIds.Contains(s.InterviewId) && !s.IsSuperseded)
+            .ToListAsync(ct);
+
         var next = candidates
-            .Where(c => c.RescheduleRequestedAt is not null || c.StartsAt >= now)
-            .OrderBy(c => c.StartsAt ?? DateTime.MaxValue)
+            .Select(c =>
+            {
+                var open = slots.Where(s => s.InterviewId == c.Interview.InterviewId).ToList();
+                var phase = InterviewEndpoints.ApplicantPhaseOf(c.Interview, open, interviewLength, now);
+                var confirmed = open.FirstOrDefault(s => s.SlotId == c.Interview.ConfirmedSlotId);
+                var state = c.Interview.RescheduleRequestedAt is not null ? HomeInterviewStates.ReschedulePending
+                    : phase switch
+                    {
+                        InterviewPhases.AwaitingSelection => HomeInterviewStates.AwaitingSelection,
+                        InterviewPhases.Scheduled => HomeInterviewStates.Scheduled,
+                        InterviewPhases.InProgress => HomeInterviewStates.InProgress,
+                        _ => null,
+                    };
+                // The earliest time still choosable orders a proposal; a
+                // confirmed time orders itself.
+                var sortAt = confirmed?.StartsAt
+                    ?? open.Where(s => s.StartsAt > now).Select(s => (DateTime?)s.StartsAt).Min();
+                return new { c.Interview, c.Reference, State = state, StartsAt = confirmed?.StartsAt, SortAt = sortAt };
+            })
+            .Where(c => c.State is not null)
+            .OrderBy(c => c.SortAt ?? DateTime.MaxValue)
             .FirstOrDefault();
         return next is null
             ? null
             : new HomeInterviewWire(
-                next.ApplicationId.ToString(),
+                next.Interview.ApplicationId.ToString(),
                 next.Reference ?? string.Empty,
-                next.RescheduleRequestedAt is null && next.StartsAt is { } at
+                next.State is HomeInterviewStates.Scheduled or HomeInterviewStates.InProgress
+                    && next.StartsAt is { } at
                     ? ApplicationEndpoints.Iso(at)
                     : null,
-                next.TicketNumber,
-                ReschedulePending: next.RescheduleRequestedAt is not null);
+                next.Interview.TicketNumber,
+                ReschedulePending: next.State == HomeInterviewStates.ReschedulePending,
+                State: next.State!);
     }
 
     /// <summary>

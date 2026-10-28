@@ -395,6 +395,44 @@ appears in a tracked file.
 
 ---
 
+## Teams interview meetings — lobby bypass (BUG-050)
+
+Interviews are booked as calendar events on the organiser mailbox
+(`Teams__OrganizerUpn`), a service account nobody signs into. Teams' default
+lobby therefore kept everyone — applicant and committee alike — waiting
+«until someone lets you in». After each booking or reschedule the API now
+finds the event's online meeting by its join link and sets
+`lobbyBypassSettings.scope = everyone` (dial-in too) and
+`allowedPresenters = organization`, so the first person to arrive starts the
+meeting. This needs, **in addition to** `Calendars.ReadWrite` and its Exchange
+`New-ApplicationAccessPolicy`:
+
+1. The Entra app registration: Microsoft Graph **`OnlineMeetings.ReadWrite.All`
+   (Application)**, with admin consent.
+2. A Teams application access policy granted to the organiser (Teams
+   PowerShell, by a Teams administrator):
+
+   ```powershell
+   New-CsApplicationAccessPolicy -Identity ExpertHub-Interviews `
+     -AppIds <Teams__ClientId> -Description "Expert Hub — interview meetings"
+   Grant-CsApplicationAccessPolicy -PolicyName ExpertHub-Interviews `
+     -Identity <Teams__OrganizerUpn>
+   ```
+
+   The policy can take up to 30 minutes to apply.
+3. The tenant's Teams meeting policy must allow anonymous/external users to
+   join meetings, or an applicant outside the tenant still cannot enter.
+
+Missing any of these, the booking still succeeds and the link still works, but
+people wait in the lobby. The API logs the outcome of every attempt: event
+`5501` (opened), `5502` (Graph refused — the status and Graph's message name
+the missing permission or policy), `5503` (no meeting matched the link), `5504`
+(the call failed). Meetings booked before this change keep their lobby until
+the applicant confirms a new time after a reschedule, which moves the meeting
+and opens it.
+
+---
+
 ## Security notes
 
 - Multi-stage build — **no Node, no source, no dev deps** in the final image; only static assets + minimal Nginx.

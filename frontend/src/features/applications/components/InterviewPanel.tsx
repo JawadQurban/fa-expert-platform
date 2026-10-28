@@ -56,7 +56,11 @@ export function InterviewPanel({
     interview.selectedSlotId == null
       ? null
       : (interview.proposedSlots.find((slot) => slot.id === interview.selectedSlotId) ?? null);
-  const awaitingSelection = interview.selectedSlotId == null && interview.proposedSlots.length > 0;
+  // BUG-052 — an ended interview asks for nothing: no time to pick, no
+  // clock, no link (BUG-053). It says that it ended, and why.
+  const ended = interview.phase === 'ended';
+  const awaitingSelection =
+    !ended && interview.selectedSlotId == null && interview.proposedSlots.length > 0;
   const sla = interview.selectionSla;
 
   return (
@@ -67,6 +71,18 @@ export function InterviewPanel({
           {interview.selectedSlotId != null ? copy.confirmedHeading : copy.heading}
         </Typography>
       </div>
+
+      {ended && (
+        <Alert tone="info" surface="tinted" role="note" title={copy.ended.title}>
+          {confirmedSlot != null ? copy.ended.afterConfirmed : copy.ended.lapsed}
+        </Alert>
+      )}
+
+      {interview.phase === 'in-progress' && (
+        <Typography as="p" variant="text-md" weight="bold">
+          {copy.inProgress}
+        </Typography>
+      )}
 
       {/* F4/AC-4 — a request is in flight; there is nothing to choose yet. */}
       {interview.pendingReschedule != null && (
@@ -138,6 +154,7 @@ export function InterviewPanel({
       )}
 
       {confirmedSlot != null &&
+        !ended &&
         (interview.meetingUrl != null ? (
           <div>
             <Button
