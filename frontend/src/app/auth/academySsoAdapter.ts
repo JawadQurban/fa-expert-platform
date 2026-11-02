@@ -5,6 +5,7 @@ import type {
   ExpertHubAuthAdapter,
   ExpertHubRole,
   ExpertHubSession,
+  LogoutResult,
   StartLoginResult,
 } from './types';
 
@@ -105,7 +106,7 @@ export const academySsoAdapter: ExpertHubAuthAdapter = {
     return { session, returnUrl: params.get('returnUrl') ?? expertHubPaths.home };
   },
 
-  async logout(): Promise<void> {
+  async logout(): Promise<LogoutResult> {
     try {
       const response = await fetch(apiUrl('auth/logout'), {
         method: 'POST',
@@ -118,11 +119,13 @@ export const academySsoAdapter: ExpertHubAuthAdapter = {
           // RP-initiated logout: only a top-level navigation can end the
           // provider's session — a fetch cannot follow it cross-origin.
           window.location.assign(body.providerLogoutUrl);
+          return { leavingSite: true };
         }
       }
     } catch {
       // The local session may already be gone (or the API unreachable);
       // logout must never throw at the UI.
     }
+    return { leavingSite: false };
   },
 };

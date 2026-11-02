@@ -26,7 +26,7 @@ function stubAdapter(overrides: Partial<ExpertHubAuthAdapter> = {}): ExpertHubAu
       Promise.resolve({ redirectTo: 'https://api.example.test/api/auth/login?returnUrl=%2F' })
     ),
     completeLogin: () => Promise.reject(new Error('not used')),
-    logout: () => Promise.resolve(),
+    logout: () => Promise.resolve({ leavingSite: false }),
     ...overrides,
   };
 }

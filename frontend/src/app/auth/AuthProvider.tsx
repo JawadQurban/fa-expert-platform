@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { expertHubConfig } from '../config/expertHubConfig';
 import { academySsoAdapter } from './academySsoAdapter';
 import { devSsoAdapter } from './devSsoAdapter';
-import type { ExpertHubAuthAdapter, ExpertHubRole, ExpertHubSession } from './types';
+import type { ExpertHubAuthAdapter, ExpertHubRole, ExpertHubSession, LogoutResult } from './types';
 
 /**
  * Expert Hub authentication provider — owns the session state for the whole
@@ -32,7 +32,7 @@ interface ExpertHubAuthContextValue {
   readonly startSso: (returnUrl: string) => Promise<void>;
   /** Finalize login at the callback; resolves the post-login return URL. */
   readonly completeSso: (params: URLSearchParams) => Promise<string>;
-  readonly logout: () => Promise<void>;
+  readonly logout: () => Promise<LogoutResult>;
 }
 
 const AuthContext = createContext<ExpertHubAuthContextValue | null>(null);
@@ -112,9 +112,16 @@ export function AuthProvider({
   );
 
   const logout = useCallback(async () => {
-    await adapter.logout();
+    const result = await adapter.logout();
+    if (result.leavingSite) {
+      // BUG-055: the page is unloading towards the provider. Clearing the
+      // session here would let a route guard navigate, and that navigation
+      // cancels the provider's — leaving its session alive.
+      return result;
+    }
     setSession(null);
     setStatus('unauthenticated');
+    return result;
   }, [adapter]);
 
   const hasRole = useCallback(

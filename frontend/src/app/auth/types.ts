@@ -63,6 +63,16 @@ export interface ExpertHubAuthAdapter {
   startLogin(returnUrl: string): Promise<StartLoginResult>;
   /** Complete login at the callback from the provider's query parameters. */
   completeLogin(params: URLSearchParams): Promise<CompleteLoginResult>;
-  /** Clear the session. */
-  logout(): Promise<void>;
+  /** Clear the session; says whether the browser is now leaving for the provider. */
+  logout(): Promise<LogoutResult>;
+}
+
+/**
+ * BUG-055 — when `leavingSite` is true the browser is on its way to the
+ * provider's end-session URL. Nothing may navigate inside the SPA after that:
+ * a same-document navigation cancels the pending one, and the provider session
+ * survives the "logout".
+ */
+export interface LogoutResult {
+  readonly leavingSite: boolean;
 }

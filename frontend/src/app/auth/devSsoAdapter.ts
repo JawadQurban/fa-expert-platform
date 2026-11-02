@@ -5,6 +5,7 @@ import type {
   ExpertHubAuthAdapter,
   ExpertHubRole,
   ExpertHubSession,
+  LogoutResult,
   StartLoginResult,
 } from './types';
 
@@ -129,11 +130,11 @@ export const devSsoAdapter: ExpertHubAuthAdapter = {
     return Promise.resolve({ session, returnUrl });
   },
 
-  logout(): Promise<void> {
+  logout(): Promise<LogoutResult> {
     const store = safeStorage();
     store?.removeItem(SESSION_KEY);
     store?.removeItem(RETURN_URL_KEY);
-    return Promise.resolve();
+    return Promise.resolve({ leavingSite: false });
   },
 };
 

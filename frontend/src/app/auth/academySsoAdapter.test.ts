@@ -139,7 +139,7 @@ describe('academySsoAdapter', () => {
     const assign = vi.fn();
     vi.stubGlobal('location', { ...window.location, assign });
 
-    await academySsoAdapter.logout();
+    await expect(academySsoAdapter.logout()).resolves.toEqual({ leavingSite: true });
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://experts.example.test/api/auth/logout',
@@ -155,7 +155,7 @@ describe('academySsoAdapter', () => {
     const assign = vi.fn();
     vi.stubGlobal('location', { ...window.location, assign });
 
-    await academySsoAdapter.logout();
+    await expect(academySsoAdapter.logout()).resolves.toEqual({ leavingSite: false });
 
     expect(assign).not.toHaveBeenCalled();
   });
@@ -163,6 +163,6 @@ describe('academySsoAdapter', () => {
   it('never throws from logout, even when the API is down', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
-    await expect(academySsoAdapter.logout()).resolves.toBeUndefined();
+    await expect(academySsoAdapter.logout()).resolves.toEqual({ leavingSite: false });
   });
 });

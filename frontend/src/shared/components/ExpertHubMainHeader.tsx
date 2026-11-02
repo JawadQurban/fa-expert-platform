@@ -222,7 +222,12 @@ export function ExpertHubMainHeader({ variant }: { readonly variant: ExpertHubHe
   );
 
   const handleLogout = () => {
-    void logout().then(() => navigate(expertHubPaths.landing, { replace: true }));
+    void logout().then(({ leavingSite }) => {
+      // BUG-055: an SPA navigation now would cancel the provider's logout.
+      if (!leavingSite) {
+        void navigate(expertHubPaths.landing, { replace: true });
+      }
+    });
   };
 
   /*
