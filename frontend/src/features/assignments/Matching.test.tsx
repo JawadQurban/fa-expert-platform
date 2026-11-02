@@ -104,12 +104,18 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
     expect(within(selection).getByText('د. سارة العتيبي')).toBeInTheDocument();
     expect(screen.getByText(copy.selectedCount(1, 6))).toBeInTheDocument();
 
-    // A match the matrix rules out is SHOWN with its reason, never selectable.
+    // `P-388` — a match the rules rule out is shown with its reason, and staff
+    // may still pick them.
     await user.clear(search);
     await user.type(search, 'عبير');
     await screen.findByText(copy.manualExcludedNote);
     expect(screen.getByText(copy.exclusionReasons['file-status'])).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: 'أ. عبير الشهري' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'أ. عبير الشهري' }));
+    expect(within(selection).getByText('أ. عبير الشهري')).toBeInTheDocument();
+    expect(screen.getByText(copy.selectedCount(2, 6))).toBeInTheDocument();
+    await user.click(
+      within(selection).getByRole('button', { name: copy.removeSelected('أ. عبير الشهري') })
+    );
     // The earlier pick is still named in the selection after the new search.
     expect(within(selection).getByText('د. سارة العتيبي')).toBeInTheDocument();
 
@@ -137,7 +143,11 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
     // exist (owner ruling, UAT `BUG-038`).
     expect(screen.getByText(copy.exclusionReasons['schedule-conflict'])).toBeInTheDocument();
     expect(screen.getByText(copy.exclusionReasons['file-status'])).toBeInTheDocument();
-    expect(Object.keys(copy.exclusionReasons)).toEqual(['schedule-conflict', 'file-status']);
+    expect(Object.keys(copy.exclusionReasons)).toEqual([
+      'schedule-conflict',
+      'file-status',
+      'not-accredited',
+    ]);
 
     // An excluded candidate is NOT selectable — not merely ranked last.
     const excluded = screen.getByText(copy.excludedHeading).closest('div') as HTMLElement;
@@ -257,6 +267,7 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
       price: { inClass: 1, online: 1, currency: 'SAR', agreementReference: 'AGR' },
       decision: 'pending',
       preferenceRank: null,
+      overrideReasons: [],
     }));
     const issues = validatePoolDecision(
       { decisions: [{ trainerId: 'a', decision: 'approved' }], preferenceOrder: ['a'] },
@@ -272,6 +283,7 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
       price: { inClass: 1, online: 1, currency: 'SAR', agreementReference: 'AGR' },
       decision: 'pending',
       preferenceRank: null,
+      overrideReasons: [],
     }));
     const issues = validatePoolDecision(
       {
@@ -294,6 +306,7 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
       price: { inClass: 1, online: 1, currency: 'SAR', agreementReference: 'AGR' },
       decision: 'rejected',
       preferenceRank: null,
+      overrideReasons: [],
     }));
     expect(isFullRejection(members)).toBe(true);
     // A mixed pool is not a full rejection.
@@ -307,6 +320,7 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
       price: { inClass: 1, online: 1, currency: 'SAR', agreementReference: 'AGR' },
       decision: 'approved',
       preferenceRank: rank,
+      overrideReasons: [],
     }));
     const forward = candidatesGoingForward(members, 2);
     expect(forward.map((member) => member.trainerId)).toEqual(['t1', 't2']);

@@ -33,6 +33,7 @@ internal static class EmailMatrixSeedData
         new() { EventCode = "EV-0214", CapabilityCode = "CAP-02", NameAr = "طلب تعديل من عضو اللجنة", NameEn = "Committee member requested a modification", Source = "Email matrix E-023 (J-09)", JourneyAudienceAr = "منشئ تسلسل اللجنة.", JourneyAudienceEn = "Whoever formed the committee sequence." },
         new() { EventCode = "EV-0215", CapabilityCode = "CAP-02", NameAr = "اكتمال البيانات البنكية", NameEn = "Bank data completed", Source = "Email matrix E-024 (J-09/F6)", JourneyAudienceAr = "منشئ تسلسل اللجنة.", JourneyAudienceEn = "Whoever formed the committee sequence." },
         new() { EventCode = "EV-0217", CapabilityCode = "CAP-02", NameAr = "نتيجة المقابلة جاهزة للقرار", NameEn = "Interview result ready for a decision", Source = "Email matrix E-072 (J-07)", JourneyAudienceAr = "صاحب قرار الفرز.", JourneyAudienceEn = "The screening decision-maker." },
+        new() { EventCode = "EV-0218", CapabilityCode = "CAP-02", NameAr = "رفض بعض الخدمات بعد المقابلة", NameEn = "Some services rejected after the interview", Source = "Owner ruling 2026-11-01 (P-389, J-07)", JourneyAudienceAr = "المتقدم.", JourneyAudienceEn = "The applicant." },
         new() { EventCode = "EV-0305", CapabilityCode = "CAP-03", NameAr = "جاهز لإعداد الاتفاقية", NameEn = "Ready for agreement preparation", Source = "Email matrix E-025 (J-10)", JourneyAudienceAr = "منشئ تسلسل اللجنة.", JourneyAudienceEn = "Whoever formed the committee sequence." },
         new() { EventCode = "EV-0306", CapabilityCode = "CAP-03", NameAr = "اتفاقية بانتظار توقيع داخلي", NameEn = "Agreement awaiting an internal signer", Source = "Email matrix E-026 (J-10)", JourneyAudienceAr = "الموقّع الذي حان دوره.", JourneyAudienceEn = "The signer whose turn it is." },
         new() { EventCode = "EV-0307", CapabilityCode = "CAP-03", NameAr = "طلب تعديل من موقّع داخلي", NameEn = "Internal signer requested a modification", Source = "Email matrix E-027 (J-10)", JourneyAudienceAr = "منشئ تسلسل التوقيع.", JourneyAudienceEn = "Whoever formed the signing sequence." },
@@ -55,6 +56,22 @@ internal static class EmailMatrixSeedData
     /// <summary>One template per Notion row, coded by its Notion id.</summary>
     internal static readonly NotificationTemplate[] Templates =
     [
+        // Not a Notion row: the owner asked for it on 2026-11-01 (`P-389`), and
+        // its wording awaits their review, like every other row here.
+        new()
+        {
+            TemplateId = new Guid("7d2c9a41-5e0b-5f3a-9c1e-3b8f6a2d4e78"),
+            Code = "E-078",
+            SubjectAr = "نتيجة ما بعد المقابلة لبعض الخدمات",
+            SubjectEn = "Post-Interview Decision on Some Services",
+            BodyAr = "نأسف لإبلاغك بأن الخدمات التالية في طلبك لم تُقبل بعد نتيجة المقابلة: {{serviceList}}. تستمر بقية خدمات طلبك في مسار الاعتماد.",
+            BodyEn = "We regret to inform you that the following services in your application were not accepted following the interview result: {{serviceList}}. The rest of your application continues through accreditation.",
+            Placeholders = "[\"serviceList\"]",
+            Version = 1,
+            Status = TemplateStatuses.Approved,
+            UpdatedAt = Seeded,
+            UpdatedBy = null,
+        },
         new()
         {
             TemplateId = new Guid("e4d0fe0b-4271-5594-b11a-d2b419ae6b86"),
@@ -1097,6 +1114,7 @@ internal static class EmailMatrixSeedData
         new() { RowId = new Guid("672c4ca1-57c1-544b-aed8-76567c0fee8f"), EventCode = "EV-0513", TemplateId = new Guid("4fb9561d-f56a-58fc-a7a3-757904cba23b"), Audience = "[\"record_subject\"]", IsActive = true }, // E-071
         new() { RowId = new Guid("7e03f3ae-ee91-5c55-81ba-77c8c40c6f92"), EventCode = "EV-0515", TemplateId = new Guid("f47aef8a-5d65-5887-a8b9-e00f86ed6a7f"), Audience = "[\"record_subject\"]", IsActive = true }, // E-076
         new() { RowId = new Guid("f2583c08-9da1-5f3c-8de7-2e575ed9fd5f"), EventCode = "EV-0516", TemplateId = new Guid("075db772-27e7-5cf7-91ae-321db671f3fe"), Audience = "[\"record_subject\"]", IsActive = true }, // E-077
+        new() { RowId = new Guid("c41e7b92-08d3-5a6f-b7e4-91d2f05a3c18"), EventCode = "EV-0218", TemplateId = new Guid("7d2c9a41-5e0b-5f3a-9c1e-3b8f6a2d4e78"), Audience = "[\"record_subject\"]", IsActive = true }, // E-078
         new() { RowId = new Guid("50648be2-cdb2-558d-b0f5-73f675258af9"), EventCode = "EV-0801", TemplateId = new Guid("73ba0ad2-3de2-5d2f-9f41-c6c4a8c74283"), Audience = "[\"record_subject\"]", IsActive = true }, // E-050
     ];
 }

@@ -87,7 +87,7 @@ internal sealed record ManualSearchWire(
 
 internal sealed record PoolMemberWire(
     string TrainerId, string Name, CandidatePriceWire Price,
-    string Decision, int? PreferenceRank);
+    string Decision, int? PreferenceRank, IReadOnlyList<string> OverrideReasons);
 
 /// <remarks><c>ReturnedToMatching</c> — the request's earlier pool is decided,
 /// but a slot came back to matching (a named nominee declined, or the Academy
@@ -384,10 +384,7 @@ public static class AssignmentEndpoints
                 foreach (var trainerId in namedTrainerIds)
                 {
                     var candidate = candidates.First(c => c.TrainerId == trainerId);
-                    IReadOnlyList<string> reasons = !MatchingEngine.IsInCategory(context, candidate)
-                        ? [NotAccreditedReason]
-                        : [.. MatchingEngine.Match(context, [candidate], weights)
-                            .Excluded.SelectMany(e => e.Reasons)];
+                    var reasons = RulesFailedBy(candidate, context, weights);
                     if (reasons.Count > 0)
                     {
                         return Results.Problem(
@@ -795,18 +792,16 @@ public static class AssignmentEndpoints
 
     /// <summary>
     /// The MANUAL search (J-17/F2/AC-1): staff look a trainer up by name and
-    /// pick that person. It runs through the same engine (F3/AC-3 — «the
-    /// exclusions apply on either path»), and answers in the run's own two
-    /// lists: <c>ranked</c> holds who may be selected, <c>excluded</c> holds
-    /// who matched the name but cannot be, WITH the reasons.
+    /// pick that person. It answers in the run's own two lists: <c>ranked</c>
+    /// holds who meets the matching rules, <c>excluded</c> holds who matched
+    /// the name but does not, WITH the reasons. Both may be selected.
     /// </summary>
     /// <remarks>
-    /// UAT `BUG-039`, second round — the name match itself was fixed
-    /// (<see cref="MatchText.NameMatches"/>), but the search still returned
-    /// only the trainers the matrix permits: the one specific person staff
-    /// were looking for, if excluded, simply vanished — an empty list with no
-    /// reason, which reads as a broken search. An excluded match is now SHOWN,
-    /// never offered; the send-side refusal (`excluded-candidate`) is unchanged.
+    /// `P-388`, owner ruling (2026-11-01): «Staff can select any trainer
+    /// manually, even if the trainer doesn't meet the matching criteria.» So
+    /// the search covers every trainer, a person not accredited for the
+    /// requested service included, and `SendPoolAsync` records what was
+    /// overridden rather than refusing it.
     /// </remarks>
     private static async Task<IResult> SearchCandidatesAsync(
         string requestId, int? slotNumber, string? query, ExpertHubDbContext db,
@@ -821,7 +816,8 @@ public static class AssignmentEndpoints
         var model = await db.MatchingModels.SingleAsync(m => m.IsActive, ct);
         var weights = MatchingEngine.ParseWeights(model.Weights);
         var candidates = await CandidateInputsAsync(db, ct);
-        var result = MatchingEngine.Match(ContextFor(request), candidates, weights);
+        var context = ContextFor(request);
+        var result = MatchingEngine.Match(context, candidates, weights);
 
         var names = await TrainerNamesAsync(db, ct);
         var englishNames = await (
@@ -836,11 +832,13 @@ public static class AssignmentEndpoints
             query, names.GetValueOrDefault(trainerId), englishNames.GetValueOrDefault(trainerId));
         return Results.Ok(new ManualSearchWire(
             [.. result.Ranked.Where(r => Hit(r.TrainerId)).Select(r => CandidateWire(r, names, prices))],
-            [.. result.Excluded.Where(e => Hit(e.TrainerId))
-                .Select(e => new ExcludedCandidateWire(
-                    e.TrainerId.ToString(),
-                    names.GetValueOrDefault(e.TrainerId, string.Empty),
-                    e.Reasons))]));
+            [.. candidates.Where(c => Hit(c.TrainerId))
+                .Select(c => (c.TrainerId, Reasons: RulesFailedBy(c, context, weights)))
+                .Where(c => c.Reasons.Count > 0)
+                .Select(c => new ExcludedCandidateWire(
+                    c.TrainerId.ToString(),
+                    names.GetValueOrDefault(c.TrainerId, string.Empty),
+                    c.Reasons))]));
     }
 
     private static async Task<IResult> SendPoolAsync(
@@ -886,17 +884,22 @@ public static class AssignmentEndpoints
         }
         var ids = trainerIds.Select(Guid.Parse).ToList();
 
-        // F3/AC-3 — the exclusions apply here too: a pool assembled by hand
-        // still cannot contain someone the matrix rules out.
+        // `P-388` — staff may pick anyone (owner ruling 2026-11-01). A rule a
+        // pick does not meet no longer refuses the pool; it travels with the
+        // member, so the party approving the pool sees what was overridden.
         var model = await db.MatchingModels.SingleAsync(m => m.IsActive, ct);
-        var result = MatchingEngine.Match(
-            ContextFor(request),
-            await CandidateInputsAsync(db, ct),
-            MatchingEngine.ParseWeights(model.Weights));
-        var excludedIds = result.Excluded.Select(e => e.TrainerId).ToHashSet();
-        if (ids.Any(excludedIds.Contains))
+        var context = ContextFor(request);
+        var weights = MatchingEngine.ParseWeights(model.Weights);
+        var candidates = await CandidateInputsAsync(db, ct);
+        var overrides = new Dictionary<Guid, IReadOnlyList<string>>();
+        foreach (var id in ids)
         {
-            return Results.Problem(statusCode: 400, detail: "excluded-candidate");
+            var candidate = candidates.FirstOrDefault(c => c.TrainerId == id);
+            if (candidate is null)
+            {
+                return Results.Problem(statusCode: 400, detail: "unknown-candidate");
+            }
+            overrides[id] = RulesFailedBy(candidate, context, weights);
         }
 
         var now = DateTime.UtcNow;
@@ -979,6 +982,9 @@ public static class AssignmentEndpoints
                 PriceOnline = price?.Online,
                 Currency = price?.Currency ?? "SAR",
                 Decision = "pending",
+                OverrideReasons = overrides[trainerId].Count > 0
+                    ? JsonSerializer.Serialize(overrides[trainerId], WireJson)
+                    : null,
             });
         }
 
@@ -1323,6 +1329,17 @@ public static class AssignmentEndpoints
     /// names the agreement they would come from. A fabricated price is the
     /// one number nobody should ever invent.
     /// </summary>
+    /// <summary>Why the matching rules would not put this person forward for
+    /// this request: not accredited for the service, or the exclusionary rows.
+    /// Empty when they would.</summary>
+    private static IReadOnlyList<string> RulesFailedBy(
+        MatchingCandidateInput candidate, MatchingContext context,
+        IReadOnlyDictionary<string, decimal> weights) =>
+        !MatchingEngine.IsInCategory(context, candidate)
+            ? [NotAccreditedReason]
+            : [.. MatchingEngine.Match(context, [candidate], weights)
+                .Excluded.SelectMany(e => e.Reasons)];
+
     private static async Task<Dictionary<Guid, CandidatePriceWire>> PricesAsync(
         ExpertHubDbContext db, CancellationToken ct)
     {
@@ -1411,7 +1428,10 @@ public static class AssignmentEndpoints
                 names.GetValueOrDefault(m.TrainerId, string.Empty),
                 new CandidatePriceWire(m.PriceInClass, m.PriceOnline, m.Currency, string.Empty),
                 m.Decision,
-                m.PreferenceRank))],
+                m.PreferenceRank,
+                m.OverrideReasons is null
+                    ? []
+                    : JsonSerializer.Deserialize<string[]>(m.OverrideReasons, WireJson) ?? []))],
             pool.SentAt is { } sentAt ? ApplicationEndpoints.Iso(sentAt) : null,
             headcount);
     }

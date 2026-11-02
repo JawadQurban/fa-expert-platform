@@ -174,6 +174,7 @@ const ar: ReRoutingContent = {
   exclusionReasons: {
     'schedule-conflict': 'تعارض مع ارتباط مؤكَّد',
     'file-status': 'ملف المدرب غير مفعّل',
+    'not-accredited': 'غير معتمد للخدمة المطلوبة',
   },
   manualSearchLabel: 'بحث باسم المدرب',
   selectedCount: (selected, required) => `اخترت ${fmtAr(selected)} من ${fmtAr(required)}`,
@@ -288,6 +289,7 @@ const en: ReRoutingContent = {
   exclusionReasons: {
     'schedule-conflict': 'Conflicts with a confirmed engagement',
     'file-status': 'Trainer file is not active',
+    'not-accredited': 'Not accredited for the requested service',
   },
   manualSearchLabel: 'Search by trainer name',
   selectedCount: (selected, required) => `${selected} of ${required} selected`,

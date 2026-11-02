@@ -97,7 +97,7 @@ export default function AssignmentMatchingPage() {
    * from one search stays named in the selection after the next search
    * replaces the results, instead of becoming an invisible tick in the count.
    */
-  const [known, setKnown] = useState<Readonly<Record<string, MatchCandidateDto>>>({});
+  const [known, setKnown] = useState<Readonly<Record<string, { name: string }>>>({});
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [decisions, setDecisions] = useState<Record<string, CandidateDecision>>({});
   const [ranks, setRanks] = useState<Record<string, string>>({});
@@ -193,7 +193,7 @@ export default function AssignmentMatchingPage() {
     });
   };
 
-  const remember = (candidates: readonly MatchCandidateDto[]) =>
+  const remember = (candidates: readonly { trainerId: string; name: string }[]) =>
     setKnown((current) => {
       const next = { ...current };
       for (const candidate of candidates) {
@@ -219,7 +219,7 @@ export default function AssignmentMatchingPage() {
       }
       if (result.ok) {
         setManualResults(result.value);
-        remember(result.value.ranked);
+        remember([...result.value.ranked, ...result.value.excluded]);
       } else {
         setManualResults({ ranked: [], excluded: [] });
       }
@@ -534,8 +534,8 @@ export default function AssignmentMatchingPage() {
                   onChange={(event) => searchManual(event.target.value)}
                 />
                 {/* `BUG-039` — the results sit under the box that asked for
-                    them, selectable right here; matches the matrix rules out
-                    are shown with their reasons instead of silently missing. */}
+                    them, selectable right here. `P-388` — so are matches the
+                    rules rule out: staff may pick anyone, seeing the reasons. */}
                 {searching && manualResults != null && (
                   <div aria-live="polite" className={styles.results}>
                     {manualResults.ranked.length === 0 && manualResults.excluded.length === 0 ? (
@@ -557,9 +557,11 @@ export default function AssignmentMatchingPage() {
                             <ul className={styles.excluded}>
                               {manualResults.excluded.map((candidate) => (
                                 <li key={candidate.trainerId} className={styles.excludedRow}>
-                                  <Typography as="span" variant="text-sm">
-                                    {candidate.name}
-                                  </Typography>
+                                  <Checkbox
+                                    label={candidate.name}
+                                    checked={selected.includes(candidate.trainerId)}
+                                    onChange={() => toggle(candidate.trainerId)}
+                                  />
                                   <span className={styles.candidateMeta}>
                                     {candidate.reasons.map((reason) => (
                                       <Tag key={reason} variant="error" size="xs">
@@ -610,6 +612,19 @@ export default function AssignmentMatchingPage() {
                       <Typography as="span" variant="text-sm">
                         {`${copy.priceLabel}: ${priceFor(member)}`}
                       </Typography>
+                      {/* `P-388` — the approver sees what the manual pick overrode. */}
+                      {member.overrideReasons.length > 0 && (
+                        <div className={styles.candidateMeta}>
+                          <Typography as="span" variant="text-xs" color="muted">
+                            {copy.overrideNote}
+                          </Typography>
+                          {member.overrideReasons.map((reason) => (
+                            <Tag key={reason} variant="error" size="xs">
+                              {copy.exclusionReasons[reason]}
+                            </Tag>
+                          ))}
+                        </div>
+                      )}
                       {/* UAT `BUG-041` / F3/AC-2 — the full profile, to decide on. */}
                       <Link href={expertHubPaths.internalTrainer(member.trainerId)}>
                         {copy.identityCardLink}

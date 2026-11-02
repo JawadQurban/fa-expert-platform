@@ -181,6 +181,108 @@ The history before this repository existed is in
 
 ### Fixed
 
+- **The owner's answers to the UAT re-test's open questions, 2026-11-01 (migration M58).**
+  - **Manual matching (BUG-039, `P-388`).** Staff can pick any trainer by hand,
+    even one who fails the matching rules or is not accredited for the service.
+    The approver sees which rules each pick overrode.
+  - **Partial rejection email (`P-389`).** When some services are rejected after
+    the interview and the application goes on, the applicant is emailed the list
+    of rejected services (`EV-0218`, `E-078`).
+  - **City list (BUG-005, `P-385`).** Names are FAST's exactly, regions and
+    spelling included. The nine English corrections are reverted, which also
+    stops a FAST request saying «Maddenah» from missing a trainer who picked
+    that city in the English list.
+  - **Trainer card PDF (BUG-051, `P-387`).** The PDF is now A4, on a temporary
+    design-system sheet until the branded template arrives; a long card continues
+    on a further page, breaking between rows.
+- **UAT re-test, Notion «Bugs - Ready to deliver (1)», 2026-10-28.**
+  - **Logout (BUG-055).** Signing out now ends the Academy SSO session too. The
+    SPA navigated to the landing page right after starting the redirect to the
+    provider's end-session URL, and that in-app navigation cancelled it, so the
+    SSO session survived and the next sign-in went straight back in.
+    `logout()` now reports `leavingSite`, and nothing navigates while the
+    browser is leaving.
+  - **Interviews (BUG-056).** An interview time must start at least one hour
+    from now, at screening and on a staff reschedule. The picker blocks it, the
+    field and dialog say so, and the API answers `400 slot-too-soon`.
+  - **Interviews (BUG-052).** An interview whose confirmed time is over, or
+    whose proposed times all passed unpicked, shows as ended to the applicant
+    instead of asking for a confirmation. Past times cannot be picked
+    (`409 slot-passed`), and an interview under way or over cannot be
+    rescheduled by the applicant (`409 interview-ended`).
+  - **Interviews (BUG-053).** Once an interview has ended, no participant is
+    offered the meeting link; «انتهت هذه المقابلة» replaces it.
+  - **Notifications (BUG-054).** Links in «إشعاراتي» are clickable. Only
+    http/https become links (the design-system `Link`); other sites open in a
+    new tab with `noopener noreferrer`; no HTML from the text is rendered.
+  - **Home (BUG-028).** The applicant's home shows the upcoming interview from
+    the moment times are proposed («اختيار موعد المقابلة»), through a pending
+    reschedule, a confirmed time and an interview under way. The earlier fix
+    showed only a confirmed time.
+  - **Teams (BUG-050, `P-375`).** Interview meetings let everyone with the link
+    in without waiting in the lobby; presenters are the Academy's own people.
+    Needs the Graph `OnlineMeetings.ReadWrite.All` application permission and a
+    Teams application access policy for the organiser (`DEPLOYMENT.md`).
+    Failures are logged as events 5501–5504 and never cost the booking.
+  - **Application form (BUG-006/007/014/015, schema `dm-gap-01.2026-10-28`,
+    M55, `P-381`–`P-383`).** «التخصص» no longer offers the workbook's footnote
+    (`spec-025`) as a value, and «أخرى» (التخصص، اسم الشهادة، المجال) reads as
+    the typed text on every read view. Every typed field checks its kind of
+    input (Arabic/English names, real links, LinkedIn, text with letters, city
+    lists, length ceilings), and dates obtained or started cannot be in the
+    future. The checks run at the field — on pick or on leaving it, and on the
+    end date when the start moves past it — on the new application,
+    add-service and profile screens, with the API enforcing the same rules. A
+    draft started on an older form moves to the current one when resumed.
+  - **Matching (BUG-039, `P-378`).** The manual name search answers
+    `{ ranked, excluded }`: a trainer the matrix rules out is shown with the
+    reasons instead of silently missing. Results sit under the search box,
+    picked trainers stay named across searches, and an empty search says so.
+  - **Offers (BUG-042, `P-379`).** The offer, and the confirmed engagement,
+    carry the request's prospectus («النشرة التعريفية») with Preview and
+    Download; only the trainer the offer is addressed to may open that file.
+    A prospectus copied from FAST is now stored by attachment id, not only by
+    file name.
+  - **Content requests (BUG-049).** Every material upload request names its
+    programme and assignment request on the trainer's list, the review queue and
+    the review page.
+  - **Trainer card PDF (BUG-051, `P-387`).** «تصدير البطاقة (PDF)» on the staff
+    trainer profile produces `trainer-card-<name>.pdf`: one page holding the card
+    exactly as shown (the `P-343` layout), drawn in the browser by the
+    open-source `html-to-image` 1.11.13 and `jspdf` 4.2.1 (both MIT), loaded
+    only when used. The browser lays out the Arabic, so letters join and RTL
+    order and mixed digits hold. The photo is embedded, or the initials appear
+    if it cannot be read; the button shows a spinner while working and an alert
+    if it fails. No new endpoint; the main bundle is unchanged.
+  - **One interview per application, evaluated and decided per service
+    (BUG-027, `P-384`, M56).** The screening decision names a single interview
+    (one set of times, one committee) covering every service sent to it;
+    exempted services stay out. After the interview each service is forwarded
+    or rejected on its own, with its reason. The application goes to the
+    approval committee if anything is left for it, and is rejected only when
+    nothing is. New table `INTERVIEW_SERVICE`, backfilled for existing
+    interviews. (M53/M54 were reserved and never used; the numbers jump from
+    M52 to M55.)
+  - **Cities (BUG-005, `P-385`, M57).** «المدن المتاح فيها الحضور الشخصي» is a
+    dropdown of the Kingdom's cities: the applicant picks one or more of the 74
+    Saudi cities in FAST's own city table
+    (`docs/inputs/fast-country-and-city.xlsx`), stored by FAST id. Every screen
+    shows the names. Matching and the manual search compare the request's city
+    with each picked city in Arabic and English, and still read the typed
+    cities of earlier applications. Form version `dm-gap-01.2026-10-28` is
+    corrected in place (never deployed).
+  - **Programmes (BUG-004, `P-386`).** «أبرز البرامج التدريبية أو الورش أو
+    الفعاليات…» is a multi-select over FAST's published programmes, plus «أخرى»
+    with a box to name an event or anything else. Each pick is kept with its
+    name. If the list cannot be loaded, «أخرى» still works and the application
+    can still be submitted. New endpoint
+    `GET /api/v1/applications/form-options/fast-programmes`.
+  - **Labels, not codes.** Screening and the trainer's comprehensive file show
+    option labels («بكالوريوس», not `bachelor`). A trainer's profile edit is now
+    checked against their form's rules.
+  - **Tests.** The Cap05 assignment requests are dated relative to today; the
+    fixed date 2026-11-01 had drifted into the withdrawal notice period.
+
 - **The interview pass mark no longer forces a rejection (BUG-033, `P-355`).**
   Forwarding to the approval committee stays available when no service reached
   the pass mark, and a service below it is no longer closed on forwarding: the

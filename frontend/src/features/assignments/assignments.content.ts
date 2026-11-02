@@ -223,6 +223,8 @@ export interface AssignmentsContent {
     readonly manualResultsLabel: string;
     readonly manualNoResults: (query: string) => string;
     readonly manualExcludedNote: string;
+    /** `P-388` — shown to whoever approves the pool. */
+    readonly overrideNote: string;
     readonly selectedCount: (selected: number, required: number) => string;
     /** `BUG-039` — the selection, named, whichever path found each person. */
     readonly selectedHeading: string;
@@ -470,10 +472,12 @@ const ar: AssignmentsContent = {
       availability: 'عدم تعارض المواعيد',
     },
     excludedHeading: 'مستبعدون',
-    excludedNote: 'استُبعد هؤلاء كليًا لعدم استيفاء معيار إقصائي، ولا يمكن ترشيحهم لهذا الطلب.',
+    excludedNote:
+      'استبعدهم محرك المطابقة لعدم استيفاء معيار إقصائي. يمكن اختيارهم يدويًا بالبحث عن الاسم.',
     exclusionReasons: {
       'schedule-conflict': 'تعارض مع ارتباط مؤكَّد',
       'file-status': 'ملف المدرب غير مفعّل',
+      'not-accredited': 'غير معتمد للخدمة المطلوبة',
     },
     requestDetailsHeading: 'تفاصيل طلب الإسناد',
     requestFields: { reference: 'رقم الطلب', createdBy: 'مُنشئ الطلب' },
@@ -482,11 +486,13 @@ const ar: AssignmentsContent = {
       'خلا مقعد بعد اعتماد القائمة السابقة (اعتذار المرشح المحدد أو إلغاء ارتباط من الأكاديمية)، فلم يُرسل العرض لأحد تلقائيًا. ابنِ قائمة مرشحين جديدة للمقاعد الشاغرة لتمر بدورة الترشيح كاملة.',
     manualHeading: 'البحث اليدوي',
     manualDescription:
-      'يمكنك بناء قائمة المرشحين يدويًا بدل محرك المطابقة. تبقى المعايير الإقصائية سارية عند الإرسال.',
+      'يمكنك بناء قائمة المرشحين يدويًا بدل محرك المطابقة، واختيار أي مدرب حتى إن لم يستوفِ معايير المطابقة.',
     manualSearchLabel: 'بحث باسم المدرب',
     manualResultsLabel: 'نتائج البحث',
-    manualNoResults: (query) => `لا يوجد مدرب معتمد باسم «${query}».`,
-    manualExcludedNote: 'مطابقون للاسم لكن لا يمكن ترشيحهم لهذا الطلب، للأسباب المبيّنة:',
+    manualNoResults: (query) => `لا يوجد مدرب باسم «${query}».`,
+    manualExcludedNote:
+      'مطابقون للاسم ولا يستوفون معايير المطابقة للأسباب المبيّنة. يمكنك اختيارهم، وتظهر الأسباب لصاحب الطلب عند الموافقة:',
+    overrideNote: 'اختير يدويًا رغم:',
     selectedCount: (selected, required) => `اخترت ${fmtAr(selected)} من ${fmtAr(required)}`,
     selectedHeading: 'المرشحون المختارون',
     removeSelected: (name) => `إزالة ${name}`,
@@ -738,10 +744,11 @@ const en: AssignmentsContent = {
     },
     excludedHeading: 'Excluded',
     excludedNote:
-      'These candidates were excluded entirely for failing an exclusionary criterion, and cannot be nominated for this request.',
+      'The matching engine excluded these candidates for failing an exclusionary criterion. They can still be picked by hand, by searching for the name.',
     exclusionReasons: {
       'schedule-conflict': 'Conflicts with a confirmed engagement',
       'file-status': 'Trainer file is not active',
+      'not-accredited': 'Not accredited for the requested service',
     },
     requestDetailsHeading: 'Assignment request details',
     requestFields: { reference: 'Request reference', createdBy: 'Raised by' },
@@ -750,12 +757,13 @@ const en: AssignmentsContent = {
       'A slot became free after the earlier list was decided (the named nominee declined, or the Academy de-linked the trainer), so nobody was offered it automatically. Build a new candidate list for the open slots to take it through the full nomination cycle.',
     manualHeading: 'Manual search',
     manualDescription:
-      'You can build the candidate list yourself instead of using the engine. The exclusionary criteria still apply when sending.',
+      'You can build the candidate list yourself instead of using the engine, and pick any trainer even if they do not meet the matching criteria.',
     manualSearchLabel: 'Search by trainer name',
     manualResultsLabel: 'Search results',
-    manualNoResults: (query) => `No accredited trainer named “${query}”.`,
+    manualNoResults: (query) => `No trainer named “${query}”.`,
     manualExcludedNote:
-      'These match the name but cannot be nominated for this request, for the reasons shown:',
+      'These match the name but do not meet the matching criteria, for the reasons shown. You can pick them, and the requesting party sees the reasons when approving:',
+    overrideNote: 'Picked by hand despite:',
     selectedCount: (selected, required) => `${selected} of ${required} selected`,
     selectedHeading: 'Selected candidates',
     removeSelected: (name) => `Remove ${name}`,

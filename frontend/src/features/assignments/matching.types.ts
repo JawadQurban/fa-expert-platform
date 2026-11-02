@@ -62,7 +62,7 @@ export function poolSizeFor(requiredHeadcount: number): number {
  * - `file-status` — the trainer's file status must be active. This is the
  *   internal-only status from J-13/AC-10, used here as J-15 makes it visible.
  */
-export type MatchExclusionReason = 'schedule-conflict' | 'file-status';
+export type MatchExclusionReason = 'schedule-conflict' | 'file-status' | 'not-accredited';
 
 /**
  * The six **weighted** rows. None of them can exclude anyone (F1/AC-3) —
@@ -191,6 +191,8 @@ export interface PoolMemberDto {
   readonly decision: CandidateDecision;
   /** F4/AC-2 — 1-based preference among the approved; `null` until ranked. */
   readonly preferenceRank: number | null;
+  /** `P-388` — the matching rules staff overrode by picking this person by hand. */
+  readonly overrideReasons: readonly MatchExclusionReason[];
 }
 
 export interface CandidatePoolDto {

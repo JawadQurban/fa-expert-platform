@@ -157,6 +157,20 @@ public static class ApplicationServices
     /// a blank is worse than an untranslated code on an agreement.</summary>
     public static string NameAr(string code) =>
         NamesAr.TryGetValue(code, out var name) ? name : code;
+
+    private static readonly Dictionary<string, string> NamesEn = new()
+    {
+        [Trainer] = "Trainer",
+        [Consultant] = "Consultant",
+        [ContentDeveloper] = "Content developer",
+        [QuestionWriter] = "Question writer",
+        [Speaker] = "Speaker",
+    };
+
+    /// <summary>The English name of a service code, on the same terms as
+    /// <see cref="NameAr"/>.</summary>
+    public static string NameEn(string code) =>
+        NamesEn.TryGetValue(code, out var name) ? name : code;
 }
 
 /// <summary>`APPLICATION.origin`.</summary>

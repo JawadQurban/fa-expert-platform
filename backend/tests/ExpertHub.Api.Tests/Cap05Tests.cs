@@ -81,8 +81,9 @@ public sealed partial class Cap05Tests
 
         var eligible = ranked.Select(r => r.GetProperty("trainerId").GetString()!).ToArray();
 
-        // «no fewer, no more» — a pool of two is refused, and so is one that
-        // contains an excluded candidate (the exclusions apply on BOTH paths).
+        // «no fewer, no more» — a pool of two is refused. Who is in it is
+        // staff's call (`P-388`): an excluded pick is accepted, and the rule
+        // it overrode travels with the member to whoever approves the pool.
         var tooFew = await staff.PostAsJsonAsync(
             $"/api/v1/internal/assignment-requests/{requestId}/pool",
             new { trainerIds = eligible.Take(2) });
@@ -91,9 +92,20 @@ public sealed partial class Cap05Tests
         var withExcluded = await staff.PostAsJsonAsync(
             $"/api/v1/internal/assignment-requests/{requestId}/pool",
             new { trainerIds = new[] { eligible[0], eligible[1], trainers.Suspended.ToString() } });
-        Assert.Equal(HttpStatusCode.BadRequest, withExcluded.StatusCode);
-        var problem = await withExcluded.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("excluded-candidate", problem.GetProperty("detail").GetString());
+        Assert.Equal(HttpStatusCode.OK, withExcluded.StatusCode);
+        var overridden = await withExcluded.Content.ReadFromJsonAsync<JsonElement>();
+        var overrides = overridden.GetProperty("members").EnumerateArray()
+            .ToDictionary(
+                m => m.GetProperty("trainerId").GetString()!,
+                m => m.GetProperty("overrideReasons").EnumerateArray().Select(r => r.GetString()!).ToArray());
+        Assert.Equal("file-status", Assert.Single(overrides[trainers.Suspended.ToString()]));
+        Assert.Empty(overrides[eligible[0]]);
+
+        // An unsent pool is replaced by the next one, so the run below starts clean.
+        var unknown = await staff.PostAsJsonAsync(
+            $"/api/v1/internal/assignment-requests/{requestId}/pool",
+            new { trainerIds = new[] { eligible[0], eligible[1], Guid.NewGuid().ToString() } });
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
 
         var pool = await PostAsync(staff,
             $"/api/v1/internal/assignment-requests/{requestId}/pool",
@@ -1153,8 +1165,8 @@ public sealed partial class Cap05Tests
         Assert.Contains("centreId", await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
         var backwards = GeneralProgramRequest();
-        backwards["dateFrom"] = "2026-11-03T00:00:00Z";
-        backwards["dateTo"] = "2026-11-02T00:00:00Z";
+        backwards["dateFrom"] = DaysAhead(62);
+        backwards["dateTo"] = DaysAhead(61);
         var backwardsResponse = await centre.PostAsJsonAsync("/api/v1/internal/assignment-requests/", backwards);
         Assert.Equal(HttpStatusCode.BadRequest, backwardsResponse.StatusCode);
         Assert.Contains("dateTo", await backwardsResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
@@ -1181,8 +1193,8 @@ public sealed partial class Cap05Tests
 
         // The boundary: the same day is a one-day request, and allowed.
         var sameDay = GeneralProgramRequest();
-        sameDay["dateFrom"] = "2026-11-03T00:00:00Z";
-        sameDay["dateTo"] = "2026-11-03T00:00:00Z";
+        sameDay["dateFrom"] = DaysAhead(62);
+        sameDay["dateTo"] = DaysAhead(62);
         await PostAsync(centre, "/api/v1/internal/assignment-requests/", sameDay);
     }
 
@@ -1590,6 +1602,12 @@ public sealed partial class Cap05Tests
 
     /* ── helpers ───────────────────────────────────────────────────────────── */
 
+    /// <summary>A request date <paramref name="days"/> ahead of today. A fixed
+    /// calendar date drifts into the withdrawal notice period as time passes, and
+    /// the tests then fail on the clock, not on the code.</summary>
+    private static string DaysAhead(int days) =>
+        DateTime.UtcNow.Date.AddDays(days).ToString("yyyy-MM-dd'T'00:00:00'Z'", System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>A complete «استشارات» / «أخرى» request (form 6) — optional
     /// expected hours and beneficiary left out.</summary>
     private static Dictionary<string, object?> ConsultationRequest(string requestType) => new()
@@ -1598,8 +1616,8 @@ public sealed partial class Cap05Tests
         ["requestType"] = requestType,
         ["responsibleEmployee"] = "موظف الإسناد",
         ["consultationTopic"] = "حوكمة المخاطر",
-        ["dateFrom"] = "2026-11-01T00:00:00Z",
-        ["dateTo"] = "2026-11-03T00:00:00Z",
+        ["dateFrom"] = DaysAhead(60),
+        ["dateTo"] = DaysAhead(62),
         ["deliveryMechanism"] = "online",
         ["city"] = "تيمز",
         ["language"] = "ar",
@@ -1942,8 +1960,8 @@ public sealed partial class Cap05Tests
         ["responsibleEmployee"] = "موظف الإسناد",
         ["programName"] = "برنامج القيادة",
         ["daysCount"] = 3,
-        ["dateFrom"] = "2026-11-01T00:00:00Z",
-        ["dateTo"] = "2026-11-03T00:00:00Z",
+        ["dateFrom"] = DaysAhead(60),
+        ["dateTo"] = DaysAhead(62),
         ["period"] = "morning",
         ["deliveryMechanism"] = "onsite",
         ["city"] = "الرياض",

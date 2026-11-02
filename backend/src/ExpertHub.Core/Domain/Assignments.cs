@@ -192,6 +192,10 @@ public sealed class PoolMember
 
     public required string Currency { get; set; }
 
+    /// <summary>`P-388` — the matching rules staff overrode by picking this
+    /// person by hand, as a JSON array of reason codes; null when none.</summary>
+    public string? OverrideReasons { get; set; }
+
     /// <summary>`pending` | `approved` | `rejected` — PER CANDIDATE, never a
     /// group verdict (J-17/F4/AC-1).</summary>
     public required string Decision { get; set; }

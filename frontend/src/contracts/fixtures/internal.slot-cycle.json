@@ -18,7 +18,8 @@
           "agreementReference": ""
         },
         "decision": "pending",
-        "preferenceRank": null
+        "preferenceRank": null,
+        "overrideReasons": []
       },
       {
         "trainerId": "a8243c0a-263f-4ead-8f09-cf299901ded0",
@@ -30,7 +31,8 @@
           "agreementReference": ""
         },
         "decision": "pending",
-        "preferenceRank": null
+        "preferenceRank": null,
+        "overrideReasons": []
       },
       {
         "trainerId": "9d00e962-bcc6-47fc-b043-8b029bd030f3",
@@ -42,7 +44,8 @@
           "agreementReference": ""
         },
         "decision": "pending",
-        "preferenceRank": null
+        "preferenceRank": null,
+        "overrideReasons": []
       }
     ],
     "sentAt": "2026-10-19T10:59:11Z",

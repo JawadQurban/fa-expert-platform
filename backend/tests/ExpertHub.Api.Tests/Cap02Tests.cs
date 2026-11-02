@@ -1277,6 +1277,16 @@ public sealed class Cap02Tests
                 Assert.Equal("pending", outcomes["content-developer"]); // exempted: untouched
                 var application = await db.Applications.SingleAsync(a => a.ApplicationId == id);
                 Assert.Equal("approval-in-progress", application.Status);
+
+                // `P-389` — the applicant is told which service was rejected,
+                // and only that one; the application itself was not rejected.
+                var notice = await db.NotificationLog.SingleAsync(
+                    l => l.EventCode == "EV-0218" && l.Channel == "in-platform");
+                Assert.Equal(application.ApplicantUserId, notice.RecipientUserId);
+                Assert.Equal("E-078", notice.TemplateCode);
+                Assert.Contains("مستشار", notice.Body, StringComparison.Ordinal);
+                Assert.DoesNotContain("مدرب", notice.Body, StringComparison.Ordinal);
+                Assert.False(await db.NotificationOccurrences.AnyAsync(o => o.EventCode == "EV-0210"));
             }
 
             // The approval committee sees the forwarded service and the exempted

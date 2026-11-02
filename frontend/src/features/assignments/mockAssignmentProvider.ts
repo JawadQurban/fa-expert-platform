@@ -961,24 +961,13 @@ export function createMockAssignmentProvider(
         };
       }
 
-      // F3/AC-3 — the exclusions are enforced before presentation "regardless of
-      // which matching path was used". A manually-picked excluded trainer is
-      // refused here, which is the only place that can be guaranteed.
+      // `P-388` — staff may pick anyone: a rule a pick does not meet travels
+      // with the member instead of refusing the pool.
       const members: PoolMemberDto[] = [];
       for (const trainerId of input.trainerIds) {
         const seed = MOCK_CANDIDATES.find((candidate) => candidate.trainerId === trainerId);
         if (seed == null) {
           return { ok: false, error: { status: 400, message: `Unknown candidate ${trainerId}.` } };
-        }
-        const reasons = exclusionsFor(seed, plan);
-        if (reasons.length > 0) {
-          return {
-            ok: false,
-            error: {
-              status: 409,
-              message: `Candidate ${trainerId} fails: ${reasons.join(', ')}.`,
-            },
-          };
         }
         members.push({
           trainerId: seed.trainerId,
@@ -991,6 +980,7 @@ export function createMockAssignmentProvider(
           },
           decision: 'pending',
           preferenceRank: null,
+          overrideReasons: exclusionsFor(seed, plan),
         });
       }
 

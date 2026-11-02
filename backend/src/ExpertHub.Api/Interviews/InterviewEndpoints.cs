@@ -423,6 +423,29 @@ public static class InterviewEndpoints
             if (forwardsAnything)
             {
                 application.Status = ApplicationStatuses.ApprovalInProgress;
+                var rejected = decisions
+                    .Where(d => d.Kind == InterviewServiceDecisions.Reject)
+                    .Select(d => d.Row.Service)
+                    .ToList();
+                if (rejected.Count > 0)
+                {
+                    // `P-389` — the application goes on, but the applicant hears
+                    // which services it goes on without.
+                    await dispatcher.RaiseAsync(
+                        "EV-0218",
+                        new NotificationEventContext(
+                            SourceEntityId: application.ApplicationId,
+                            RecordSubjectUserId: application.ApplicantUserId,
+                            ActingStaffUserId: actor.UserId),
+                        new Dictionary<string, string>
+                        {
+                            ["referenceNumber"] = application.Reference ?? string.Empty,
+                            ["serviceList"] = string.Join("، ", rejected.Select(ApplicationServices.NameAr)),
+                            ["serviceList" + NotificationDispatcher.EnglishSuffix] =
+                                string.Join(", ", rejected.Select(ApplicationServices.NameEn)),
+                        },
+                        ct);
+                }
             }
             else
             {

@@ -80,16 +80,16 @@ public sealed class NotificationTests
         var matrix = await GetJsonAsync("/api/v1/internal/notifications/matrix");
 
         var events = matrix.GetProperty("events").EnumerateArray().ToArray();
-        Assert.Equal(49, events.Length);
+        Assert.Equal(50, events.Length);
         Assert.All(events, e =>
             Assert.False(string.IsNullOrWhiteSpace(e.GetProperty("source").GetString())));
 
         // P-372 — every Notion row is a template; every event the platform can
         // raise and Notion addresses is routed to an approved one.
         var templates = matrix.GetProperty("templates").EnumerateArray().ToArray();
-        Assert.Equal(71, templates.Length);
+        Assert.Equal(72, templates.Length);
         var rows = matrix.GetProperty("rows").EnumerateArray().ToArray();
-        Assert.Equal(44, rows.Length);
+        Assert.Equal(45, rows.Length);
         var known = matrix.GetProperty("knownPlaceholders").EnumerateArray()
             .Select(p => p.GetString()).ToHashSet();
         Assert.Equal(16, known.Count);

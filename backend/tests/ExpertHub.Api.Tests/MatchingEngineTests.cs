@@ -2,6 +2,7 @@ using System.Text.Json;
 using ExpertHub.Core.Domain;
 using ExpertHub.Infrastructure.Applications;
 using ExpertHub.Infrastructure.Assignments;
+using ExpertHub.Infrastructure.Fast;
 
 namespace ExpertHub.Api.Tests;
 
@@ -196,5 +197,22 @@ public sealed class MatchingEngineTests
         Assert.Equal(3, BusinessCalendar.Countdown(now.AddDays(3), now.AddSeconds(1)).DaysRemaining);
         Assert.Equal(("approaching", 1), BusinessCalendar.Countdown(now.AddHours(5), now));
         Assert.Equal(("breached", -1), BusinessCalendar.Countdown(now, now.AddMinutes(1)));
+    }
+
+    [Theory]
+    [InlineData("Maddenah")]
+    [InlineData("المدينة المنورة")]
+    [InlineData("Eastrn Region")]
+    [InlineData("المنطقة الشرقية")]
+    public void A_request_carrying_FASTs_own_city_name_meets_a_trainer_who_picked_that_city(string fastName)
+    {
+        // `P-385` — requests come from FAST, so the list keeps FAST's spelling:
+        // a corrected «Madinah» would never meet FAST's «Maddenah».
+        string[] picked =
+        [
+            FastCities.ByCode["city-10"].NameAr, FastCities.ByCode["city-10"].NameEn,
+            FastCities.ByCode["city-682"].NameAr, FastCities.ByCode["city-682"].NameEn,
+        ];
+        Assert.True(MatchText.AnyCityEqual(fastName, picked));
     }
 }

@@ -174,6 +174,7 @@ public sealed class PoolMemberConfiguration : IEntityTypeConfiguration<PoolMembe
         builder.Property(m => m.PriceInClass).HasColumnName("price_in_class").HasPrecision(10, 2);
         builder.Property(m => m.PriceOnline).HasColumnName("price_online").HasPrecision(10, 2);
         builder.Property(m => m.Currency).HasColumnName("currency").HasMaxLength(10);
+        builder.Property(m => m.OverrideReasons).HasColumnName("override_reasons").HasMaxLength(200);
         builder.Property(m => m.Decision).HasColumnName("decision").HasMaxLength(20);
         builder.Property(m => m.PreferenceRank).HasColumnName("preference_rank");
         builder.Property(m => m.DecidedAt).HasColumnName("decided_at");

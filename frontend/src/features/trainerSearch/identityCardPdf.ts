@@ -9,9 +9,12 @@
  *    order, mixed Arabic/Latin digits, and the same font the screen uses. A
  *    PDF library that sets text itself (jsPDF's `text()`, pdfmake, PDFKit
  *    without a shaper, html2canvas's own text painter) breaks Arabic shaping.
- * 2. `jspdf` (MIT) wraps that image in a one-page PDF **the card's own size**:
- *    the card's height follows its content, so an A4 page would either shrink
- *    it or split it across pages. Printing still fits it to the paper.
+ * 2. `jspdf` (MIT) places that image on **A4** pages at its natural scale (owner
+ *    ruling 2026-11-01, `P-387`). The card's height follows its content, so a
+ *    long one continues on another page, breaking between rows, never through one.
+ *
+ * ⚠️ The sheet is a temporary template built from the design system; the owner
+ * will supply a branded one (`IdentityCardPanel`).
  *
  * Both libraries are imported on demand, so neither reaches the main bundle
  * or the profile page's chunk until somebody actually exports a card.
@@ -21,8 +24,16 @@
 
 /** CSS pixels → PDF points (96 px = 72 pt). */
 const POINTS_PER_PIXEL = 0.75;
-/** A quiet margin round the card on the page, in points. */
-const PAGE_MARGIN_PT = 18;
+/** ISO 216 A4, in points. */
+const A4_WIDTH_PT = 595.28;
+const A4_HEIGHT_PT = 841.89;
+/** The page margin, in points (10 mm). */
+const PAGE_MARGIN_PT = 28.35;
+/** The width the sheet is laid out at, so one CSS pixel prints at its natural size. */
+export const A4_SHEET_WIDTH_PX = (A4_WIDTH_PT - PAGE_MARGIN_PT * 2) / POINTS_PER_PIXEL;
+const A4_SHEET_HEIGHT_PX = (A4_HEIGHT_PT - PAGE_MARGIN_PT * 2) / POINTS_PER_PIXEL;
+/** Marks an element a page may break after. */
+export const PDF_BLOCK_ATTRIBUTE = 'data-pdf-block';
 /** Drawn at twice the CSS resolution, so the text stays sharp when printed. */
 const PIXEL_RATIO = 2;
 
@@ -70,32 +81,75 @@ export async function loadPhotoForExport(url: string): Promise<string | null> {
   }
 }
 
-/** Draws `node` and saves it as `fileName`. Rejects if either step fails. */
-export async function exportIdentityCardPdf(node: HTMLElement, fileName: string): Promise<void> {
+export interface PageSlice {
+  readonly start: number;
+  readonly end: number;
+}
+
+/**
+ * Where each page starts and ends, in sheet pixels: as far as a block's end that
+ * still fits. A single block taller than a page is the one thing cut through.
+ */
+export function pageSlices(
+  blockEnds: readonly number[],
+  totalHeight: number,
+  pageHeight: number
+): readonly PageSlice[] {
+  const slices: PageSlice[] = [];
+  let start = 0;
+  while (totalHeight - start > pageHeight) {
+    const limit = start + pageHeight;
+    const end = blockEnds.filter((block) => block > start && block <= limit).at(-1) ?? limit;
+    slices.push({ start, end });
+    start = end;
+  }
+  slices.push({ start, end: totalHeight });
+  return slices;
+}
+
+/** One page's strip of the captured sheet, as a PNG `data:` URL. */
+async function cropSlice(image: string, slice: PageSlice, width: number): Promise<string> {
+  const source = new Image();
+  source.src = image;
+  await source.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = width * PIXEL_RATIO;
+  canvas.height = (slice.end - slice.start) * PIXEL_RATIO;
+  const context = canvas.getContext('2d');
+  if (context == null) {
+    throw new Error('canvas');
+  }
+  context.drawImage(source, 0, -slice.start * PIXEL_RATIO);
+  return canvas.toDataURL('image/png');
+}
+
+/** Draws `sheet` and saves it as `fileName`. Rejects if either step fails. */
+export async function exportIdentityCardPdf(sheet: HTMLElement, fileName: string): Promise<void> {
   const [{ toPng }, { jsPDF }] = await Promise.all([import('html-to-image'), import('jspdf')]);
 
-  const { width, height } = node.getBoundingClientRect();
-  const image = await toPng(node, { pixelRatio: PIXEL_RATIO, width, height });
+  const { width, height, top } = sheet.getBoundingClientRect();
+  const image = await toPng(sheet, { pixelRatio: PIXEL_RATIO, width, height });
 
-  const cardWidth = width * POINTS_PER_PIXEL;
-  const cardHeight = height * POINTS_PER_PIXEL;
-  const pageWidth = cardWidth + PAGE_MARGIN_PT * 2;
-  const pageHeight = cardHeight + PAGE_MARGIN_PT * 2;
-  const pdf = new jsPDF({
-    orientation: pageWidth > pageHeight ? 'landscape' : 'portrait',
-    unit: 'pt',
-    format: [pageWidth, pageHeight],
-    compress: true,
-  });
-  pdf.addImage(
-    image,
-    'PNG',
-    PAGE_MARGIN_PT,
-    PAGE_MARGIN_PT,
-    cardWidth,
-    cardHeight,
-    undefined,
-    'FAST'
-  );
+  const blockEnds = Array.from(sheet.querySelectorAll(`[${PDF_BLOCK_ATTRIBUTE}]`))
+    .map((block) => block.getBoundingClientRect().bottom - top)
+    .sort((a, b) => a - b);
+  const slices = pageSlices(blockEnds, height, A4_SHEET_HEIGHT_PX);
+
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+  for (const [index, slice] of slices.entries()) {
+    if (index > 0) {
+      pdf.addPage();
+    }
+    pdf.addImage(
+      slices.length === 1 ? image : await cropSlice(image, slice, width),
+      'PNG',
+      PAGE_MARGIN_PT,
+      PAGE_MARGIN_PT,
+      width * POINTS_PER_PIXEL,
+      (slice.end - slice.start) * POINTS_PER_PIXEL,
+      undefined,
+      'FAST'
+    );
+  }
   pdf.save(fileName);
 }

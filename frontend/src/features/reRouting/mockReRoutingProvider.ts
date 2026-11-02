@@ -445,6 +445,7 @@ export function createMockReRoutingProvider(
         },
         decision: 'pending',
         preferenceRank: null,
+        overrideReasons: [],
       }));
       pool = {
         status: 'sent',
