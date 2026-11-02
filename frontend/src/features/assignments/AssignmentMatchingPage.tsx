@@ -535,7 +535,8 @@ export default function AssignmentMatchingPage() {
                 />
                 {/* `BUG-039` — the results sit under the box that asked for
                     them, selectable right here. `P-388` — so are matches the
-                    rules rule out: staff may pick anyone, seeing the reasons. */}
+                    rules rule out: staff may pick anyone, seeing the reasons,
+                    except someone already booked on those dates. */}
                 {searching && manualResults != null && (
                   <div aria-live="polite" className={styles.results}>
                     {manualResults.ranked.length === 0 && manualResults.excluded.length === 0 ? (
@@ -560,6 +561,7 @@ export default function AssignmentMatchingPage() {
                                   <Checkbox
                                     label={candidate.name}
                                     checked={selected.includes(candidate.trainerId)}
+                                    disabled={candidate.reasons.includes('schedule-conflict')}
                                     onChange={() => toggle(candidate.trainerId)}
                                   />
                                   <span className={styles.candidateMeta}>

@@ -184,7 +184,8 @@ The history before this repository existed is in
 - **The owner's answers to the UAT re-test's open questions, 2026-11-01 (migration M58).**
   - **Manual matching (BUG-039, `P-388`).** Staff can pick any trainer by hand,
     even one who fails the matching rules or is not accredited for the service.
-    The approver sees which rules each pick overrode.
+    The approver sees which rules each pick overrode. The exception is a trainer
+    with a confirmed engagement on the same dates, who cannot be picked.
   - **Partial rejection email (`P-389`).** When some services are rejected after
     the interview and the application goes on, the applicant is emailed the list
     of rejected services (`EV-0218`, `E-078`).

@@ -116,6 +116,11 @@ describe('EH-INT-09 — Matching & Nomination (J-17)', () => {
     await user.click(
       within(selection).getByRole('button', { name: copy.removeSelected('أ. عبير الشهري') })
     );
+    // ...except someone already booked on those dates.
+    await user.clear(search);
+    await user.type(search, 'طارق');
+    await screen.findByText(copy.exclusionReasons['schedule-conflict']);
+    expect(screen.getByRole('checkbox', { name: 'أ. طارق الزهراني' })).toBeDisabled();
     // The earlier pick is still named in the selection after the new search.
     expect(within(selection).getByText('د. سارة العتيبي')).toBeInTheDocument();
 

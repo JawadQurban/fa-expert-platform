@@ -962,12 +962,15 @@ export function createMockAssignmentProvider(
       }
 
       // `P-388` — staff may pick anyone: a rule a pick does not meet travels
-      // with the member instead of refusing the pool.
+      // with the member instead of refusing the pool. A double booking does not.
       const members: PoolMemberDto[] = [];
       for (const trainerId of input.trainerIds) {
         const seed = MOCK_CANDIDATES.find((candidate) => candidate.trainerId === trainerId);
         if (seed == null) {
           return { ok: false, error: { status: 400, message: `Unknown candidate ${trainerId}.` } };
+        }
+        if (exclusionsFor(seed, plan).includes('schedule-conflict')) {
+          return { ok: false, error: { status: 409, message: 'schedule-conflict' } };
         }
         members.push({
           trainerId: seed.trainerId,

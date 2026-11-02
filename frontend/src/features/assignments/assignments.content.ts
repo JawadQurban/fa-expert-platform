@@ -491,7 +491,7 @@ const ar: AssignmentsContent = {
     manualResultsLabel: 'نتائج البحث',
     manualNoResults: (query) => `لا يوجد مدرب باسم «${query}».`,
     manualExcludedNote:
-      'مطابقون للاسم ولا يستوفون معايير المطابقة للأسباب المبيّنة. يمكنك اختيارهم، وتظهر الأسباب لصاحب الطلب عند الموافقة:',
+      'مطابقون للاسم ولا يستوفون معايير المطابقة للأسباب المبيّنة. يمكنك اختيارهم، وتظهر الأسباب لصاحب الطلب عند الموافقة، إلا من لديه ارتباط مؤكَّد في المواعيد نفسها:',
     overrideNote: 'اختير يدويًا رغم:',
     selectedCount: (selected, required) => `اخترت ${fmtAr(selected)} من ${fmtAr(required)}`,
     selectedHeading: 'المرشحون المختارون',
@@ -762,7 +762,7 @@ const en: AssignmentsContent = {
     manualResultsLabel: 'Search results',
     manualNoResults: (query) => `No trainer named “${query}”.`,
     manualExcludedNote:
-      'These match the name but do not meet the matching criteria, for the reasons shown. You can pick them, and the requesting party sees the reasons when approving:',
+      'These match the name but do not meet the matching criteria, for the reasons shown. You can pick them, and the requesting party sees the reasons when approving, except anyone with a confirmed engagement on the same dates:',
     overrideNote: 'Picked by hand despite:',
     selectedCount: (selected, required) => `${selected} of ${required} selected`,
     selectedHeading: 'Selected candidates',

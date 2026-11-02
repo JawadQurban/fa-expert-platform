@@ -115,7 +115,7 @@ public static class MatchingEngine
         candidate.AccreditedServices.Contains(request.ServiceType);
 
     /// <summary>The two exclusionary rows. Each is a REASON, never a score.</summary>
-    private static List<string> Exclusions(
+    public static List<string> Exclusions(
         MatchingContext request, MatchingCandidateInput candidate)
     {
         var reasons = new List<string>();

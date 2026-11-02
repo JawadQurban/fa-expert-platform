@@ -5,14 +5,14 @@
 | | |
 |---|---|
 | Branch | `cr/notion-2026-10-07`, pushed |
-| Head | The commit carrying this record, on top of the BUG-055 logout commit and `d327a15` |
+| Head | The commit carrying this record, on top of `318735d` |
 | Release tag | none |
 | Deployed | **No** |
-| Validation | Backend **546/546** run alone, build 0 warnings, no pending model changes · frontend **1779/1779** in 129 files, lint 0 errors (1 pre-existing warning), `lint:css` ✓, `npm run build` ✓ |
+| Validation | After the double-booking change: backend full run 546 of 547, the one failure a helper in the new test; test fixed, then Cap05 + MatchingEngine **82/82**, build 0 warnings · frontend **1779/1779** in 129 files, lint 0 errors (1 pre-existing warning), `npm run build` ✓
 | Migrations waiting for the server | M55, M56, M57, **M58** `ManualPickOverridesAndServiceRejectionNotice` |
 | Notion | Not connected this session. **BUG-007 still reads Resolved = YES, which is wrong** until a new list arrives |
 | Left out of the commits on purpose | `.skills/` (a nested repository), `docs/Bugs/` (the owner's working files), `diary/repo/2026-10-28.jawad-qurban.md` (maps production FAST account ids) |
-| Next | Deploy; the owner supplies the real certification list |
+| Next | Deploy |
 
 Read in this order: this file → [the previous record](2026-10-28--2026-10-28-notion-uat-retest-bugs.md) → `docs/DECISIONS.md` `P-378`, `P-385`, `P-387`–`P-389`.
 
@@ -21,6 +21,7 @@ Read in this order: this file → [the previous record](2026-10-28--2026-10-28-n
 1. Five answers to the previous session's questions, «start do the work» (quoted below).
 2. «what is missing now from the bugs ?», asked while the validation was still running. The answer was given and the verification then finished.
 3. «start push and commit», which also took the uncommitted set of `2026-10-28`.
+4. On 2026-11-02, the deploy command and three more answers (next section). The double-booking answer changed code, so the deploy waits on that commit.
 
 ## What changed
 
@@ -39,6 +40,9 @@ Details are in `CHANGELOG.md` *[Unreleased] › Fixed*; the principles worth kee
 | «Yes. Staff can select any trainer manually, even if the trainer doesn't meet the matching criteria.» | `P-388`, superseding `P-378`'s "never offered" and the manual half of J-17/F3/AC-3 |
 | «The city list must match the FAST list exactly, whatever that list contains, including any regions and the exact spelling of every name. Assignment requests come from FAST, so any difference between the two lists will break matching. Don't keep your spelling corrections unless FAST uses the same spelling.» | Corrections removed (`P-385`, M58) |
 | «Yes. Use the latest list, on bugs folder i update new list» | **Could not be applied:** see *Corrections* |
+| «keep the certification list as is» | BUG-007 closed with no change (`P-390`) |
+| «trainer no» (should naming a trainer on a request override the rules?) | `nominee-not-eligible` stays (`P-390`) |
+| «no it should not» (may a hand-picked trainer end up double-booked?) | The pick is refused with `409 schedule-conflict` and its checkbox is disabled (`P-388`) |
 | «Switch to A4. A branded template will be provided later. For now, create a temporary template using the platform's design system.» | A4 sheet (`P-387`) |
 
 ## Calls made here that the owner did not rule on
@@ -69,7 +73,6 @@ Details are in `CHANGELOG.md` *[Unreleased] › Fixed*; the principles worth kee
 
 | Item | Waiting on |
 |---|---|
-| BUG-007 | The owner: the real newer certification list |
 | BUG-051 final look | The owner: the branded template |
 | BUG-016 foreign/GCC applicants | An identity route for non-Nafath applicants |
 | BUG-050 in production | IT: Graph `OnlineMeetings.ReadWrite.All` + Teams application access policy |
@@ -79,13 +82,13 @@ Details are in `CHANGELOG.md` *[Unreleased] › Fixed*; the principles worth kee
 
 ## Open questions, by who can answer them
 
-- **Owner:** the certification list; the wording of `E-078`; whether naming a trainer on a request should also override; whether accepting a double booking on the manual path is intended (no later step stops it). Still open from before: `P-381`, the `P-382` ceilings, notes per service.
+- **Owner:** the wording of `E-078`; whether accepting an offer should re-check for a booking made after the pool was sent (a gap on both paths, not built). Still open from before: `P-381`, the `P-382` ceilings, notes per service.
 - **Documents/data:** an events list (BUG-004); whether FAST's `active` means «published on the site».
 - **Technical:** deploy; Teams permission; `npm audit` on `react-router` (GHSA-qwww-vcr4-c8h2); Notion's BUG-007 row, which needs the connector authorized or a manual edit.
 
 ## Where it stopped
 
-All code answers are committed and pushed and passed both suites before committing. BUG-007 waits on the file. Next: deploy; then receive the list, copy it over `docs/inputs/certification-master-list.xlsx`, run the generator, and check whether scoring tables changed, because `EvaluationLookupTables.cs` comes from the same workbook.
+All code answers are committed and pushed and passed both suites before committing. Next: deploy. If a new certification list ever arrives, copy it over `docs/inputs/certification-master-list.xlsx`, run the generator, and check whether scoring tables changed, because `EvaluationLookupTables.cs` comes from the same workbook.
 
 ## Resuming
 

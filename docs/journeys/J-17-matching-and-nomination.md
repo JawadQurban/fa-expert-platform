@@ -69,7 +69,7 @@ Description: The candidate pool is sent together to the requesting party, each s
 | AC-2 | Given each candidate, then their identity card (per J-15/F2) and their price (per delivery mode: online/in-class, sourced from their active agreement) are shown alongside them *(BR-0515)* |
 | AC-3 | Given no candidate has a conflicting confirmed engagement at the same time, then this exclusion is enforced before presentation, regardless of which matching path was used *(BR-0504)* |
 
-> ⚠️ Owner ruling 2026-11-01 (`P-388`): this applies to the engine only. Staff picking by hand may select anyone; the overridden rules are recorded and shown to the approver.
+> ⚠️ Owner ruling 2026-11-01 (`P-388`): this applies to the engine only. Staff picking by hand may select anyone except a trainer with a conflicting confirmed engagement; the overridden rules are recorded and shown to the approver.
 
 **F4. Requesting Party Approval & Prioritization**
 

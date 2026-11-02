@@ -887,6 +887,7 @@ public static class AssignmentEndpoints
         // `P-388` — staff may pick anyone (owner ruling 2026-11-01). A rule a
         // pick does not meet no longer refuses the pool; it travels with the
         // member, so the party approving the pool sees what was overridden.
+        // The exception is a double booking, which no pick may override.
         var model = await db.MatchingModels.SingleAsync(m => m.IsActive, ct);
         var context = ContextFor(request);
         var weights = MatchingEngine.ParseWeights(model.Weights);
@@ -900,6 +901,10 @@ public static class AssignmentEndpoints
                 return Results.Problem(statusCode: 400, detail: "unknown-candidate");
             }
             overrides[id] = RulesFailedBy(candidate, context, weights);
+            if (overrides[id].Contains(MatchExclusionReasons.ScheduleConflict))
+            {
+                return Results.Problem(statusCode: 409, detail: MatchExclusionReasons.ScheduleConflict);
+            }
         }
 
         var now = DateTime.UtcNow;
@@ -1335,10 +1340,8 @@ public static class AssignmentEndpoints
     private static IReadOnlyList<string> RulesFailedBy(
         MatchingCandidateInput candidate, MatchingContext context,
         IReadOnlyDictionary<string, decimal> weights) =>
-        !MatchingEngine.IsInCategory(context, candidate)
-            ? [NotAccreditedReason]
-            : [.. MatchingEngine.Match(context, [candidate], weights)
-                .Excluded.SelectMany(e => e.Reasons)];
+        [.. MatchingEngine.IsInCategory(context, candidate) ? [] : new[] { NotAccreditedReason },
+            .. MatchingEngine.Exclusions(context, candidate)];
 
     private static async Task<Dictionary<Guid, CandidatePriceWire>> PricesAsync(
         ExpertHubDbContext db, CancellationToken ct)

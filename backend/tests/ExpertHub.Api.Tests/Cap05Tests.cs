@@ -1257,6 +1257,64 @@ public sealed partial class Cap05Tests
         return (engagement.GetProperty("engagementId").GetString()!, trainer);
     }
 
+    /* ── `P-388` — a pick may override the rules, never a double booking ───── */
+
+    [Fact]
+    public async Task A_trainer_booked_on_those_dates_cannot_be_picked_by_hand()
+    {
+        using var staff = await SignInAsync("cap05-booked-staff", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync(
+            "cap05-booked-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+
+        var first = await CreateRequestAsync(centre);
+        var run = await PostAsync(staff,
+            $"/api/v1/internal/assignment-requests/{first}/matching/run", null);
+        var ids = run.GetProperty("ranked").EnumerateArray()
+            .Select(r => r.GetProperty("trainerId").GetString()!).ToArray();
+        await PostAsync(staff,
+            $"/api/v1/internal/assignment-requests/{first}/pool", new { trainerIds = ids });
+        await PostAsync(centre,
+            $"/api/v1/internal/assignment-requests/{first}/pool/decision",
+            new
+            {
+                decisions = new object[]
+                {
+                    new { trainerId = ids[0], decision = "approved", preferenceRank = 1 },
+                    new { trainerId = ids[1], decision = "rejected", preferenceRank = (int?)null },
+                    new { trainerId = ids[2], decision = "rejected", preferenceRank = (int?)null },
+                },
+            });
+        var slots = await GetAsync(staff, $"/api/v1/internal/assignment-requests/{first}/slots");
+        var offerId = slots.EnumerateArray().Single()
+            .GetProperty("currentOffer").GetProperty("offerId").GetString()!;
+        await PostAsync(trainers.Clients[ids[0]],
+            $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "accept" });
+
+        // The same dates, the same three people: the booked one is refused.
+        var second = (await PostAsync(centre, "/api/v1/internal/assignment-requests/", GeneralProgramRequest()))
+            .GetProperty("requestId").GetString()!;
+        var again = await PostAsync(staff,
+            $"/api/v1/internal/assignment-requests/{second}/matching/run", null);
+        Assert.Contains(again.GetProperty("excluded").EnumerateArray(),
+            e => e.GetProperty("trainerId").GetString() == ids[0]);
+        var pool = $"/api/v1/internal/assignment-requests/{second}/pool";
+        await AssertProblemAsync(
+            await staff.PostAsJsonAsync(pool, new { trainerIds = ids }),
+            HttpStatusCode.Conflict, "schedule-conflict");
+
+        // Not being accredited for the service does not hide the booking.
+        await using (var db = _database.CreateContext())
+        {
+            var booked = Guid.Parse(ids[0]);
+            db.TrainerServices.RemoveRange(db.TrainerServices.Where(s => s.TrainerId == booked));
+            await db.SaveChangesAsync();
+        }
+        await AssertProblemAsync(
+            await staff.PostAsJsonAsync(pool, new { trainerIds = ids }),
+            HttpStatusCode.Conflict, "schedule-conflict");
+    }
+
     /* ── UAT BUG-039 — staff find ONE specific trainer by name and pick them ── */
 
     [Fact]
