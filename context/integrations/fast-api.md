@@ -36,7 +36,9 @@ conventions around that boundary.
   strings because FAST mixes int and GUID keys.
 - What uses it: the request form's programme → plan pick and pull
   (`FastPlanSelection`, RUN-030); the outbox channel `FastPlanChannel`
-  (assign / unassign trainer, approved material — B-07…B-09); the engagement
+  (assign / unassign trainer, approved material — B-07…B-09; the FAST Trainer
+  role at signing and before each assignment, revoked when the agreement ends
+  — `P-391`); the engagement
   view's trainees, attendance, Teams link and evaluations (`FastExecution`,
   B-10…B-12); `FastPlanStatusWorker` (cancellations and date changes, B-11);
   `FastDeliveredPlansSync` (delivered plans → `TRAINER_RECORD`, B-14); the

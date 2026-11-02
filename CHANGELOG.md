@@ -181,6 +181,11 @@ The history before this repository existed is in
 
 ### Fixed
 
+- **FAST Trainer role (`P-391`).** FAST only assigns people who hold its Trainer
+  role, so signing the agreement now gives it to the new trainer, and it is sent
+  again just before any plan assignment to cover trainers accredited earlier.
+  When an agreement ends, by hand or by its end date passing, the role is
+  revoked, and a renewal after expiry gives it back.
 - **The owner's answers to the UAT re-test's open questions, 2026-11-01 (migration M58).**
   - **Manual matching (BUG-039, `P-388`).** Staff can pick any trainer by hand,
     even one who fails the matching rules or is not accredited for the service.

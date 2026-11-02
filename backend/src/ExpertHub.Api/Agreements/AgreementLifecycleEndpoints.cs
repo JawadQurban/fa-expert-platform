@@ -2,6 +2,8 @@ using System.Text.Json;
 using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Fast;
+using ExpertHub.Infrastructure.Integration;
 using ExpertHub.Infrastructure.Notifications;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -212,6 +214,7 @@ public static class AgreementLifecycleEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             NotificationDispatcher dispatcher,
+            IntegrationHub hub,
             CancellationToken ct) =>
         {
             if (!Guid.TryParse(id, out var agreementId))
@@ -284,6 +287,13 @@ public static class AgreementLifecycleEndpoints
                     AgreementEndpoints.LogEvent(
                         db, row.AgreementId, "renewed", actor.UserId, now, input.Note, 3);
 
+                    // `P-391` — expiry took FAST's Trainer role away; this gives it back.
+                    if (effective == AgreementStatuses.Expired
+                        && await FastTrainerRole.TrainerOfAsync(db, row.TrainerUserId, ct) is { } renewedTrainer)
+                    {
+                        await FastTrainerRole.EnqueueAsync(db, hub, renewedTrainer, "upsert", ct);
+                    }
+
                     // J-12/F2/AC-3 — the trainer is told, with the new term.
                     await dispatcher.RaiseAsync(
                         "EV-0304",
@@ -316,6 +326,10 @@ public static class AgreementLifecycleEndpoints
                     row.Status = AgreementStatuses.Ended;
                     AgreementEndpoints.LogEvent(
                         db, row.AgreementId, "ended", actor.UserId, now, input.Note);
+                    if (await FastTrainerRole.TrainerOfAsync(db, row.TrainerUserId, ct) is { } endedTrainer)
+                    {
+                        await FastTrainerRole.EnqueueAsync(db, hub, endedTrainer, FastPlanChannel.Revoke, ct);
+                    }
                     await RaiseLifecycleAsync(dispatcher, "EV-0312", row, actor.UserId, ct); // P-372 E-037
                     break;
             }

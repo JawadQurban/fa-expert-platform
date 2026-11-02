@@ -7,10 +7,10 @@ Every operation of the FAST **Training API**, the service FAST published for Exp
 | **Host (testing)** | `testingadminapi.fa.gov.sa` |
 | **Base path** | `/training` |
 | **Auth** | OAuth 2.0 `clientCredentials`, scope `ims_training_api`, token from `https://testingauth.fa.gov.sa/identitymanagement.sts/connect/token` |
-| **Operations** | 27 |
-| **By method** | 23 GET · 4 POST |
+| **Operations** | 29 |
+| **By method** | 23 GET · 6 POST |
 | **Envelope** | `ApiResponse` — `success`, `message`, `modelStateErrors`, `value` (the payload) |
-| **Captured** | 2026-10-20 |
+| **Captured** | 2026-11-02 |
 
 ## Operations
 
@@ -43,6 +43,8 @@ Every operation of the FAST **Training API**, the service FAST published for Exp
 | `GET` | `/api/v1/Program/{programId}/Prospectus/File` | `programId` (path, required)<br>`lang` (query) | binary | Downloads the programme prospectus. |
 | `GET` | `/api/v1/Survey/GetTrainerEvaluations` | `planId` (query, required)<br>`trainerFastUserId` (query, required) | [TrainerEvaluationDto](#trainerevaluationdto) | B-12: the trainer's MTM rating on the plan, plus the plan's trainee survey answers. FAST does not link survey answers to a trainer, so the answers are the plan's. |
 | `GET` | `/api/v1/Trainer/GetDeliveredPlans` | `trainerFastUserId` (query, required) | [DeliveredPlanDto](#deliveredplandto)[] | B-14: closed and final-closed plans the trainer delivered, newest first. An unknown trainer returns an empty list. |
+| `POST` | `/api/v1/Trainer/GrantTrainerRole` | body [TrainerRoleRequest](#trainerrolerequest) | [TrainerRoleResponseDto](#trainerroleresponsedto) | Gives the user the FAST Trainer role. Safe to retry: a user who is already a trainer returns changed = false. |
+| `POST` | `/api/v1/Trainer/RevokeTrainerRole` | body [TrainerRoleRequest](#trainerrolerequest) | [TrainerRoleResponseDto](#trainerroleresponsedto) | Removes the FAST Trainer role from the user. Safe to retry: a user who is not a trainer returns changed = false. Plans the user is already assigned to are not changed. |
 
 ## Error responses
 
@@ -58,6 +60,8 @@ Every operation of the FAST **Training API**, the service FAST published for Exp
 - `GET /api/v1/Program/GetPlanDetails` — `404` Not Found
 - `GET /api/v1/Program/{programId}/Prospectus/File` — `404` Not Found
 - `GET /api/v1/Survey/GetTrainerEvaluations` — `404` The trainer is not on the plan.
+- `POST /api/v1/Trainer/GrantTrainerRole` — `400` The user is not active.; `404` The user does not exist.
+- `POST /api/v1/Trainer/RevokeTrainerRole` — `404` The user does not exist.
 
 ## Schemas
 
@@ -339,6 +343,22 @@ B-12.
 | `threeRating` | double? |  |
 | `fourRating` | double? |  |
 | `fiveRating` | double? |  |
+
+### TrainerRoleRequest
+
+Grant / revoke Trainer role request.
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | uuid |  |
+
+### TrainerRoleResponseDto
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | string? |  |
+| `isTrainer` | boolean | Whether the user has the Trainer role after the call. |
+| `changed` | boolean | False when the user was already in the requested state and nothing changed. |
 
 ### TrainingMaterialDto
 

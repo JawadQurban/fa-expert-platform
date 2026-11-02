@@ -5,14 +5,14 @@
 | | |
 |---|---|
 | Branch | `cr/notion-2026-10-07`, pushed |
-| Head | The commit carrying this record, on top of `318735d` |
+| Head | The commit carrying this record, on top of `1659722` |
 | Release tag | none |
 | Deployed | **No** |
-| Validation | After the double-booking change: backend full run 546 of 547, the one failure a helper in the new test; test fixed, then Cap05 + MatchingEngine **82/82**, build 0 warnings · frontend **1779/1779** in 129 files, lint 0 errors (1 pre-existing warning), `npm run build` ✓
+| Validation | After `P-391`: backend full run 550 of 551, the one failure a missing agreement row in the new test; test fixed, then the Cap05 class **61/61**, build 0 warnings. Frontend unchanged since **1779/1779** |
 | Migrations waiting for the server | M55, M56, M57, **M58** `ManualPickOverridesAndServiceRejectionNotice` |
 | Notion | Not connected this session. **BUG-007 still reads Resolved = YES, which is wrong** until a new list arrives |
 | Left out of the commits on purpose | `.skills/` (a nested repository), `docs/Bugs/` (the owner's working files), `diary/repo/2026-10-28.jawad-qurban.md` (maps production FAST account ids) |
-| Next | Deploy |
+| Next | Deploy; confirm on FAST's test server that a signature grants the role, because every test here uses a simulated FAST |
 
 Read in this order: this file → [the previous record](2026-10-28--2026-10-28-notion-uat-retest-bugs.md) → `docs/DECISIONS.md` `P-378`, `P-385`, `P-387`–`P-389`.
 
@@ -22,6 +22,7 @@ Read in this order: this file → [the previous record](2026-10-28--2026-10-28-n
 2. «what is missing now from the bugs ?», asked while the validation was still running. The answer was given and the verification then finished.
 3. «start push and commit», which also took the uncommitted set of `2026-10-28`.
 4. On 2026-11-02, the deploy command and three more answers (next section). The double-booking answer changed code, so the deploy waits on that commit.
+5. FAST's new `Trainer/GrantTrainerRole`: «add when the use get approved as trainer» (`P-391`), then «yes it should be revoke if the aggrement end», then push and give the command.
 
 ## What changed
 

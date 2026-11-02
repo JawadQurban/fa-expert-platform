@@ -4,6 +4,7 @@ using ExpertHub.Api.Applications;
 using ExpertHub.Api.Auth;
 using ExpertHub.Api.Profiles;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Integration;
 using ExpertHub.Infrastructure.Notifications;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -291,6 +292,7 @@ public static partial class ApplicantAgreementEndpoints
         HttpContext http,
         ExpertHubDbContext db,
         NotificationDispatcher dispatcher,
+        IntegrationHub hub,
         CancellationToken ct)
     {
         var row = await db.Agreements.FirstOrDefaultAsync(
@@ -349,8 +351,11 @@ public static partial class ApplicantAgreementEndpoints
             // the profile exists (`P-134`: with the accreditation layer
             // Expert Hub masters, and the base copied from what they already
             // answered — `BR-0404`, the same fields).
-            await TrainerProfileService.EnsureForActivatedApplicationAsync(
+            var profile = await TrainerProfileService.EnsureForActivatedApplicationAsync(
                 db, application, now, ct);
+
+            // `P-391` — FAST assigns only people holding its Trainer role.
+            await FastTrainerRole.EnqueueAsync(db, hub, profile.TrainerId, "upsert", ct);
 
             application.Status = ApplicationStatuses.Active;
             application.UpdatedAt = now;

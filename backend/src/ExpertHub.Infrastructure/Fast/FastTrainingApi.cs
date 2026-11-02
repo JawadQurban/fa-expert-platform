@@ -106,6 +106,9 @@ public sealed record FastDeliveredPlan(
 public sealed record FastAssignTrainerResult(
     string? PlanTrainerId, string? PlanId, string? TrainerFastUserId, bool AlreadyAssigned);
 
+/// <summary>`TrainerRoleResponseDto` — <c>Trainer/GrantTrainerRole</c>.</summary>
+public sealed record FastTrainerRoleResult(string? UserId, bool IsTrainer, bool Changed);
+
 /// <summary>`UnassignTrainerResponseDto` — B-08.</summary>
 public sealed record FastUnassignTrainerResult(string? PlanId, bool Removed);
 
@@ -230,6 +233,22 @@ public sealed class FastTrainingApi
         Guid planId, Guid trainerFastUserId, string? reasonText, CancellationToken ct) =>
         _client.PostAsync<FastUnassignTrainerResult>(
             "api/v1/Plan/UnassignTrainer", new { planId, trainerFastUserId, reasonText }, "ar", ct);
+
+    /// <summary>
+    /// The FAST Trainer role, which <c>Plan/AssignTrainer</c> requires. Idempotent
+    /// at FAST: a user who is already a trainer answers <c>changed = false</c>.
+    /// </summary>
+    public Task<FastResult<FastTrainerRoleResult>> GrantTrainerRoleAsync(Guid fastUserId, CancellationToken ct) =>
+        _client.PostAsync<FastTrainerRoleResult>(
+            "api/v1/Trainer/GrantTrainerRole", new { userId = fastUserId }, "ar", ct);
+
+    /// <summary>
+    /// Takes the FAST Trainer role away. Idempotent at FAST, and plans the user
+    /// is already assigned to are not changed.
+    /// </summary>
+    public Task<FastResult<FastTrainerRoleResult>> RevokeTrainerRoleAsync(Guid fastUserId, CancellationToken ct) =>
+        _client.PostAsync<FastTrainerRoleResult>(
+            "api/v1/Trainer/RevokeTrainerRole", new { userId = fastUserId }, "ar", ct);
 
     /// <summary>B-09 — the material status and, when a file is given, the file itself (max 50 MB).</summary>
     public Task<FastResult<FastTrainingMaterial>> SetTrainingMaterialAsync(

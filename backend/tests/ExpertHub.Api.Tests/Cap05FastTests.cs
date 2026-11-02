@@ -408,6 +408,120 @@ public sealed partial class Cap05Tests
         }
     }
 
+    /* ── `P-391` — FAST's Trainer role, which AssignTrainer requires ───────── */
+
+    [Fact]
+    public async Task Signing_gives_the_FAST_Trainer_role_and_a_trainer_with_no_FAST_id_waits()
+    {
+        var fast = UseFakeFast();
+        using var trainers = await SeedTrainersAsync(3);
+        var trainerId = trainers.Clients.Keys.First();
+        using (var scope = _configured!.Services.CreateScope())
+        {
+            var hub = scope.ServiceProvider.GetRequiredService<ExpertHub.Infrastructure.Integration.IntegrationHub>();
+            var db = scope.ServiceProvider.GetRequiredService<ExpertHub.Infrastructure.Persistence.ExpertHubDbContext>();
+            await hub.EnqueueOutboundAsync(
+                IntegrationSystems.Fast, "trainer_accreditation", "TRAINER", Guid.Parse(trainerId),
+                entityVersion: 1, operation: "upsert", "{}", CancellationToken.None);
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Equal(0, await PublishFastAsync());
+        Assert.DoesNotContain(fast.Seen, c => c.Url.Contains("GrantTrainerRole", StringComparison.Ordinal));
+
+        var fastUserId = await LinkFastUserAsync(trainerId);
+        Assert.Equal(1, await PublishFastAsync(minutesAhead: 120));
+        var grant = JsonSerializer.Deserialize<JsonElement>(
+            fast.Seen.Single(c => c.Url.EndsWith("/api/v1/Trainer/GrantTrainerRole", StringComparison.Ordinal)).Body);
+        Assert.Equal(fastUserId.ToString(), grant.GetProperty("userId").GetString());
+    }
+
+    [Fact]
+    public async Task A_revoke_reaches_FAST_only_if_no_agreement_is_still_in_effect()
+    {
+        var fast = UseFakeFast();
+        using var trainers = await SeedTrainersAsync(3);
+        var trainerId = trainers.Clients.Keys.First();
+        var fastUserId = await LinkFastUserAsync(trainerId);
+
+        async Task QueueRevokeAsync(int version, string agreementStatus)
+        {
+            using var scope = _configured!.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ExpertHub.Infrastructure.Persistence.ExpertHubDbContext>();
+            var profile = await db.TrainerProfiles.SingleAsync(p => p.TrainerId == Guid.Parse(trainerId));
+            var agreement = await db.Agreements.SingleOrDefaultAsync(a => a.TrainerUserId == profile.UserId);
+            if (agreement is null)
+            {
+                agreement = new Agreement
+                {
+                    AgreementId = Guid.NewGuid(),
+                    TrainerUserId = profile.UserId,
+                    ApplicationId = profile.ApplicationId,
+                    Reference = $"EH-AGR-{Guid.NewGuid():N}"[..20],
+                    Status = agreementStatus,
+                    FieldValues = "{}",
+                    CreatedBy = profile.UserId,
+                    CreatedAt = DateTime.UtcNow,
+                };
+                db.Agreements.Add(agreement);
+            }
+            agreement.Status = agreementStatus;
+            agreement.EndsAt = DateTime.UtcNow.AddYears(1);
+            await scope.ServiceProvider.GetRequiredService<ExpertHub.Infrastructure.Integration.IntegrationHub>()
+                .EnqueueOutboundAsync(
+                    IntegrationSystems.Fast, "trainer_accreditation", "TRAINER", Guid.Parse(trainerId),
+                    version, FastPlanChannel.Revoke, "{}", CancellationToken.None);
+            await db.SaveChangesAsync();
+        }
+
+        // Renewed before the message was delivered: nothing is revoked.
+        await QueueRevokeAsync(1, AgreementStatuses.Active);
+        Assert.Equal(1, await PublishFastAsync());
+        Assert.DoesNotContain(fast.Seen, c => c.Url.Contains("RevokeTrainerRole", StringComparison.Ordinal));
+
+        await QueueRevokeAsync(2, AgreementStatuses.Ended);
+        Assert.Equal(1, await PublishFastAsync());
+        var revoke = JsonSerializer.Deserialize<JsonElement>(
+            fast.Seen.Single(c => c.Url.EndsWith("/api/v1/Trainer/RevokeTrainerRole", StringComparison.Ordinal)).Body);
+        Assert.Equal(fastUserId.ToString(), revoke.GetProperty("userId").GetString());
+    }
+
+    [Fact]
+    public async Task A_trainer_FAST_will_not_give_the_role_is_not_assigned_and_FASTs_reason_is_kept()
+    {
+        var fast = UseFakeFast();
+        using var staff = await SignInAsync("cap05-role-staff", "موظف", RoleCode.Manager);
+        using var centre = await SignInAsync("cap05-role-centre", "منسق المركز", RoleCode.CentreCoordinator);
+        using var trainers = await SeedTrainersAsync(3);
+        var body = GeneralProgramRequest();
+        body["fastPlanId"] = FastPlanId;
+        var requestId = (await PostAsync(centre, "/api/v1/internal/assignment-requests/", body))
+            .GetProperty("requestId").GetString()!;
+        var eligible = await ApprovePoolAsync(staff, centre, requestId, trainers);
+        await LinkFastUserAsync(eligible[0]);
+        var offerId = await CurrentOfferIdAsync(staff, requestId);
+        await PostAsync(trainers.Clients[eligible[0]],
+            $"/api/v1/me/assignment-offers/{offerId}/response", new { response = "accept" });
+
+        fast.RoleStatus = HttpStatusCode.BadRequest;
+        Assert.Equal(0, await PublishFastAsync());
+        Assert.DoesNotContain(fast.Seen, c => c.Url.Contains("Plan/AssignTrainer", StringComparison.Ordinal));
+        await using (var db = _database.CreateContext())
+        {
+            var message = await db.OutboxMessages.SingleAsync(m => m.EntityType == "ENGAGEMENT");
+            Assert.Equal(OutboxStatuses.Pending, message.Status);
+            Assert.Equal("The user is not active.", message.LastError);
+        }
+
+        // The role is sent first, then the assignment: an earlier trainer needs both.
+        fast.RoleStatus = HttpStatusCode.OK;
+        Assert.Equal(1, await PublishFastAsync(minutesAhead: 120));
+        var calls = fast.Seen.Select(c => c.Url).ToList();
+        Assert.True(
+            calls.FindLastIndex(u => u.EndsWith("/Trainer/GrantTrainerRole", StringComparison.Ordinal))
+            < calls.FindIndex(u => u.EndsWith("/Plan/AssignTrainer", StringComparison.Ordinal)));
+    }
+
     /* ── B-10 / B-11 / B-12 — the engagement as FAST sees it ───────────────── */
 
     [Fact]
@@ -742,6 +856,9 @@ public sealed partial class Cap05Tests
         /// <summary>The status code AssignTrainer / UnassignTrainer answer with.</summary>
         public HttpStatusCode WriteStatus { get; set; } = HttpStatusCode.OK;
 
+        /// <summary>The status code GrantTrainerRole answers with.</summary>
+        public HttpStatusCode RoleStatus { get; set; } = HttpStatusCode.OK;
+
         public List<SeenFastCall> Seen { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -812,6 +929,16 @@ public sealed partial class Cap05Tests
                     traineeLevel = new { id = "3", nameAr = "متقدم", nameEn = "Advanced" },
                     prospectus = new { fileName = "prospectus-ar.pdf", downloadUrl = $"api/v1/Program/{FastProgramId}/Prospectus/File" },
                 }));
+            }
+            if (url.Contains("Trainer/RevokeTrainerRole", StringComparison.Ordinal))
+            {
+                return (HttpStatusCode.OK, FastTrainingApiTests.Envelope(new { userId = "u-1", isTrainer = false, changed = true }));
+            }
+            if (url.Contains("Trainer/GrantTrainerRole", StringComparison.Ordinal))
+            {
+                return RoleStatus == HttpStatusCode.OK
+                    ? (HttpStatusCode.OK, FastTrainingApiTests.Envelope(new { userId = "u-1", isTrainer = true, changed = true }))
+                    : (RoleStatus, JsonSerializer.Serialize(new { success = false, message = "The user is not active." }));
             }
             if (url.Contains("Plan/AssignTrainer", StringComparison.Ordinal))
             {

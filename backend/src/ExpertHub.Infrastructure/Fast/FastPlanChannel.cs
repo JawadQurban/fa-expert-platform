@@ -24,6 +24,10 @@ namespace ExpertHub.Infrastructure.Fast;
 /// engagement was ended in Expert Hub) removes them again.</item>
 /// <item><b>B-09</b> — <c>approved_training_material</c> sends the approved
 /// file and sets the plan's material status.</item>
+/// <item><c>trainer_accreditation</c> gives the person the FAST Trainer role
+/// when the agreement is signed or renewed after expiry
+/// (<c>Trainer/GrantTrainerRole</c>), and <see cref="Revoke"/> takes it away when
+/// the agreement ends (<c>Trainer/RevokeTrainerRole</c>, `P-391`).</item>
 /// </list>
 /// <para>
 /// A request with no FAST plan (manual entry, or a form that does not pick
@@ -42,6 +46,9 @@ public sealed partial class FastPlanChannel : ISystemChannel
 {
     /// <summary>The outbox operation that removes a trainer from a plan (B-08).</summary>
     public const string Unassign = "unassign";
+
+    /// <summary>The outbox operation that takes the FAST Trainer role away (`P-391`).</summary>
+    public const string Revoke = "revoke";
 
     /// <summary>
     /// B-09's material status for a file Expert Hub approved. ⚠️ Needs
@@ -72,6 +79,7 @@ public sealed partial class FastPlanChannel : ISystemChannel
         return message.ElementName switch
         {
             "engagement" => await EngagementAsync(db, message, cancellationToken).ConfigureAwait(false),
+            "trainer_accreditation" => await TrainerRoleAsync(db, message, cancellationToken).ConfigureAwait(false),
             "approved_training_material" => await MaterialAsync(
                 db, scope.ServiceProvider.GetRequiredService<IDocumentStore>(), message, cancellationToken)
                 .ConfigureAwait(false),
@@ -127,6 +135,14 @@ public sealed partial class FastPlanChannel : ISystemChannel
             return IntegrationAttemptResult.Success();
         }
 
+        // `P-391` — FAST refuses to assign anyone without its Trainer role, and
+        // a trainer accredited before the role was sent at signing has none.
+        var granted = await _fast.GrantTrainerRoleAsync(trainerFastUserId.Value, ct).ConfigureAwait(false);
+        if (!granted.Ok)
+        {
+            return IntegrationAttemptResult.Failure(granted.Error ?? "FAST refused the Trainer role.");
+        }
+
         var assigned = await _fast.AssignTrainerAsync(planId.Value, trainerFastUserId.Value, isFreelance: true, ct)
             .ConfigureAwait(false);
         if (!assigned.Ok)
@@ -140,6 +156,52 @@ public sealed partial class FastPlanChannel : ISystemChannel
         }
         LogAssigned(_logger, engagement.EngagementId, planId.Value, assigned.Value!.AlreadyAssigned);
         return IntegrationAttemptResult.Success();
+    }
+
+    private async Task<IntegrationAttemptResult> TrainerRoleAsync(
+        ExpertHubDbContext db, OutboxMessage message, CancellationToken ct)
+    {
+        var trainerFastUserId = await FastUserOfAsync(db, message.EntityId, ct).ConfigureAwait(false);
+        if (trainerFastUserId is null)
+        {
+            return IntegrationAttemptResult.Failure(
+                "The trainer has no FAST user id in Expert Hub yet (it is read from FAST at their sign-in).");
+        }
+        // Messages can be retried out of order, so what is sent is checked
+        // against the agreements as they stand now, not as they stood when queued.
+        var inEffect = await AgreementInEffectAsync(db, message.EntityId, ct).ConfigureAwait(false);
+        var revoking = message.Operation == Revoke;
+        if (revoking ? inEffect == true : inEffect == false)
+        {
+            return IntegrationAttemptResult.Success();
+        }
+        var result = revoking
+            ? await _fast.RevokeTrainerRoleAsync(trainerFastUserId.Value, ct).ConfigureAwait(false)
+            : await _fast.GrantTrainerRoleAsync(trainerFastUserId.Value, ct).ConfigureAwait(false);
+        if (!result.Ok)
+        {
+            return IntegrationAttemptResult.Failure(result.Error ?? "FAST refused the Trainer role change.");
+        }
+        LogTrainerRole(_logger, message.EntityId, result.Value!.IsTrainer, result.Value.Changed);
+        return IntegrationAttemptResult.Success();
+    }
+
+    /// <summary>Whether an agreement still governs this trainer; null when they have none.</summary>
+    private static async Task<bool?> AgreementInEffectAsync(ExpertHubDbContext db, Guid trainerId, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var agreements = await (
+            from profile in db.TrainerProfiles
+            join agreement in db.Agreements on profile.UserId equals agreement.TrainerUserId
+            where profile.TrainerId == trainerId
+                && (agreement.Status == AgreementStatuses.Active
+                    || agreement.Status == AgreementStatuses.Suspended
+                    || agreement.Status == AgreementStatuses.Ended)
+            select new { agreement.Status, agreement.EndsAt })
+            .ToListAsync(ct).ConfigureAwait(false);
+        return agreements.Count == 0
+            ? null
+            : agreements.Any(a => a.Status != AgreementStatuses.Ended && (a.EndsAt is null || a.EndsAt > now));
     }
 
     private async Task<IntegrationAttemptResult> MaterialAsync(
@@ -233,4 +295,8 @@ public sealed partial class FastPlanChannel : ISystemChannel
     [LoggerMessage(EventId = 5242, Level = LogLevel.Information,
         Message = "FAST: approved material {SubmissionId} sent to plan {PlanId}.")]
     private static partial void LogMaterialSent(ILogger logger, Guid submissionId, Guid planId);
+
+    [LoggerMessage(EventId = 5243, Level = LogLevel.Information,
+        Message = "FAST: trainer {TrainerId} Trainer role is now {IsTrainer} (changed: {Changed}).")]
+    private static partial void LogTrainerRole(ILogger logger, Guid trainerId, bool isTrainer, bool changed);
 }

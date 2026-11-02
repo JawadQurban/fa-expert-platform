@@ -979,6 +979,124 @@
           }
         }
       }
+    },
+    "/api/v1/Trainer/GrantTrainerRole": {
+      "post": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Gives the user the FAST Trainer role. Safe to retry: a user who is already a trainer returns changed = false.",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainerRoleRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainerRoleRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainerRoleRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainerRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainerRoleResponseDtoApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The user is not active.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The user does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Trainer/RevokeTrainerRole": {
+      "post": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Removes the FAST Trainer role from the user. Safe to retry: a user who is not a trainer returns changed = false.\r\nPlans the user is already assigned to are not changed.",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainerRoleRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainerRoleRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainerRoleRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainerRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainerRoleResponseDtoApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The user does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2123,6 +2241,76 @@
             "type": "number",
             "format": "double",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrainerRoleRequest": {
+        "required": [
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Grant / revoke Trainer role request."
+      },
+      "TrainerRoleResponseDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "nullable": true
+          },
+          "isTrainer": {
+            "type": "boolean",
+            "description": "Whether the user has the Trainer role after the call."
+          },
+          "changed": {
+            "type": "boolean",
+            "description": "False when the user was already in the requested state and nothing changed."
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrainerRoleResponseDtoApiResponse": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelStateErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "nullable": true
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/TrainerRoleResponseDto"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false

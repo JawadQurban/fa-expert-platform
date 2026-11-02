@@ -1,9 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using ExpertHub.Api.Agreements;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Integration;
+using ExpertHub.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ExpertHub.Api.Tests;
 
@@ -337,6 +341,9 @@ public sealed class Cap03Tests
         Guid agreementId;
         await using (var db = _database.CreateContext())
         {
+            // `P-391` — signing queues the FAST Trainer role for the new trainer.
+            var accredited = await db.OutboxMessages.SingleAsync(m => m.ElementName == "trainer_accreditation");
+            Assert.Equal((await db.TrainerProfiles.SingleAsync()).TrainerId, accredited.EntityId);
             var row = await db.Agreements.SingleAsync();
             agreementId = row.AgreementId;
             Assert.Equal(1, row.TermYears);
@@ -420,6 +427,68 @@ public sealed class Cap03Tests
             $"/api/v1/internal/agreements/{agreementId}/lifecycle",
             new { kind = "reactivate", note = "" });
         Assert.Equal(HttpStatusCode.Conflict, terminal.StatusCode);
+    }
+
+    /* ── `P-391` — FAST's Trainer role follows the agreement ──────────────── */
+
+    [Fact]
+    public async Task FASTs_Trainer_role_is_revoked_when_the_agreement_ends_and_given_back_on_renewal()
+    {
+        var world = await SentToApplicantAsync("agr-role");
+        await PostAsync(world.Applicant,
+            $"/api/v1/me/applications/{world.ApplicationId}/agreement-decision",
+            new { kind = "sign", signatureName = "سارة العتيبي" });
+
+        async Task<string[]> OperationsAsync()
+        {
+            await using var read = _database.CreateContext();
+            return await read.OutboxMessages
+                .Where(m => m.ElementName == "trainer_accreditation")
+                .OrderBy(m => m.EntityVersion)
+                .Select(m => m.Operation)
+                .ToArrayAsync();
+        }
+        async Task<int> SweepAsync()
+        {
+            using var scope = _configured!.Services.CreateScope();
+            return await FastTrainerRole.RevokeExpiredAsync(
+                scope.ServiceProvider.GetRequiredService<ExpertHubDbContext>(),
+                scope.ServiceProvider.GetRequiredService<IntegrationHub>(),
+                DateTime.UtcNow,
+                CancellationToken.None);
+        }
+        async Task SetEndsAtAsync(DateTime endsAt)
+        {
+            await using var write = _database.CreateContext();
+            (await write.Agreements.SingleAsync()).EndsAt = endsAt;
+            await write.SaveChangesAsync();
+        }
+        Guid agreementId;
+        await using (var db = _database.CreateContext())
+        {
+            agreementId = (await db.Agreements.SingleAsync()).AgreementId;
+        }
+        Assert.Equal(["upsert"], await OperationsAsync());
+
+        // In effect: nothing to revoke. Long expired: not this sweep's to touch.
+        await SetEndsAtAsync(DateTime.UtcNow.AddDays(30));
+        Assert.Equal(0, await SweepAsync());
+        await SetEndsAtAsync(DateTime.UtcNow.AddDays(-30));
+        Assert.Equal(0, await SweepAsync());
+
+        // Its end date just passed: revoked once, however often the sweep runs.
+        await SetEndsAtAsync(DateTime.UtcNow.AddHours(-1));
+        Assert.Equal(1, await SweepAsync());
+        Assert.Equal(0, await SweepAsync());
+        Assert.Equal(["upsert", "revoke"], await OperationsAsync());
+
+        // A renewal after expiry gives it back; ending the agreement takes it away.
+        await PostAsync(world.Creator, $"/api/v1/internal/agreements/{agreementId}/lifecycle",
+            new { kind = "renew", note = "" });
+        Assert.Equal(["upsert", "revoke", "upsert"], await OperationsAsync());
+        await PostAsync(world.Creator, $"/api/v1/internal/agreements/{agreementId}/lifecycle",
+            new { kind = "end", note = "إنهاء" });
+        Assert.Equal(["upsert", "revoke", "upsert", "revoke"], await OperationsAsync());
     }
 
     /* ── J-11/F1/AC-4 — rejection is permanent ────────────────────────────── */

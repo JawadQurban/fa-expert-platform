@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using ExpertHub.Core.Domain;
+using ExpertHub.Infrastructure.Integration;
 using ExpertHub.Infrastructure.Notifications;
 using ExpertHub.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -125,6 +126,11 @@ public sealed partial class AgreementExpiryReminderWorker : BackgroundService
                 await AgreementExpiryReminders.RaiseDueAsync(
                     scope.ServiceProvider.GetRequiredService<ExpertHubDbContext>(),
                     scope.ServiceProvider.GetRequiredService<NotificationDispatcher>(),
+                    DateTime.UtcNow,
+                    stoppingToken);
+                await FastTrainerRole.RevokeExpiredAsync(
+                    scope.ServiceProvider.GetRequiredService<ExpertHubDbContext>(),
+                    scope.ServiceProvider.GetRequiredService<IntegrationHub>(),
                     DateTime.UtcNow,
                     stoppingToken);
             }

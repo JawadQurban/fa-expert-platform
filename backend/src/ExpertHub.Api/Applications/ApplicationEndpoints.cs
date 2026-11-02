@@ -642,13 +642,14 @@ public static class ApplicationEndpoints
             HttpContext http,
             ExpertHubDbContext db,
             NotificationDispatcher dispatcher,
+            IntegrationHub hub,
             CancellationToken ct) =>
         {
             var (application, notFound) = await FindOwnedAsync(id, http, db, ct);
             return application is null
                 ? notFound!
                 : await ApplicantAgreementEndpoints.DecideAsync(
-                    application, input, http, db, dispatcher, ct);
+                    application, input, http, db, dispatcher, hub, ct);
         }).WithName("DecideOnAgreement");
 
         me.MapGet("/{id}/services/context", async (
