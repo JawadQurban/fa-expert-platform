@@ -1360,7 +1360,89 @@ public sealed class ApplicationTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task A_submission_stores_the_identity_FAST_verified_not_the_one_the_client_sent()
+    {
+        /*
+         * `P-392` — security test, Identity Spoofing: the draft and submit paths
+         * stored whatever identity the client sent, though the schema marks it
+         * `sso-profile`. Where FAST holds a value, FAST's is stored; `gender`,
+         * which FAST never sends, stays the applicant's to answer.
+         */
+        await SignInApplicantAsync();
+        await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        await SeedFastIdentityAsync();
+        await SeedAllAttachmentsAsync();
+        var values = await CompleteValuesForAsync("trainer");
+        values["idNumber"] = "2999999999";
+        values["dateOfBirth"] = "1980-01-01";
+        values["gender"] = "female";
+
+        var submitted = await PostJsonAsync("/api/v1/me/applications/submit", new
+        {
+            services = new[] { "trainer" },
+            values,
+        });
+
+        await using var db = _database.CreateContext();
+        var application = await db.Applications.SingleAsync(
+            a => a.Reference == submitted.GetProperty("reference").GetString());
+        var stored = await db.ApplicationFieldValues
+            .Where(v => v.ApplicationId == application.ApplicationId)
+            .ToDictionaryAsync(v => v.FieldCode, v => v.Value);
+        Assert.Equal("\"1105419996\"", stored["idNumber"]);
+        Assert.Equal("\"1999-10-22\"", stored["dateOfBirth"]);
+        Assert.Equal("\"female\"", stored["gender"]);
+    }
+
+    [Fact]
+    public async Task A_draft_cannot_store_a_verified_identity_field_through_the_client_or_an_entry()
+    {
+        await SignInApplicantAsync();
+        await PostJsonAsync("/api/v1/me/applications/draft/start", null);
+        await SeedFastIdentityAsync();
+        var schema = await GetJsonAsync("/api/v1/applications/schema");
+        var repeatable = schema.GetProperty("sections").EnumerateArray()
+            .First(s => s.TryGetProperty("repeatable", out _))
+            .GetProperty("id").GetString()!;
+
+        // An entry is written before the flat values and wins over them — so
+        // a locked code smuggled into one must not land either.
+        await PostJsonAsync("/api/v1/me/applications/draft", new
+        {
+            services = new[] { "trainer" },
+            values = new Dictionary<string, object> { ["idNumber"] = "2999999999" },
+            entries = new Dictionary<string, object[]>
+            {
+                [repeatable] = [new { entryId = "e-1", values = new Dictionary<string, object> { ["idNumber"] = "2888888888" } }],
+            },
+        });
+
+        await using var db = _database.CreateContext();
+        var stored = await db.ApplicationFieldValues
+            .Where(v => v.FieldCode == "idNumber")
+            .Select(v => v.Value)
+            .ToListAsync();
+        Assert.Equal(["\"1105419996\""], stored);
+    }
+
     /* ── helpers ───────────────────────────────────────────────────────────── */
+
+    /// <summary>The identity FAST verified for the signed-in applicant.</summary>
+    private async Task SeedFastIdentityAsync()
+    {
+        await using var db = _database.CreateContext();
+        var user = await db.Users.SingleAsync(u => u.ExternalIdentityId == TestOidc.Subject);
+        db.FastProfiles.Add(new FastProfileReplica
+        {
+            UserId = user.UserId,
+            FastUserId = Guid.NewGuid().ToString(),
+            IdNumber = "1105419996",
+            DateOfBirth = new DateTime(1999, 10, 22),
+            LastSyncedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+    }
 
     /// <summary>Builds a complete value set for one service FROM the served
     /// schema — the same rows the validator reads, so the fixture cannot

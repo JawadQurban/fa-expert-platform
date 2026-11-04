@@ -44,7 +44,7 @@ conventions around that boundary.
   `FastDeliveredPlansSync` (delivered plans → `TRAINER_RECORD`, B-14); the
   reference sync's 14 lookups (B-15).
 - A request is linked to FAST by `fastPlanId`/`fastProgramId` in its form
-  values; the trainer by `FAST_PROFILE_REPLICA.fast_user_id` from sign-in.
+  values; the trainer by `FAST_USER_PROFILE.fast_user_id` from sign-in.
 - **Configured changes the rules (`P-362`, `P-363`):** with `Fast__TrainingBaseUrl`
   set, forms 1–2 must link a plan (`400 fast-plan-required`); form 4 may link a
   programme (no plan); no other form links anything. Without it, every form is
@@ -55,7 +55,7 @@ conventions around that boundary.
 - **Every FAST endpoint is scoped to the authenticated caller's own token.** The
   one moment Expert Hub holds an access token is `OnTicketReceived` at sign-in,
   where the base profile is read and the token is then discarded (`P-215`).
-- The replica (`FAST_PROFILE_REPLICA`) is therefore only as fresh as the
+- The replica (`FAST_USER_PROFILE`) is therefore only as fresh as the
   person's last sign-in, and staff cannot read anyone else's profile. That cost
   is accepted and recorded, not hidden.
 - **FAST masters what it masters.** Replicated fields are read-only in Expert

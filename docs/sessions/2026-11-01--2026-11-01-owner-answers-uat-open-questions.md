@@ -12,7 +12,7 @@
 | Migrations waiting for the server | M55, M56, M57, **M58** `ManualPickOverridesAndServiceRejectionNotice` |
 | Notion | Not connected this session. **BUG-007 still reads Resolved = YES, which is wrong** until a new list arrives |
 | Left out of the commits on purpose | `.skills/` (a nested repository), `docs/Bugs/` (the owner's working files), `diary/repo/2026-10-28.jawad-qurban.md` (maps production FAST account ids) |
-| Next | Deploy; confirm on FAST's test server that a signature grants the role, because every test here uses a simulated FAST |
+| Next | The owner called both role endpoints from the server against FAST's testing environment: working. Still to see there: a real signature granting the role through the outbox |
 
 Read in this order: this file → [the previous record](2026-10-28--2026-10-28-notion-uat-retest-bugs.md) → `docs/DECISIONS.md` `P-378`, `P-385`, `P-387`–`P-389`.
 
@@ -62,6 +62,7 @@ Details are in `CHANGELOG.md` *[Unreleased] › Fixed*; the principles worth kee
 - **The first A4 page breaks cut through text.** Breaks fell only after whole rows, so a list taller than a page was sliced through a line. Unit tests could not see this; a real export did. Each list item is now a break point. The test card went from 5 pages to 4.
 - **`--fads-ref-space-12` does not exist** (the scale stops at 9). I used it for the logo before checking; `--fads-ref-space-9` replaced it.
 - **My first `pageSlices` test expected the wrong slices**; the code was right.
+- **The table is `FAST_USER_PROFILE`, not `FAST_PROFILE_REPLICA`.** I gave the owner a server query with the wrong name, copied from `context/integrations/fast-api.md`, which is now corrected. The entity class is still `FastProfileReplica`.
 - **One full backend run reported 2 failures** while the frontend suite ran beside it. Their names were lost to `tail`. The next run, alone, passed 546/546. Treat this as load-related but unidentified, not as proven flakes.
 
 ## Where it stands

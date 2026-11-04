@@ -1002,19 +1002,44 @@ describe('EH-TP-05 — New Application', () => {
 
   it('never overwrites what the applicant already saved', async () => {
     /*
-      ⚠️ The rule the whole design turns on. `MOCK_DRAFT` saved «خبير» as the
-      first name; a suggestion must not replace it. The draft is their work,
+      ⚠️ The rule the whole design turns on. The draft saved a LinkedIn
+      address; a suggestion must not replace it. The draft is their work,
       the prefill is only our guess at what would have saved them typing.
     */
-    injectProvider({ prefill: { firstNameAr: 'من سجل الأكاديمية' } });
-    const { user } = await renderPage(); // carries the resumable MOCK_DRAFT
+    injectProvider({
+      draftSeed: {
+        ...MOCK_DRAFT,
+        values: { ...MOCK_DRAFT.values, linkedin: 'https://linkedin.com/in/saved' },
+      },
+      prefill: { linkedin: 'https://linkedin.com/in/academy' },
+    });
+    const { user } = await renderPage();
 
     await next(user);
-    await screen.findByLabelText(/الاسم الأول \(بالعربية\)/);
+    await screen.findByLabelText(/حساب LinkedIn/);
 
-    expect(screen.getByDisplayValue('خبير')).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('من سجل الأكاديمية')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('https://linkedin.com/in/saved')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('https://linkedin.com/in/academy')).not.toBeInTheDocument();
     // Nothing was filled, so the form does not claim it filled anything.
     expect(screen.queryByText(content.prefill.title)).not.toBeInTheDocument();
+  });
+
+  it('shows the identity the Academy verified read-only, over a value the draft saved', async () => {
+    /*
+      `P-392` — security test, Identity Spoofing. `MOCK_DRAFT` saved «خبير»
+      as the first name; the Academy's verified name is what the server
+      stores, so the form shows it and does not offer an edit it would discard.
+    */
+    injectProvider({ prefill: { firstNameAr: 'جواد' } });
+    const { user } = await renderPage();
+
+    await next(user);
+    const firstName = await screen.findByLabelText(/الاسم الأول \(بالعربية\)/);
+
+    expect(firstName).toHaveValue('جواد');
+    expect(firstName).toHaveAttribute('readonly');
+    expect(screen.queryByDisplayValue('خبير')).not.toBeInTheDocument();
+    // A field FAST did not supply stays the applicant's to answer.
+    expect(screen.getByLabelText(/الاسم الأخير \(بالعربية\)/)).not.toHaveAttribute('readonly');
   });
 });

@@ -181,6 +181,17 @@ The history before this repository existed is in
 
 ### Fixed
 
+- **Security: an application can no longer claim someone else's identity
+  (`P-392`).** A security test (Broken Access Control, Identity Spoofing) found
+  that `POST /me/applications/draft` and `/submit` stored whatever name, ID
+  number, date of birth and nationality the client sent, though the schema marks
+  them `sso-profile`. Both paths, and the J-02 nomination paths that share them,
+  now store the value FAST verified for the applicant and ignore the client's,
+  including a value smuggled into a repeatable-section entry. The form shows
+  those fields read-only. A field FAST does not hold (`gender`, a name part the
+  record cannot anchor, everything for a person with no FAST record) is still
+  typed by the applicant, because it is required and nobody else can supply it.
+
 - **FAST Trainer role (`P-391`).** FAST only assigns people who hold its Trainer
   role, so signing the agreement now gives it to the new trainer, and it is sent
   again just before any plan assignment to cover trainers accredited earlier.

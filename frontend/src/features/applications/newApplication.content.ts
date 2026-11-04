@@ -227,7 +227,7 @@ const ar: NewApplicationContent = {
   },
   prefill: {
     title: 'عبّأنا بعض الحقول من بياناتك لدى الأكاديمية',
-    body: 'راجعها وعدّل ما تغيّر منها. لن يُرسل شيء حتى تكمل الطلب وترسله بنفسك.',
+    body: 'بيانات الهوية الموثّقة لدى الأكاديمية للعرض فقط ولا تُعدّل هنا. راجع بقية الحقول وعدّل ما تغيّر منها. لن يُرسل شيء حتى تكمل الطلب وترسله بنفسك.',
   },
   stepDescriptions: {
     services: 'اختر ما تتقدّم له',
@@ -423,7 +423,7 @@ const en: NewApplicationContent = {
   },
   prefill: {
     title: 'We filled some fields in from your Financial Academy record',
-    body: 'Check them and correct anything that has changed. Nothing is sent until you complete and submit the application yourself.',
+    body: 'Identity details the Academy has verified are shown read-only and cannot be changed here. Check the other fields and correct anything that has changed. Nothing is sent until you complete and submit the application yourself.',
   },
   stepDescriptions: {
     services: 'Choose what you are applying for',

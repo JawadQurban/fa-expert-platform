@@ -916,6 +916,8 @@ public static class ApplicationEndpoints
         {
             return Results.Problem(statusCode: 409, detail: "No draft to save.");
         }
+        // `P-392` — the identity FAST verified is stored, never the client's.
+        input = await ApplicationPrefill.LockIdentityAsync(db, draft, input, ct);
         var invalid = await ApplyDraftInputAsync(db, draft, input, ct);
         if (invalid is not null)
         {
@@ -1058,6 +1060,8 @@ public static class ApplicationEndpoints
         {
             return Results.Problem(statusCode: 409, detail: "No draft to submit.");
         }
+        // `P-392` — before the completeness gate, which judges these values.
+        input = await ApplicationPrefill.LockIdentityAsync(db, draft, input, ct);
         var invalid = await ApplyDraftInputAsync(db, draft, input, ct);
         if (invalid is not null)
         {

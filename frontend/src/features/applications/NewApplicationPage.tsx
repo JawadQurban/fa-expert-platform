@@ -234,7 +234,29 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
         setPhase('error');
         return;
       }
-      setSchema(schemaResult.value);
+      /*
+       * `P-392` — an identity field the Academy verified is FAST's, not the
+       * applicant's: the server stores FAST's value whatever is sent, so the
+       * form shows it read-only rather than accept an edit it will discard.
+       * The prefill omits a value the form would refuse, so a locked field
+       * is never one that blocks submission.
+       */
+      const suggested = prefillResult.ok ? prefillResult.value : {};
+      const verified = Object.fromEntries(
+        Object.entries(suggested).filter(
+          ([id, value]) =>
+            value !== '' &&
+            schemaResult.value.fields.some(
+              (field) => field.id === id && field.ownership === 'sso-profile'
+            )
+        )
+      );
+      setSchema({
+        ...schemaResult.value,
+        fields: schemaResult.value.fields.map((field) =>
+          field.id in verified ? { ...field, readOnly: true } : field
+        ),
+      });
       const {
         draft,
         resumed: wasResumed,
@@ -259,15 +281,17 @@ export default function NewApplicationPage({ nominee }: { readonly nominee?: Nom
        * A failed prefill is not an error either — the form simply opens
        * blank, exactly as it did before, so the Academy's API being down
        * cannot stop somebody applying.
+       *
+       * The verified identity is the exception, and goes last: it replaces
+       * anything a draft saved before the lock carries.
        */
-      const suggested = prefillResult.ok ? prefillResult.value : {};
       const filled = Object.fromEntries(
         Object.entries(suggested).filter(([field]) => {
           const existing = draft.values[field];
-          return existing == null || existing === '';
+          return field in verified || existing == null || existing === '';
         })
       );
-      const merged = { ...filled, ...draft.values };
+      const merged = { ...filled, ...draft.values, ...verified };
       setValues(merged);
       // A draft saved before `dm-gap-01.2026-09-21` carries no `entries`; the
       // adapter reads its flat values as exactly one entry per repeatable
