@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using ExpertHub.Core;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ExpertHub.Api.Tests;
 
@@ -33,6 +34,19 @@ public sealed class ApiContractTests : IClassFixture<WebApplicationFactory<Progr
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("healthy", body.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public void Kestrel_does_not_name_itself_in_a_Server_header()
+    {
+        // `P-393` — security test. Asserted on the options, not a response:
+        // the test host is not Kestrel, so a missing header here proves nothing.
+        var options = _factory.Services
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<
+                Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>>()
+            .Value;
+
+        Assert.False(options.AddServerHeader);
     }
 
     [Fact]

@@ -181,6 +181,15 @@ The history before this repository existed is in
 
 ### Fixed
 
+- **Security: the web tier no longer names its software and version
+  (`P-393`).** A security test found `Server: nginx/1.28.0 (Ubuntu)` on every
+  response, an out-of-date build. That header comes from the server's own host
+  nginx, which is upgraded and set to `server_tokens off` on the host
+  (`deploy/server-nginx.example.conf` now says so). In this repo the frontend
+  container moves from `nginx-unprivileged:1.27-alpine` to the pinned
+  `1.30.6-alpine` (it already had `server_tokens off`), and the API stops
+  sending `Server: Kestrel`.
+
 - **Security: an application can no longer claim someone else's identity
   (`P-392`).** A security test (Broken Access Control, Identity Spoofing) found
   that `POST /me/applications/draft` and `/submit` stored whatever name, ID

@@ -35,7 +35,9 @@ RUN npm run build
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2 — runtime (non-root Nginx, static only)
 # ─────────────────────────────────────────────────────────────────────────────
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
+# Pinned to a patch release, not a moving tag: a security test flagged an
+# out-of-date nginx (P-393), and 1.30.6+ clears the advisories it listed.
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine AS runtime
 
 # Runtime configuration defaults — override at `docker run`/compose. These are
 # injected into the browser-visible `config.js` at container start (entrypoint).

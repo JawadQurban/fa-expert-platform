@@ -59,7 +59,13 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 {
     options.MultipartBodyLengthLimit = 25L * 1024 * 1024;
 });
-builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 25L * 1024 * 1024);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 25L * 1024 * 1024;
+    // `P-393` — no `Server: Kestrel`: a security test flagged the web tier
+    // naming its software on every response.
+    options.AddServerHeader = false;
+});
 
 builder.Services.AddExpertHubFast();
 // BUG-004 — the application form's published-programme list, cached once for everyone.
