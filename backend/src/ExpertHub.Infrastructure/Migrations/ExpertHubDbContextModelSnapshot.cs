@@ -704,6 +704,11 @@ namespace ExpertHub.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("attachment_id");
 
+                    b.Property<string>("EntryId")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasColumnName("entry_id");
+
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(255)

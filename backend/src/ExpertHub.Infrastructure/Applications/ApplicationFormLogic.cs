@@ -57,6 +57,10 @@ public sealed record FormEntry(string? EntryId, IReadOnlyDictionary<string, Json
 public sealed record AttachmentRequirement(
     string RuleCode, IReadOnlyList<string> RequiredFor, string? PerEntryOf);
 
+/// <summary>A stored file as the completeness gate reads it: its rule, and
+/// for a per-entry rule the entry it belongs to (`P-394`).</summary>
+public sealed record StoredAttachment(string RuleCode, string? EntryId);
+
 /// <summary>
 /// The server half of `applicationValidation.ts` — the same visibility,
 /// required-by-union (`BR-0104`) and completeness (`BR-0105`) rules, run
@@ -413,41 +417,47 @@ public static partial class ApplicationFormLogic
         return filled ? [new FormEntry($"{sectionId}-1", entryValues)] : [];
     }
 
-    /// <summary>Required attachment rules with no stored file (`BR-0105`'s file half).</summary>
-    public static IReadOnlyList<string> MissingAttachmentRules(
-        IEnumerable<(string RuleCode, IReadOnlyList<string> RequiredFor)> rules,
-        IReadOnlyList<string> services,
-        IReadOnlyCollection<string> presentRuleCodes) =>
-        rules
-            .Where(rule => rule.RequiredFor.Any(services.Contains)
-                && !presentRuleCodes.Contains(rule.RuleCode))
-            .Select(rule => rule.RuleCode)
-            .ToList();
-
     /// <summary>
-    /// The file half with per-entry rules: a rule that attaches to a
-    /// repeatable section's entries is required only when that section HAS an
-    /// entry — an applicant who lists no professional certificate owes no
-    /// certificate file.
+    /// Required attachment rules with no stored file (`BR-0105`'s file half).
+    /// An application-level rule is reported by its code; a per-entry rule is
+    /// judged entry by entry and reported as <c>ruleCode::entryId</c> — the
+    /// form's `entryAttachmentKey` — for each entry with no file of its own.
+    /// A section with no entries owes no file: an applicant who lists no
+    /// professional certificate owes no certificate.
     /// </summary>
     /// <remarks>
-    /// ⚠️ `APPLICATION_ATTACHMENT` does not record which entry a file belongs
-    /// to, so a per-entry rule is satisfied by any stored file for it — the
-    /// one-file-per-entry check stays with the form until it does.
+    /// ⚠️ A per-entry file with no entry id is historical (`P-394`) and
+    /// satisfies the FIRST entry only, as the form's `entryAttachments` reads it.
     /// </remarks>
     public static IReadOnlyList<string> MissingAttachmentRules(
         IEnumerable<AttachmentRequirement> rules,
         IReadOnlyList<string> services,
-        IReadOnlyCollection<string> presentRuleCodes,
-        IReadOnlyDictionary<string, IReadOnlyList<FormEntry>> normalizedEntries) =>
-        MissingAttachmentRules(
-            rules
-                .Where(rule => rule.PerEntryOf is null
-                    || (normalizedEntries.TryGetValue(rule.PerEntryOf, out var sectionEntries)
-                        && sectionEntries.Count > 0))
-                .Select(rule => (rule.RuleCode, rule.RequiredFor)),
-            services,
-            presentRuleCodes);
+        IReadOnlyCollection<StoredAttachment> present,
+        IReadOnlyDictionary<string, IReadOnlyList<FormEntry>> normalizedEntries)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(present);
+        ArgumentNullException.ThrowIfNull(normalizedEntries);
+        var missing = new List<string>();
+        foreach (var rule in rules.Where(r => r.RequiredFor.Any(services.Contains)))
+        {
+            if (rule.PerEntryOf is null)
+            {
+                if (!present.Any(a => a.RuleCode == rule.RuleCode))
+                {
+                    missing.Add(rule.RuleCode);
+                }
+                continue;
+            }
+            var sectionEntries = normalizedEntries.GetValueOrDefault(rule.PerEntryOf) ?? [];
+            missing.AddRange(sectionEntries
+                .Select((entry, index) => (entry.EntryId, index))
+                .Where(e => !present.Any(a => a.RuleCode == rule.RuleCode
+                    && (a.EntryId == e.EntryId || (a.EntryId is null && e.index == 0))))
+                .Select(e => $"{rule.RuleCode}{EntryKeySeparator}{e.EntryId}"));
+        }
+        return missing;
+    }
 
     private static bool IsEmpty(FieldDefinition field, JsonElement value) =>
         field.Type switch

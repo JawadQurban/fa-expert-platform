@@ -381,6 +381,7 @@ erDiagram
     uuid application_id FK
     uuid rule_id FK
     uuid attachment_id FK
+    string entry_id "per-entry rule only - the entry it belongs to, P-394"
   }
   SERVICE_REQUEST {
     uuid service_request_id PK

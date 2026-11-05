@@ -239,6 +239,7 @@ public sealed class ApplicationAttachmentConfiguration : IEntityTypeConfiguratio
         builder.Property(a => a.FileName).HasColumnName("file_name").HasMaxLength(255);
         builder.Property(a => a.SizeBytes).HasColumnName("size_bytes");
         builder.Property(a => a.AttachmentId).HasColumnName("attachment_id");
+        builder.Property(a => a.EntryId).HasColumnName("entry_id").HasMaxLength(80);
 
         builder.HasIndex(a => a.ApplicationId);
         builder.HasOne<Application>().WithMany().HasForeignKey(a => a.ApplicationId)

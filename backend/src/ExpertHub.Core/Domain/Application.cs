@@ -118,6 +118,19 @@ public sealed class ApplicationAttachment
 
     /// <summary>Null until `G26` closes and files actually land in storage.</summary>
     public Guid? AttachmentId { get; set; }
+
+    /// <summary>
+    /// For a per-entry rule (`perEntryOf`), the repeatable entry the file
+    /// belongs to — *this* qualification's certificate, not the section's. The
+    /// same id as <see cref="ApplicationFieldValue.EntryId"/>; NULL for an
+    /// application-level rule.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NULL on a per-entry rule is the historical shape (`P-394`): the file
+    /// was uploaded before the API recorded the entry, and it belongs to the
+    /// FIRST entry, the same rule the form's `entryAttachments` applies.
+    /// </remarks>
+    public string? EntryId { get; set; }
 }
 
 /// <summary>

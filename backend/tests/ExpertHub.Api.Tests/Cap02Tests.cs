@@ -1730,18 +1730,35 @@ public sealed class Cap02Tests
                 _ => "قيمة تجريبية",
             };
         }
+        // `P-394` — a per-entry rule owes one file PER entry, so each given
+        // entry gets its own; without entries, the one file with no entry
+        // belongs to the single entry the flat values become.
+        var entryIds = entries is null
+            ? []
+            : JsonSerializer.SerializeToElement(entries).EnumerateObject().ToDictionary(
+                section => section.Name,
+                section => section.Value.EnumerateArray()
+                    .Select(e => e.GetProperty("entryId").GetString())
+                    .ToList());
         await using (var db = _database.CreateContext())
         {
             foreach (var rule in await db.AttachmentRules.Where(r => r.SchemaVersion == FormSchemaVersions.Current).ToListAsync())
             {
-                db.ApplicationAttachments.Add(new ApplicationAttachment
+                var owners = rule.PerEntryOf is { } section && entryIds.TryGetValue(section, out var ids)
+                    ? ids
+                    : [null];
+                foreach (var entryId in owners)
                 {
-                    ApplicationAttachmentId = Guid.NewGuid(),
-                    ApplicationId = Guid.Parse(draftId),
-                    RuleCode = rule.RuleCode,
-                    FileName = $"{rule.RuleCode}.pdf",
-                    SizeBytes = 100_000,
-                });
+                    db.ApplicationAttachments.Add(new ApplicationAttachment
+                    {
+                        ApplicationAttachmentId = Guid.NewGuid(),
+                        ApplicationId = Guid.Parse(draftId),
+                        RuleCode = rule.RuleCode,
+                        FileName = $"{rule.RuleCode}.pdf",
+                        SizeBytes = 100_000,
+                        EntryId = entryId,
+                    });
+                }
             }
             await db.SaveChangesAsync();
         }

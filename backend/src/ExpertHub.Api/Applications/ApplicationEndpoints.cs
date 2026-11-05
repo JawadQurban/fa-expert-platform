@@ -61,7 +61,11 @@ internal sealed record MyApplicationsListWire(
     IReadOnlyDictionary<string, int> StatusCounts,
     int AwaitingSlotSelection = 0);
 
-internal sealed record DraftAttachmentWire(string Id, string RuleId, string FileName, long SizeBytes);
+/// <summary><c>EntryId</c> — the repeatable entry a per-entry rule's file
+/// belongs to; null for an application-level file and for a historical one
+/// (`P-394`).</summary>
+internal sealed record DraftAttachmentWire(
+    string Id, string RuleId, string FileName, long SizeBytes, string? EntryId = null);
 
 internal sealed record ApplicationDraftWire(
     string Id, IReadOnlyList<string> Services,
@@ -995,9 +999,26 @@ public static class ApplicationEndpoints
             return Results.Problem(statusCode: 400, detail: "Unknown attachment rule.");
         }
 
+        // `P-394` — a per-entry rule's file belongs to ONE entry: the second
+        // qualification's certificate is its own, and the rule's limit is per
+        // entry. Without the entry, every certificate was filed under the
+        // first qualification and the second upload hit the limit. An
+        // application-level rule has no entry, whatever the client sends.
+        string? entryId = null;
+        if (rule.PerEntryOf is { Length: > 0 })
+        {
+            entryId = form["entryId"].ToString();
+            if (string.IsNullOrWhiteSpace(entryId) || entryId.Length > 80)
+            {
+                return Results.Problem(
+                    statusCode: 400, detail: "This document belongs to an entry; an entryId is required.");
+            }
+        }
+
         // The count first: a refusal must not leave stored bytes behind.
         var already = await db.ApplicationAttachments.CountAsync(
-            a => a.ApplicationId == draft.ApplicationId && a.RuleCode == rule.RuleCode, ct);
+            a => a.ApplicationId == draft.ApplicationId && a.RuleCode == rule.RuleCode
+                && a.EntryId == entryId, ct);
         if (already >= rule.MaxCount)
         {
             return Results.Problem(
@@ -1030,6 +1051,7 @@ public static class ApplicationEndpoints
             RuleCode = rule.RuleCode,
             FileName = attachment.FileName,
             SizeBytes = attachment.SizeBytes,
+            EntryId = entryId,
         });
         draft.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
@@ -1040,7 +1062,8 @@ public static class ApplicationEndpoints
             // rendered — the same id it sent.
             rule.RuleCode,
             attachment.FileName,
-            attachment.SizeBytes));
+            attachment.SizeBytes,
+            entryId));
     }
 
     /// <summary>
@@ -1090,7 +1113,7 @@ public static class ApplicationEndpoints
             .ToList();
         var present = await db.ApplicationAttachments
             .Where(a => a.ApplicationId == draft.ApplicationId)
-            .Select(a => a.RuleCode)
+            .Select(a => new StoredAttachment(a.RuleCode, a.EntryId))
             .ToListAsync(ct);
 
         // The repeatable sections' answers travel in `entries`, never in
@@ -1461,7 +1484,8 @@ public static class ApplicationEndpoints
             services,
             await LoadValuesAsync(db, draft.ApplicationId, ct),
             attachments.Select(a => new DraftAttachmentWire(
-                a.ApplicationAttachmentId.ToString(), a.RuleCode, a.FileName, a.SizeBytes)).ToList(),
+                a.ApplicationAttachmentId.ToString(), a.RuleCode, a.FileName, a.SizeBytes,
+                a.EntryId)).ToList(),
             Iso(draft.UpdatedAt),
             draft.SchemaVersion,
             await LoadEntriesAsync(db, draft, ct));

@@ -181,6 +181,113 @@ public sealed class RepeatableSectionTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /* ── per-entry files — `P-394` ─────────────────────────────────────────── */
+
+    [Fact]
+    public async Task Each_qualification_takes_its_own_certificate_and_keeps_it()
+    {
+        // UAT: with two qualifications the second certificate was refused —
+        // the rule's one-file limit was counted across the application — and
+        // every certificate came back filed under the first qualification.
+        await SignInAsync();
+        await StartDraftAsync();
+        await SaveDraftAsync(Education(
+            ("edu-1", "bachelor", "جامعة الملك سعود"),
+            ("edu-2", "master", "جامعة الملك عبدالعزيز")));
+
+        var first = await UploadCertificateAsync("edu-1");
+        var second = await UploadCertificateAsync("edu-2");
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        Assert.Equal("edu-2", (await second.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("entryId").GetString());
+        // The limit still holds — per entry.
+        Assert.Equal((HttpStatusCode)422, (await UploadCertificateAsync("edu-2")).StatusCode);
+
+        var resumed = (await StartDraftAsync()).GetProperty("draft");
+        Assert.Equal(
+            ["edu-1", "edu-2"],
+            resumed.GetProperty("attachments").EnumerateArray()
+                .Select(a => a.GetProperty("entryId").GetString())
+                .Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_per_entry_file_without_its_entry_is_refused()
+    {
+        await SignInAsync();
+        await StartDraftAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await UploadCertificateAsync(null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Removing_the_second_certificate_leaves_exactly_that_qualification_missing_one()
+    {
+        await SignInAsync();
+        await StartDraftAsync();
+        var education = Education(
+            ("edu-1", "bachelor", "جامعة الملك سعود"),
+            ("edu-2", "master", "جامعة الملك عبدالعزيز"));
+        await SaveDraftAsync(education);
+        await UploadCertificateAsync("edu-1");
+        var secondId = (await (await UploadCertificateAsync("edu-2")).Content
+            .ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
+
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync(
+            "/api/v1/me/applications/draft/attachments/remove", new { attachmentId = secondId })).StatusCode);
+
+        var submit = await _client.PostAsJsonAsync("/api/v1/me/applications/submit", new
+        {
+            services = new[] { "trainer" },
+            values = new Dictionary<string, object?>(),
+            entries = education,
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, submit.StatusCode);
+        var missing = (await submit.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("missingAttachmentRuleIds").EnumerateArray()
+            .Select(m => m.GetString())
+            .Where(m => m!.StartsWith("qualification-certificate", StringComparison.Ordinal));
+        Assert.Equal(["qualification-certificate::edu-2"], missing);
+    }
+
+    [Fact]
+    public async Task A_certificate_stored_before_entries_were_recorded_still_counts_for_the_first_qualification()
+    {
+        await SignInAsync();
+        await StartDraftAsync();
+        var education = Education(
+            ("edu-1", "bachelor", "جامعة الملك سعود"),
+            ("edu-2", "master", "جامعة الملك عبدالعزيز"));
+        await SaveDraftAsync(education);
+        await using (var db = _database.CreateContext())
+        {
+            db.ApplicationAttachments.Add(new ApplicationAttachment
+            {
+                ApplicationAttachmentId = Guid.NewGuid(),
+                ApplicationId = _draftId,
+                RuleCode = "qualification-certificate",
+                FileName = "old.pdf",
+                SizeBytes = 100_000,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var submit = await _client.PostAsJsonAsync("/api/v1/me/applications/submit", new
+        {
+            services = new[] { "trainer" },
+            values = new Dictionary<string, object?>(),
+            entries = education,
+        });
+
+        var missing = (await submit.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("missingAttachmentRuleIds").EnumerateArray()
+            .Select(m => m.GetString())
+            .Where(m => m!.StartsWith("qualification-certificate", StringComparison.Ordinal));
+        Assert.Equal(["qualification-certificate::edu-2"], missing);
+    }
+
     /* ── history ───────────────────────────────────────────────────────────── */
 
     [Fact]
@@ -239,6 +346,20 @@ public sealed class RepeatableSectionTests
                 },
             }).ToArray(),
         };
+
+    private async Task<HttpResponseMessage> UploadCertificateAsync(string? entryId)
+    {
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent("qualification-certificate"), "ruleId");
+        if (entryId is not null)
+        {
+            form.Add(new StringContent(entryId), "entryId");
+        }
+        var file = new ByteArrayContent("%PDF-1.4 certificate"u8.ToArray());
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "شهادة.pdf");
+        return await _client.PostAsync("/api/v1/me/applications/draft/attachments", form);
+    }
 
     private Task<JsonElement> SignInAsync() =>
         TestOidc.SignInAsync(_client, _tokenEndpoint, "unmapped");

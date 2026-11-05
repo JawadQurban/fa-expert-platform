@@ -181,6 +181,17 @@ The history before this repository existed is in
 
 ### Fixed
 
+- **Each qualification takes its own certificate (`P-394`).** UAT found that with
+  two qualifications the second certificate could not be uploaded, and deleting
+  it left the form saying it was still missing. The API ignored the entry the
+  form sent with a per-entry file: the one-file limit was counted across the
+  whole application, so the second upload was refused, and every stored
+  certificate was filed under the first qualification. `APPLICATION_ATTACHMENT`
+  now records `entry_id` (migration M59), the upload requires it for a
+  per-entry rule and counts the limit per entry, the draft returns it, and the
+  submit check reports `qualification-certificate::<entry>` for each entry with
+  no file. Files stored before this belong to the first entry.
+
 - **Security: the web tier no longer names its software and version
   (`P-393`).** A security test found `Server: nginx/1.28.0 (Ubuntu)` on every
   response, an out-of-date build. That header comes from the server's own host
